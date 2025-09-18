@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import '../models/game_thread.dart';
 
 class ApiService {
   static const String baseUrl =
       'https://f95zone.to/sam/latest_alpha/latest_data.php';
+  static String? _cachedUserAgent;
 
   /// Fetches games from the f95zone API
   /// Parameters match the sample endpoint from notes.txt
@@ -21,6 +23,7 @@ class ApiService {
     List<int> notags = const [173, 174, 324, 522],
     String sort = 'date',
     int rows = 90,
+    bool fallbackToMockOnError = false,
   }) async {
     // On web, F95Zone API blocks CORS requests, so use mock data
     if (kIsWeb) {
@@ -30,6 +33,8 @@ class ApiService {
     }
 
     try {
+      final userAgent = await _resolveUserAgent();
+
       // Build query parameters
       final Map<String, String> queryParams = {
         'cmd': cmd,
@@ -56,7 +61,7 @@ class ApiService {
       final response = await http.get(
         uri,
         headers: {
-          'User-Agent': 'F95Portal/1.0.0',
+          'User-Agent': userAgent,
           'Accept': 'application/json',
         },
       );
@@ -64,13 +69,34 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         return ApiResponse.fromJson(jsonData);
-      } else {
-        throw ApiException('Failed to load games: ${response.statusCode}');
       }
-    } catch (e) {
-      // If real API fails on mobile/desktop, fallback to mock data
-      return createMockData();
+
+      throw ApiException('Failed to load games: ${response.statusCode}');
+    } on ApiException {
+      rethrow;
+    } catch (e, stackTrace) {
+      debugPrint('ApiService.fetchGames error: $e\n$stackTrace');
+      if (fallbackToMockOnError) {
+        return createMockData();
+      }
+      throw ApiException('Failed to load games: ${e.toString()}');
     }
+  }
+
+  static Future<String> _resolveUserAgent() async {
+    if (_cachedUserAgent != null) {
+      return _cachedUserAgent!;
+    }
+
+    try {
+      final info = await PackageInfo.fromPlatform();
+      _cachedUserAgent = 'F95Portal/${info.version} (${info.buildNumber})';
+    } catch (e) {
+      debugPrint('PackageInfo fetch failed: $e');
+      _cachedUserAgent = 'F95Portal/unknown';
+    }
+
+    return _cachedUserAgent!;
   }
 
   /// Creates mock data for testing UI before API integration

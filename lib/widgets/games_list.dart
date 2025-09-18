@@ -26,6 +26,7 @@ class _GamesListState extends State<GamesList> {
 
   Future<void> _loadGames() async {
     try {
+      if (!mounted) return;
       setState(() {
         _isLoading = true;
         _error = null;
@@ -33,11 +34,13 @@ class _GamesListState extends State<GamesList> {
 
       final apiResponse = await ApiService.fetchGames();
 
+      if (!mounted) return;
       setState(() {
         _games = apiResponse.data.games;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;

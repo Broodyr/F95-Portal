@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'dart:ui';
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 
 class GlassmorphicFabs extends StatelessWidget {
   final ScrollController scrollController;
@@ -21,10 +22,14 @@ class GlassmorphicFabs extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: bottomNavVisible,
       builder: (context, isVisible, child) {
+        final bottomInset = MediaQuery.of(context).padding.bottom;
+        final double baseOffset = isVisible ? 72 : 8;
+        final double targetBottom = bottomInset + baseOffset;
+
         return AnimatedPositioned(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          bottom: isVisible ? 120 : 56,
+          bottom: targetBottom,
           right: 32,
           child: child!,
         );
@@ -36,9 +41,7 @@ class GlassmorphicFabs extends StatelessWidget {
             scrollController: scrollController,
             icon: Icons.filter_alt_outlined,
             backgroundColor: const Color(0xFF404040).withValues(alpha: 0.5),
-            hoverBackgroundColor: const Color(
-              0xFF404040,
-            ).withValues(alpha: 0.7),
+            hoverBackgroundColor: const Color(0xFF404040).withValues(alpha: 0.7),
             tooltip: 'Filters',
             onPressed: onFilterPressed,
           ),
@@ -48,12 +51,8 @@ class GlassmorphicFabs extends StatelessWidget {
           _PassThroughFab(
             scrollController: scrollController,
             icon: Icons.tune,
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.5),
-            hoverBackgroundColor: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.7),
+            backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            hoverBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
             tooltip: 'Search options',
             onPressed: onSearchPressed,
           ),
@@ -92,9 +91,7 @@ class _PassThroughFabState extends State<_PassThroughFab> {
 
   @override
   Widget build(BuildContext context) {
-    Color currentBackgroundColor = _isHovered || _isPressed
-        ? widget.hoverBackgroundColor
-        : widget.backgroundColor;
+    Color currentBackgroundColor = _isHovered || _isPressed ? widget.hoverBackgroundColor : widget.backgroundColor;
 
     return Tooltip(
       message: widget.tooltip,
@@ -138,10 +135,7 @@ class _PassThroughFabState extends State<_PassThroughFab> {
                 decoration: BoxDecoration(
                   color: currentBackgroundColor,
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    width: 1,
-                  ),
+                  border: Border.all(color: Colors.black.withValues(alpha: 0.2), width: 1),
                 ),
                 child: Icon(widget.icon, color: Colors.white, size: 24),
               ),

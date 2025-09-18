@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'screens/games_screen.dart';
 import 'widgets/bottom_navigation.dart';
 
@@ -58,10 +59,7 @@ class _MainAppState extends State<MainApp> {
   Widget _getCurrentScreen() {
     switch (_currentIndex) {
       case 0:
-        return GamesScreen(
-          scrollController: _scrollController,
-          bottomNavVisible: _bottomNavVisible,
-        );
+        return GamesScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible);
       default:
         // Placeholder for other tabs
         return Scaffold(
@@ -96,7 +94,7 @@ class _MainAppState extends State<MainApp> {
               return AnimatedPositioned(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                bottom: isVisible ? 0 : -120,
+                bottom: isVisible ? 0 : -(72 + MediaQuery.of(context).padding.bottom),
                 left: 0,
                 right: 0,
                 child: child!,
