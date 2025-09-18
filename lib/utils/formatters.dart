@@ -49,7 +49,7 @@ class EngineColors {
   }
 }
 
-class GameUtils {
+class ThreadUtils {
   /// Maps prefix IDs to engine names based on observed API data
   /// This mapping is based on the edge cases provided
   static const Map<int, String> _prefixToEngine = {
@@ -70,8 +70,8 @@ class GameUtils {
   };
 
   /// Gets multiple engines from prefixes and tags
-  /// Returns a list of engine names found in the game data
-  static List<String> getEnginesFromGame(List<int> prefixes, List<int> tags) {
+  /// Returns a list of engine names found in the thread data
+  static List<String> getEnginesFromThread(List<int> prefixes, List<int> tags) {
     Set<String> engines = <String>{};
 
     // Check prefixes first (they seem to be more reliable for engines)

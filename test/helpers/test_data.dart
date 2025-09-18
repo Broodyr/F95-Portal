@@ -1,8 +1,8 @@
-import 'package:f95_portal/models/game_thread.dart';
+import 'package:f95_portal/models/thread_summary.dart';
 
-GameThread createGameThread({
+ThreadSummary createThreadSummary({
   int threadId = 1,
-  String title = 'Test Game',
+  String title = 'Test Thread',
   String creator = 'Test Creator',
   String version = 'v0.1',
   int views = 1000,
@@ -18,7 +18,7 @@ GameThread createGameThread({
   bool isNew = false,
   int timestamp = 0,
 }) {
-  return GameThread(
+  return ThreadSummary(
     threadId: threadId,
     title: title,
     creator: creator,
@@ -38,12 +38,12 @@ GameThread createGameThread({
   );
 }
 
-ApiResponse createApiResponse({List<GameThread>? games, int page = 1, int total = 1, int count = 1}) {
-  final gameList = games ?? [createGameThread()];
+ApiResponse createApiResponse({List<ThreadSummary>? threads, int page = 1, int total = 1, int count = 1}) {
+  final threadList = threads ?? [createThreadSummary()];
   return ApiResponse(
     status: 'ok',
     data: ApiResponseData(
-      games: gameList,
+      threads: threadList,
       pagination: Pagination(page: page, total: total),
       count: count,
     ),

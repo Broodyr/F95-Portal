@@ -5,14 +5,12 @@ import 'package:flutter/material.dart';
 
 class GlassmorphicFabs extends StatelessWidget {
   final ScrollController scrollController;
-  final VoidCallback? onFilterPressed;
   final VoidCallback? onSearchPressed;
   final ValueNotifier<bool> bottomNavVisible;
 
   const GlassmorphicFabs({
     super.key,
     required this.scrollController,
-    this.onFilterPressed,
     this.onSearchPressed,
     required this.bottomNavVisible,
   });
@@ -34,29 +32,13 @@ class GlassmorphicFabs extends StatelessWidget {
           child: child!,
         );
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _PassThroughFab(
-            scrollController: scrollController,
-            icon: Icons.filter_alt_outlined,
-            backgroundColor: const Color(0xFF404040).withValues(alpha: 0.5),
-            hoverBackgroundColor: const Color(0xFF404040).withValues(alpha: 0.7),
-            tooltip: 'Filters',
-            onPressed: onFilterPressed,
-          ),
-
-          const SizedBox(height: 12),
-
-          _PassThroughFab(
-            scrollController: scrollController,
-            icon: Icons.tune,
-            backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-            hoverBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-            tooltip: 'Search options',
-            onPressed: onSearchPressed,
-          ),
-        ],
+      child: _PassThroughFab(
+        scrollController: scrollController,
+        icon: Icons.search,
+        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+        hoverBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+        tooltip: 'Search Options',
+        onPressed: onSearchPressed,
       ),
     );
   }

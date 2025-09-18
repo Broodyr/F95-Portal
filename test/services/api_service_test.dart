@@ -18,13 +18,13 @@ void main() {
       final response = ApiService.createMockData();
 
       expect(response.status, 'ok');
-      expect(response.data.games, isNotEmpty);
+      expect(response.data.threads, isNotEmpty);
       expect(response.data.pagination.page, 1);
       expect(response.data.count, greaterThan(0));
     });
   });
 
-  group('ApiService.fetchGames', () {
+  group('ApiService.fetchThreads', () {
     test('parses successful HTTP response', () async {
       int loaderCalls = 0;
       final PackageInfoLoader loader = () async {
@@ -43,10 +43,7 @@ void main() {
           'status': 'ok',
           'msg': {
             'data': [
-              {
-                'thread_id': 1,
-                'title': 'From API',
-              }
+              {'thread_id': 1, 'title': 'From API'},
             ],
             'pagination': {'page': 1, 'total': 5},
             'count': 100,
@@ -55,15 +52,12 @@ void main() {
         return http.Response(body, 200, headers: {'content-type': 'application/json'});
       });
 
-      final response = await ApiService.fetchGames(
-        client: client,
-        packageInfoLoader: loader,
-      );
+      final response = await ApiService.fetchThreads(client: client, packageInfoLoader: loader);
 
       expect(loaderCalls, 1);
       expect(response.status, 'ok');
-      expect(response.data.games, hasLength(1));
-      expect(response.data.games.first.title, 'From API');
+      expect(response.data.threads, hasLength(1));
+      expect(response.data.threads.first.title, 'From API');
       expect(response.data.pagination.total, 5);
     });
 
@@ -84,10 +78,7 @@ void main() {
           'status': 'ok',
           'msg': {
             'data': [
-              {
-                'thread_id': request.hashCode,
-                'title': 'Call ${request.hashCode}',
-              }
+              {'thread_id': request.hashCode, 'title': 'Call ${request.hashCode}'},
             ],
             'pagination': {'page': 1, 'total': 1},
             'count': 1,
@@ -98,8 +89,8 @@ void main() {
 
       final client = MockClient(handler);
 
-      await ApiService.fetchGames(client: client, packageInfoLoader: loader);
-      await ApiService.fetchGames(client: client, packageInfoLoader: loader);
+      await ApiService.fetchThreads(client: client, packageInfoLoader: loader);
+      await ApiService.fetchThreads(client: client, packageInfoLoader: loader);
 
       expect(loaderCalls, 1);
     });
@@ -107,7 +98,7 @@ void main() {
     test('returns mock data when fallback enabled', () async {
       final client = MockClient((_) async => http.Response('error', 500));
 
-      final response = await ApiService.fetchGames(
+      final response = await ApiService.fetchThreads(
         client: client,
         fallbackToMockOnError: true,
         packageInfoLoader: () async => PackageInfo(
@@ -119,14 +110,14 @@ void main() {
       );
 
       expect(response.status, 'ok');
-      expect(response.data.games, isNotEmpty);
+      expect(response.data.threads, isNotEmpty);
     });
 
     test('throws ApiException when fallback disabled', () async {
       final client = MockClient((_) async => http.Response('error', 500));
 
       expect(
-        () => ApiService.fetchGames(
+        () => ApiService.fetchThreads(
           client: client,
           packageInfoLoader: () async => PackageInfo(
             appName: 'F95 Portal',
@@ -143,7 +134,7 @@ void main() {
       final client = MockClient((_) async => throw StateError('boom'));
 
       expect(
-        () => ApiService.fetchGames(
+        () => ApiService.fetchThreads(
           client: client,
           packageInfoLoader: () async => PackageInfo(
             appName: 'F95 Portal',
@@ -152,9 +143,7 @@ void main() {
             buildNumber: '1',
           ),
         ),
-        throwsA(
-          isA<ApiException>().having((e) => e.message, 'message', contains('boom')),
-        ),
+        throwsA(isA<ApiException>().having((e) => e.message, 'message', contains('boom'))),
       );
     });
   });

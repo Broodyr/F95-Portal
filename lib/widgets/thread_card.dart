@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import '../models/game_thread.dart';
+import '../models/thread_summary.dart';
 import '../utils/formatters.dart';
 import 'cover_image.dart';
 import 'engine_tag.dart';
@@ -9,11 +9,11 @@ import 'version_pill.dart';
 import 'star_rating.dart';
 import 'metadata_row.dart';
 
-class GameCard extends StatelessWidget {
-  final GameThread game;
+class ThreadCard extends StatelessWidget {
+  final ThreadSummary thread;
   final VoidCallback? onTap;
 
-  const GameCard({super.key, required this.game, this.onTap});
+  const ThreadCard({super.key, required this.thread, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -34,23 +34,15 @@ class GameCard extends StatelessWidget {
               children: [
                 // Cover image with top border radius matching card
                 ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(11),
-                    topRight: Radius.circular(11),
-                  ),
-                  child: CoverImage(imageUrl: game.cover),
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(11), topRight: Radius.circular(11)),
+                  child: CoverImage(imageUrl: thread.cover),
                 ),
 
                 // Engine tag (top-left)
                 Positioned(
                   top: 8,
                   left: 8,
-                  child: EngineTag(
-                    engines: GameUtils.getEnginesFromGame(
-                      game.prefixes,
-                      game.tags,
-                    ),
-                  ),
+                  child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, thread.tags)),
                 ),
 
                 // Version pill (top-right)
@@ -58,19 +50,15 @@ class GameCard extends StatelessWidget {
                   top: 8,
                   right: 8,
                   child: VersionPill(
-                    version: game.version,
-                    isCompleted: game.isCompleted,
-                    isAbandoned: game.isAbandoned,
-                    isOnhold: game.isOnhold,
+                    version: thread.version,
+                    isCompleted: thread.isCompleted,
+                    isAbandoned: thread.isAbandoned,
+                    isOnhold: thread.isOnhold,
                   ),
                 ),
 
                 // Star rating (bottom-right)
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: StarRating(rating: game.rating),
-                ),
+                Positioned(bottom: 8, right: 8, child: StarRating(rating: thread.rating)),
               ],
             ),
 
@@ -92,10 +80,7 @@ class GameCard extends StatelessWidget {
                           // main CoverImage is using to overflow.
                           alignment: Alignment.topCenter,
                           maxHeight: double.infinity,
-                          child: Transform.scale(
-                            scaleY: -1,
-                            child: CoverImage(imageUrl: game.cover),
-                          ),
+                          child: Transform.scale(scaleY: -1, child: CoverImage(imageUrl: thread.cover)),
                         ),
                       ),
                     ),
@@ -119,12 +104,7 @@ class GameCard extends StatelessWidget {
                                 bottomLeft: Radius.circular(11.0),
                                 bottomRight: Radius.circular(11.0),
                               ),
-                              border: const Border(
-                                top: BorderSide(
-                                  color: Color.fromARGB(127, 0, 0, 0),
-                                  width: 1,
-                                ),
-                              ),
+                              border: const Border(top: BorderSide(color: Color.fromARGB(127, 0, 0, 0), width: 1)),
                               // gradient: LinearGradient(
                               //   begin: Alignment.topCenter,
                               //   end: Alignment(0.0, 0.4),
@@ -157,24 +137,16 @@ class GameCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Game title
+                          // Thread title
                           Text(
-                            game.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            thread.title,
+                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           // Metadata row
-                          MetadataRow(
-                            timeUpdated: game.date,
-                            likes: game.likes,
-                            views: game.views,
-                          ),
+                          MetadataRow(timeUpdated: thread.date, likes: thread.likes, views: thread.views),
                         ],
                       ),
                     ),

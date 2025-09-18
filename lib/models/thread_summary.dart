@@ -1,4 +1,4 @@
-class GameThread {
+class ThreadSummary {
   final int threadId;
   final String title;
   final String creator;
@@ -16,7 +16,7 @@ class GameThread {
   final bool isNew;
   final int timestamp;
 
-  GameThread({
+  ThreadSummary({
     required this.threadId,
     required this.title,
     required this.creator,
@@ -35,8 +35,8 @@ class GameThread {
     required this.timestamp,
   });
 
-  factory GameThread.fromJson(Map<String, dynamic> json) {
-    return GameThread(
+  factory ThreadSummary.fromJson(Map<String, dynamic> json) {
+    return ThreadSummary(
       threadId: json['thread_id'] ?? 0,
       title: json['title'] ?? '',
       creator: json['creator'] ?? '',
@@ -89,29 +89,20 @@ class ApiResponse {
   ApiResponse({required this.status, required this.data});
 
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
-    return ApiResponse(
-      status: json['status'] ?? '',
-      data: ApiResponseData.fromJson(json['msg'] ?? {}),
-    );
+    return ApiResponse(status: json['status'] ?? '', data: ApiResponseData.fromJson(json['msg'] ?? {}));
   }
 }
 
 class ApiResponseData {
-  final List<GameThread> games;
+  final List<ThreadSummary> threads;
   final Pagination pagination;
   final int count;
 
-  ApiResponseData({
-    required this.games,
-    required this.pagination,
-    required this.count,
-  });
+  ApiResponseData({required this.threads, required this.pagination, required this.count});
 
   factory ApiResponseData.fromJson(Map<String, dynamic> json) {
     return ApiResponseData(
-      games: (json['data'] as List? ?? [])
-          .map((item) => GameThread.fromJson(item))
-          .toList(),
+      threads: (json['data'] as List? ?? []).map((item) => ThreadSummary.fromJson(item)).toList(),
       pagination: Pagination.fromJson(json['pagination'] ?? {}),
       count: json['count'] ?? 0,
     );

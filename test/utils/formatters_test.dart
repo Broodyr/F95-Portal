@@ -28,19 +28,19 @@ void main() {
     });
   });
 
-  group('GameUtils', () {
+  group('ThreadUtils', () {
     test('prefers engines mapped from prefixes', () {
-      final engines = GameUtils.getEnginesFromGame([13], const []);
+      final engines = ThreadUtils.getEnginesFromThread([13], const []);
       expect(engines, ['WebGL']);
     });
 
     test('falls back to tags when prefixes empty', () {
-      final engines = GameUtils.getEnginesFromGame(const [], const [130]);
+      final engines = ThreadUtils.getEnginesFromThread(const [], const [130]);
       expect(engines, ["Ren'Py"]);
     });
 
     test('returns Others when no mapping available', () {
-      final engines = GameUtils.getEnginesFromGame(const [], const []);
+      final engines = ThreadUtils.getEnginesFromThread(const [], const []);
       expect(engines, ['Others']);
     });
   });

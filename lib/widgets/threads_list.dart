@@ -1,47 +1,60 @@
 import 'package:flutter/material.dart';
-import '../models/game_thread.dart';
+
+import '../models/search_category.dart';
+import '../models/thread_summary.dart';
 import '../services/api_service.dart';
-import 'game_card.dart';
-import 'game_details_modal.dart';
+import 'thread_card.dart';
+import 'thread_details_modal.dart';
 
-typedef FetchGamesCallback = Future<ApiResponse> Function({
-  String cmd,
-  String cat,
-  int page,
-  List<int> noprefixes,
-  List<int> tags,
-  List<int> notags,
-  String sort,
-  int rows,
-  bool fallbackToMockOnError,
-});
+typedef FetchThreadsCallback =
+    Future<ApiResponse> Function({
+      String cmd,
+      SearchCategory category,
+      int page,
+      List<int> noprefixes,
+      List<int> tags,
+      List<int> notags,
+      String sort,
+      int rows,
+      bool fallbackToMockOnError,
+    });
 
-class GamesList extends StatefulWidget {
+class ThreadsList extends StatefulWidget {
   final ScrollController? scrollController;
-  final FetchGamesCallback fetchGames;
+  final FetchThreadsCallback fetchThreads;
+  final SearchCategory category;
 
-  const GamesList({
+  const ThreadsList({
     super.key,
     this.scrollController,
-    this.fetchGames = ApiService.fetchGames,
+    this.fetchThreads = ApiService.fetchThreads,
+    this.category = SearchCategory.games,
   });
 
   @override
-  State<GamesList> createState() => _GamesListState();
+  State<ThreadsList> createState() => _ThreadsListState();
 }
 
-class _GamesListState extends State<GamesList> {
-  List<GameThread> _games = [];
+class _ThreadsListState extends State<ThreadsList> {
+  List<ThreadSummary> _threads = [];
   bool _isLoading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadGames();
+    _loadThreads();
   }
 
-  Future<void> _loadGames() async {
+  @override
+  void didUpdateWidget(ThreadsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.category != widget.category) {
+      _loadThreads();
+    }
+  }
+
+  Future<void> _loadThreads() async {
     try {
       if (!mounted) return;
       setState(() {
@@ -49,11 +62,11 @@ class _GamesListState extends State<GamesList> {
         _error = null;
       });
 
-      final apiResponse = await widget.fetchGames();
+      final apiResponse = await widget.fetchThreads(category: widget.category);
 
       if (!mounted) return;
       setState(() {
-        _games = apiResponse.data.games;
+        _threads = apiResponse.data.threads;
         _isLoading = false;
       });
     } catch (e) {
@@ -66,21 +79,17 @@ class _GamesListState extends State<GamesList> {
   }
 
   Future<void> _onRefresh() async {
-    await _loadGames();
+    await _loadThreads();
   }
 
-  void _onGameTap(GameThread game) {
-    GameDetailsModal.show(context, game);
+  void _onThreadTap(ThreadSummary thread) {
+    ThreadDetailsModal.show(context, thread);
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      );
+      return Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary));
     }
 
     if (_error != null) {
@@ -90,10 +99,7 @@ class _GamesListState extends State<GamesList> {
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text(
-              'Failed to load games',
-              style: TextStyle(color: Colors.grey[400], fontSize: 18),
-            ),
+            Text('Failed to load threads', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
             const SizedBox(height: 8),
             Text(
               _error!,
@@ -102,11 +108,9 @@ class _GamesListState extends State<GamesList> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadGames,
+              onPressed: _loadThreads,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(
-                  context,
-                ).snackBarTheme.backgroundColor,
+                backgroundColor: Theme.of(context).snackBarTheme.backgroundColor,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Retry'),
@@ -124,10 +128,10 @@ class _GamesListState extends State<GamesList> {
         controller: widget.scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: MediaQuery.of(context).padding,
-        itemCount: _games.length,
+        itemCount: _threads.length,
         itemBuilder: (context, index) {
-          final game = _games[index];
-          return GameCard(game: game, onTap: () => _onGameTap(game));
+          final thread = _threads[index];
+          return ThreadCard(thread: thread, onTap: () => _onThreadTap(thread));
         },
       ),
     );

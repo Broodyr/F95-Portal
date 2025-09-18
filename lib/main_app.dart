@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/games_screen.dart';
+import 'screens/threads_screen.dart';
 import 'widgets/bottom_navigation.dart';
 
 class MainApp extends StatefulWidget {
@@ -24,7 +24,7 @@ class _MainAppState extends State<MainApp> {
 
   void _onTabTapped(int index) {
     if (index == 0) {
-      // Games tab - already implemented
+      // Threads tab - already implemented
       setState(() {
         _currentIndex = index;
       });
@@ -42,7 +42,7 @@ class _MainAppState extends State<MainApp> {
   String _getTabName(int index) {
     switch (index) {
       case 0:
-        return 'Games';
+        return 'Threads';
       case 1:
         return 'Forum';
       case 2:
@@ -59,7 +59,7 @@ class _MainAppState extends State<MainApp> {
   Widget _getCurrentScreen() {
     switch (_currentIndex) {
       case 0:
-        return GamesScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible);
+        return ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible);
       default:
         // Placeholder for other tabs
         return Scaffold(

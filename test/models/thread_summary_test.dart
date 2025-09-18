@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:f95_portal/models/game_thread.dart';
+import 'package:f95_portal/models/thread_summary.dart';
 
 void main() {
-  group('GameThread', () {
+  group('ThreadSummary', () {
     test('fromJson parses full payload', () {
       final json = {
         'thread_id': 42,
-        'title': 'Sample Game',
+        'title': 'Sample Thread',
         'creator': 'Sample Creator',
         'version': 'v1.2.3',
         'views': 12345,
@@ -23,10 +23,10 @@ void main() {
         'ts': 1234567890,
       };
 
-      final thread = GameThread.fromJson(json);
+      final thread = ThreadSummary.fromJson(json);
 
       expect(thread.threadId, 42);
-      expect(thread.title, 'Sample Game');
+      expect(thread.title, 'Sample Thread');
       expect(thread.creator, 'Sample Creator');
       expect(thread.version, 'v1.2.3');
       expect(thread.views, 12345);
@@ -44,7 +44,7 @@ void main() {
     });
 
     test('toJson serializes correctly', () {
-      final thread = GameThread(
+      final thread = ThreadSummary(
         threadId: 7,
         title: 'Serialize Me',
         creator: 'Serializer',
@@ -84,7 +84,7 @@ void main() {
     });
 
     test('status helpers detect completion edge cases', () {
-      final thread = GameThread(
+      final thread = ThreadSummary(
         threadId: 1,
         title: 'Edges',
         creator: 'Edge Lord',
@@ -115,10 +115,7 @@ void main() {
         'status': 'ok',
         'msg': {
           'data': [
-            {
-              'thread_id': 1,
-              'title': 'Nested',
-            }
+            {'thread_id': 1, 'title': 'Nested'},
           ],
           'pagination': {'page': 2, 'total': 4},
           'count': 120,
@@ -128,11 +125,11 @@ void main() {
       final response = ApiResponse.fromJson(json);
 
       expect(response.status, 'ok');
-      expect(response.data.games, hasLength(1));
+      expect(response.data.threads, hasLength(1));
       expect(response.data.pagination.page, 2);
       expect(response.data.pagination.total, 4);
       expect(response.data.count, 120);
-      expect(response.data.games.first.title, 'Nested');
+      expect(response.data.threads.first.title, 'Nested');
     });
   });
 }

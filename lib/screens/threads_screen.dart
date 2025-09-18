@@ -1,26 +1,29 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import '../widgets/games_list.dart';
+
+import '../models/search_category.dart';
+import '../widgets/threads_list.dart';
 import '../widgets/glassmorphic_fabs.dart';
+import '../widgets/search_options_modal.dart';
 //import '../widgets/noisy_background.dart';
 
-class GamesScreen extends StatefulWidget {
+class ThreadsScreen extends StatefulWidget {
   final ScrollController? scrollController;
   final ValueNotifier<bool> bottomNavVisible;
 
-  const GamesScreen({
-    super.key,
-    this.scrollController,
-    required this.bottomNavVisible,
-  });
+  const ThreadsScreen({super.key, this.scrollController, required this.bottomNavVisible});
 
   @override
-  State<GamesScreen> createState() => _GamesScreenState();
+  State<ThreadsScreen> createState() => _ThreadsScreenState();
 }
 
-class _GamesScreenState extends State<GamesScreen> {
+class _ThreadsScreenState extends State<ThreadsScreen> {
   // Use external ScrollController if provided, otherwise create internal one
   late final ScrollController _scrollController;
+  SearchCategory _activeCategory = SearchCategory.games;
+  String _activeQuery = '';
 
   @override
   void initState() {
@@ -52,40 +55,56 @@ class _GamesScreenState extends State<GamesScreen> {
     }
   }
 
-  void _onFilterPressed() {
-    // TODO: Show filter modal
-  }
+  void _onSearchPressed() async {
+    final result = await showModalBottomSheet<SearchOptionsResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.55),
+      builder: (BuildContext context) {
+        final colorScheme = Theme.of(context).colorScheme;
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: colorScheme.surface.withOpacity(0.32)),
+              child: SearchOptionsModal(initialCategory: _activeCategory, initialQuery: _activeQuery),
+            ),
+          ),
+        );
+      },
+    );
 
-  void _onSearchPressed() {
-    // TODO: Show search options modal
+    if (!mounted || result == null) {
+      return;
+    }
+
+    setState(() {
+      _activeCategory = result.category;
+      _activeQuery = result.query;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-
       body: Stack(
         children: [
           //PreRenderedNoisyBackground(child: Container()),
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: RadialGradient(
                 center: Alignment(0, -0.5), // Center slightly above the middle
                 radius: 1.5, // A large radius to make the gradient very soft
-                colors: [
-                  Color.fromARGB(255, 24, 24, 24),
-                  Color.fromARGB(255, 8, 8, 8),
-                ],
+                colors: [Color.fromARGB(255, 24, 24, 24), Color.fromARGB(255, 8, 8, 8)],
               ),
             ),
           ),
-
-          GamesList(scrollController: _scrollController),
-
+          ThreadsList(scrollController: _scrollController, category: _activeCategory),
           GlassmorphicFabs(
             scrollController: _scrollController,
-            onFilterPressed: _onFilterPressed,
             onSearchPressed: _onSearchPressed,
             bottomNavVisible: widget.bottomNavVisible,
           ),
