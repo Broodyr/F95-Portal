@@ -3,17 +3,12 @@ import 'dart:ui';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-class GlassmorphicFabs extends StatelessWidget {
+class SearchFab extends StatelessWidget {
   final ScrollController scrollController;
   final VoidCallback? onSearchPressed;
   final ValueNotifier<bool> bottomNavVisible;
 
-  const GlassmorphicFabs({
-    super.key,
-    required this.scrollController,
-    this.onSearchPressed,
-    required this.bottomNavVisible,
-  });
+  const SearchFab({super.key, required this.scrollController, this.onSearchPressed, required this.bottomNavVisible});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +16,7 @@ class GlassmorphicFabs extends StatelessWidget {
       valueListenable: bottomNavVisible,
       builder: (context, isVisible, child) {
         final bottomInset = MediaQuery.of(context).padding.bottom;
-        final double baseOffset = isVisible ? 72 : 8;
+        final double baseOffset = isVisible ? 88 : 24;
         final double targetBottom = bottomInset + baseOffset;
 
         return AnimatedPositioned(
@@ -112,8 +107,8 @@ class _PassThroughFabState extends State<_PassThroughFab> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
               child: Container(
-                width: 40,
-                height: 40,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: currentBackgroundColor,
                   borderRadius: BorderRadius.circular(28),

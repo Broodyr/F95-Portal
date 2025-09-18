@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../models/search_category.dart';
-import '../widgets/threads_list.dart';
-import '../widgets/glassmorphic_fabs.dart';
+import '../widgets/search_fab.dart';
 import '../widgets/search_options_modal.dart';
+import '../widgets/threads_list.dart';
 //import '../widgets/noisy_background.dart';
 
 class ThreadsScreen extends StatefulWidget {
@@ -103,7 +103,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
             ),
           ),
           ThreadsList(scrollController: _scrollController, category: _activeCategory),
-          GlassmorphicFabs(
+          SearchFab(
             scrollController: _scrollController,
             onSearchPressed: _onSearchPressed,
             bottomNavVisible: widget.bottomNavVisible,

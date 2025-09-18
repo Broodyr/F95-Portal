@@ -8,7 +8,7 @@
 ## Key Files & Responsibilities
 - `lib/main.dart`: Entrypoint, edge-to-edge system UI setup, and dark theme definition.
 - `lib/main_app.dart`: App shell with the shared `ScrollController`, `ValueNotifier` that hides/shows the nav bar, and tab switching logic.
-- `lib/screens/threads_screen.dart`: Hosts the gradient background, `ThreadsList`, and floating glassmorphic FAB column.
+- `lib/screens/threads_screen.dart`: Hosts the gradient background, `ThreadsList`, and floating search FAB column.
 - `lib/widgets/threads_list.dart`: Stateful list that owns loading state, calls `ApiService.fetchThreads()`, exposes pull-to-refresh, and opens the detail modal.
 - `lib/services/api_service.dart`: Wraps `https://f95zone.to/sam/latest_alpha/latest_data.php` with default query params, custom headers, and an optional mock fallback (`createMockData`).
 - `lib/models/thread_summary.dart`: Strongly-typed model for API responses, including helpers for completion/abandoned/on-hold status flags and response scaffolding (`ApiResponse`, `Pagination`).
@@ -26,7 +26,7 @@
 - `ThreadCard` (`lib/widgets/thread_card.dart`): 3:1 cover art with mirrored reflection, segmented `EngineTag`, status-aware `VersionPill`, star rating badge, and a metadata row for formatted likes/views/time.
 - `EngineTag` & `VersionPill`: Use `ThreadUtils` and `EngineColors` (`lib/utils/formatters.dart`) to map prefix/tag IDs to display strings and palette.
 - `CustomBottomNavigation` (`lib/widgets/bottom_navigation.dart`): Glass pill nav with animated icons; vertical drags and taps pass through to the shared scroll controller for gesture continuity.
-- `GlassmorphicFabs` (`lib/widgets/glassmorphic_fabs.dart`): Floating filter/search buttons that also forward vertical drags to scrolling; callbacks currently stubbed for future filter/search modals.
+- `SearchFab` (`lib/widgets/search_fab.dart`): Floating search button that also forwards vertical drags to scrolling; callbacks currently stubbed for future search modal.
 - `ThreadDetailsModal` (`lib/widgets/thread_details_modal.dart`): Bottom sheet placeholder opened on card tap, ready for richer detail content.
 - `PreRenderedNoisyBackground` (`lib/widgets/noisy_background.dart`): Utility for caching a noise texture; the call is currently commented out in `ThreadsScreen`.
 
@@ -49,7 +49,7 @@
 
 ## Current Limitations & Next Actions
 - Only the Threads tab is wired up; other tabs trigger snackbars and placeholder screens.
-- Filter/search UX is not implemented; wire `GlassmorphicFabs` callbacks once designs are ready.
+- Filter/search UX is not implemented; wire `SearchFab` callbacks once designs are ready.
 - `ThreadDetailsModal` contains placeholder messaging.
 - Engine and tag mappings in `ThreadUtils` are incomplete and based on a small sample set; update alongside `docs/api_mappings.md` as more API data is observed.
 - Networking lacks pagination, rich error messaging, and auth/session handling; consider introducing repository-level caching once live data usage stabilizes.
