@@ -4,10 +4,27 @@ import '../services/api_service.dart';
 import 'game_card.dart';
 import 'game_details_modal.dart';
 
+typedef FetchGamesCallback = Future<ApiResponse> Function({
+  String cmd,
+  String cat,
+  int page,
+  List<int> noprefixes,
+  List<int> tags,
+  List<int> notags,
+  String sort,
+  int rows,
+  bool fallbackToMockOnError,
+});
+
 class GamesList extends StatefulWidget {
   final ScrollController? scrollController;
+  final FetchGamesCallback fetchGames;
 
-  const GamesList({super.key, this.scrollController});
+  const GamesList({
+    super.key,
+    this.scrollController,
+    this.fetchGames = ApiService.fetchGames,
+  });
 
   @override
   State<GamesList> createState() => _GamesListState();
@@ -32,7 +49,7 @@ class _GamesListState extends State<GamesList> {
         _error = null;
       });
 
-      final apiResponse = await ApiService.fetchGames();
+      final apiResponse = await widget.fetchGames();
 
       if (!mounted) return;
       setState(() {

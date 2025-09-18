@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import '../models/game_thread.dart';
 
+typedef PackageInfoLoader = Future<PackageInfo> Function();
+
 class ApiService {
   static const String baseUrl =
       'https://f95zone.to/sam/latest_alpha/latest_data.php';
@@ -24,6 +26,8 @@ class ApiService {
     String sort = 'date',
     int rows = 90,
     bool fallbackToMockOnError = false,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
   }) async {
     // On web, F95Zone API blocks CORS requests, so use mock data
     if (kIsWeb) {
@@ -32,8 +36,12 @@ class ApiService {
       return createMockData();
     }
 
+    final http.Client httpClient = client ?? http.Client();
+    final PackageInfoLoader loader = packageInfoLoader ?? PackageInfo.fromPlatform;
+    final bool shouldCloseClient = client == null;
+
     try {
-      final userAgent = await _resolveUserAgent();
+      final userAgent = await _resolveUserAgent(loader);
 
       // Build query parameters
       final Map<String, String> queryParams = {
@@ -58,7 +66,7 @@ class ApiService {
 
       final uri = Uri.parse(baseUrl).replace(queryParameters: queryParams);
 
-      final response = await http.get(
+      final response = await httpClient.get(
         uri,
         headers: {
           'User-Agent': userAgent,
@@ -72,7 +80,11 @@ class ApiService {
       }
 
       throw ApiException('Failed to load games: ${response.statusCode}');
-    } on ApiException {
+    } on ApiException catch (e) {
+      if (fallbackToMockOnError) {
+        debugPrint('ApiService.fetchGames recovered from ApiException: ${e.message}');
+        return createMockData();
+      }
       rethrow;
     } catch (e, stackTrace) {
       debugPrint('ApiService.fetchGames error: $e\n$stackTrace');
@@ -80,16 +92,20 @@ class ApiService {
         return createMockData();
       }
       throw ApiException('Failed to load games: ${e.toString()}');
+    } finally {
+      if (shouldCloseClient) {
+        httpClient.close();
+      }
     }
   }
 
-  static Future<String> _resolveUserAgent() async {
+  static Future<String> _resolveUserAgent(PackageInfoLoader loader) async {
     if (_cachedUserAgent != null) {
       return _cachedUserAgent!;
     }
 
     try {
-      final info = await PackageInfo.fromPlatform();
+      final info = await loader();
       _cachedUserAgent = 'F95Portal/${info.version} (${info.buildNumber})';
     } catch (e) {
       debugPrint('PackageInfo fetch failed: $e');
@@ -97,6 +113,11 @@ class ApiService {
     }
 
     return _cachedUserAgent!;
+  }
+
+  @visibleForTesting
+  static void clearUserAgentCache() {
+    _cachedUserAgent = null;
   }
 
   /// Creates mock data for testing UI before API integration

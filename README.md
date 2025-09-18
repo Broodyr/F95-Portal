@@ -38,7 +38,14 @@
   flutter pub get
   flutter run
   ```
-- There are no automated tests yet; manual QA is required after feature changes.
+- Automated unit/service/widget tests live under `test/`; run `flutter test` (or `tool/run_tests.sh` / `tool/run_tests.ps1`) to keep the suite green after every change.
+
+## Test-Driven Development Workflow
+- Write or update a failing test under `test/` before touching production code; mirror the lib structure (for example `test/services`, `test/widgets`).
+- Reuse `test/helpers/test_data.dart` for realistic `GameThread` fixtures and `test/helpers/widget_test_utils.dart` to wrap widgets in a minimal `MaterialApp`.
+- Service tests can inject dependencies via the optional `client`/`packageInfoLoader` parameters on `ApiService.fetchGames`; widget tests can pass a custom `fetchGames` callback into `GamesList`.
+- Keep feedback fast with `flutter test --coverage` (or the helper scripts in `tool/`); use `flutter test --watch` during active TDD loops.
+- Aim to keep the suite green after each change set - tests double as living documentation for API contracts and UI states.
 
 ## Current Limitations & Next Actions
 - Only the Games tab is wired up; other tabs trigger snackbars and placeholder screens.
