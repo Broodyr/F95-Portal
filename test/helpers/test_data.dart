@@ -1,5 +1,4 @@
 import 'package:f95_portal/models/game_thread.dart';
-import 'package:f95_portal/services/api_service.dart';
 
 GameThread createGameThread({
   int threadId = 1,
@@ -39,12 +38,7 @@ GameThread createGameThread({
   );
 }
 
-ApiResponse createApiResponse({
-  List<GameThread>? games,
-  int page = 1,
-  int total = 1,
-  int count = 1,
-}) {
+ApiResponse createApiResponse({List<GameThread>? games, int page = 1, int total = 1, int count = 1}) {
   final gameList = games ?? [createGameThread()];
   return ApiResponse(
     status: 'ok',
