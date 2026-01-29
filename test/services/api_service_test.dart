@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:f95_portal/services/api_service.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -27,7 +27,7 @@ void main() {
   group('ApiService.fetchThreads', () {
     test('parses successful HTTP response', () async {
       int loaderCalls = 0;
-      final PackageInfoLoader loader = () async {
+      loader() async {
         loaderCalls++;
         return PackageInfo(
           appName: 'F95 Portal',
@@ -35,7 +35,7 @@ void main() {
           version: '1.0.0',
           buildNumber: '42',
         );
-      };
+      }
 
       final client = MockClient((request) async {
         expect(request.headers['User-Agent'], 'F95Portal/1.0.0 (42)');
@@ -63,7 +63,7 @@ void main() {
 
     test('reuses cached user agent on subsequent calls', () async {
       int loaderCalls = 0;
-      final PackageInfoLoader loader = () async {
+      loader() async {
         loaderCalls++;
         return PackageInfo(
           appName: 'F95 Portal',
@@ -71,7 +71,7 @@ void main() {
           version: '1.0.0',
           buildNumber: '1',
         );
-      };
+      }
 
       Future<http.Response> handler(http.Request request) async {
         final body = jsonEncode({

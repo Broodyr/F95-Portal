@@ -69,7 +69,10 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.28)),
                 gradient: LinearGradient(
-                  colors: [colorScheme.surfaceVariant.withOpacity(0.2), colorScheme.surfaceVariant.withOpacity(0.12)],
+                  colors: [
+                    colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                    colorScheme.surfaceContainerHighest.withOpacity(0.12),
+                  ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -96,7 +99,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   Widget _buildSearchField(ColorScheme colorScheme) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.4),
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.4),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
       ),
@@ -129,7 +132,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? colorScheme.primary.withOpacity(0.18)
-                    : colorScheme.surfaceVariant.withOpacity(0.25),
+                    : colorScheme.surfaceContainerHighest.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: isSelected ? colorScheme.primary : Colors.transparent, width: 1.5),
               ),
