@@ -60,7 +60,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.55),
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (BuildContext context) {
         final colorScheme = Theme.of(context).colorScheme;
         return ClipRRect(
@@ -68,7 +68,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: DecoratedBox(
-              decoration: BoxDecoration(color: colorScheme.surface.withOpacity(0.32)),
+              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.32)),
               child: SearchOptionsModal(initialCategory: _activeCategory, initialQuery: _activeQuery),
             ),
           ),

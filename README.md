@@ -26,13 +26,14 @@
 - `ThreadCard` (`lib/widgets/thread_card.dart`): 3:1 cover art with mirrored reflection, segmented `EngineTag`, status-aware `VersionPill`, star rating badge, and a metadata row for formatted likes/views/time.
 - `EngineTag` & `VersionPill`: Use `ThreadUtils` and `EngineColors` (`lib/utils/formatters.dart`) to map prefix/tag IDs to display strings and palette.
 - `CustomBottomNavigation` (`lib/widgets/bottom_navigation.dart`): Glass pill nav with animated icons; vertical drags and taps pass through to the shared scroll controller for gesture continuity.
-- `SearchFab` (`lib/widgets/search_fab.dart`): Floating search button that also forwards vertical drags to scrolling; callbacks currently stubbed for future search modal.
+- `SearchFab` (`lib/widgets/search_fab.dart`): Floating search button that also forwards vertical drags to scrolling; opens `SearchOptionsModal`.
+- `SearchOptionsModal` (`lib/widgets/search_options_modal.dart`): Glass bottom sheet with a query field and category selector; returns a `SearchOptionsResult`. Category switching re-fetches the list, but the query text is not yet sent to the API.
 - `ThreadDetailsModal` (`lib/widgets/thread_details_modal.dart`): Bottom sheet placeholder opened on card tap, ready for richer detail content.
 - `PreRenderedNoisyBackground` (`lib/widgets/noisy_background.dart`): Utility for caching a noise texture; the call is currently commented out in `ThreadsScreen`.
 
 ## Development Notes
 - Toolchain: Flutter SDK 3.8.1+, Dart 3.8+ (`pubspec.yaml`).
-- Dependencies in use: `http` (network), `cached_network_image` (cover caching), `flutter_staggered_grid_view` (reserved for upcoming layouts), `cupertino_icons`.
+- Dependencies in use: `http` (network), `cached_network_image` (cover caching), `flutter_staggered_grid_view` (reserved for upcoming layouts), `package_info_plus` (User-Agent versioning), `cupertino_icons`.
 - Install & run:
   ```bash
   flutter pub get
@@ -44,12 +45,12 @@
 - Write or update a failing test under `test/` before touching production code; mirror the lib structure (for example `test/services`, `test/widgets`).
 - Reuse `test/helpers/test_data.dart` for realistic `ThreadSummary` fixtures and `test/helpers/widget_test_utils.dart` to wrap widgets in a minimal `MaterialApp`.
 - Service tests can inject dependencies via the optional `client`/`packageInfoLoader` parameters on `ApiService.fetchThreads`; widget tests can pass a custom `fetchThreads` callback into `ThreadsList`.
-- Keep feedback fast with `flutter test --coverage` (or the helper scripts in `tool/`); use `flutter test --watch` during active TDD loops.
+- Keep feedback fast with `flutter test --coverage` (or the helper scripts in `tool/`), or scope runs to a single file (`flutter test test/widgets/threads_list_test.dart`) during active TDD loops.
 - Aim to keep the suite green after each change set - tests double as living documentation for API contracts and UI states.
 
 ## Current Limitations & Next Actions
 - Only the Threads tab is wired up; other tabs trigger snackbars and placeholder screens.
-- Filter/search UX is not implemented; wire `SearchFab` callbacks once designs are ready.
+- The search modal collects a query string, but `ApiService.fetchThreads` has no search parameter yet, so the query is currently ignored.
 - `ThreadDetailsModal` contains placeholder messaging.
 - Engine and tag mappings in `ThreadUtils` are incomplete and based on a small sample set; update alongside `docs/api_mappings.md` as more API data is observed.
 - Networking lacks pagination, rich error messaging, and auth/session handling; consider introducing repository-level caching once live data usage stabilizes.

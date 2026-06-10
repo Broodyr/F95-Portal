@@ -67,11 +67,11 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.28)),
+                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.28)),
                 gradient: LinearGradient(
                   colors: [
-                    colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                    colorScheme.surfaceContainerHighest.withOpacity(0.12),
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.12),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -99,9 +99,9 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   Widget _buildSearchField(ColorScheme colorScheme) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.4),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
       ),
       child: TextField(
         controller: _searchController,
@@ -131,8 +131,8 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               duration: const Duration(milliseconds: 180),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? colorScheme.primary.withOpacity(0.18)
-                    : colorScheme.surfaceContainerHighest.withOpacity(0.25),
+                    ? colorScheme.primary.withValues(alpha: 0.18)
+                    : colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: isSelected ? colorScheme.primary : Colors.transparent, width: 1.5),
               ),

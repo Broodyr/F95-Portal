@@ -19,12 +19,12 @@ void main() {
   group('EngineColors', () {
     test('returns known engine color', () {
       final color = EngineColors.getEngineColor("Ren'Py");
-      expect(color.value, 0xFF9d46e3);
+      expect(color.toARGB32(), 0xFF9d46e3);
     });
 
     test('falls back to Others for unknown engines', () {
       final color = EngineColors.getEngineColor('Unknown Engine');
-      expect(color.value, 0xFF6e9e37);
+      expect(color.toARGB32(), 0xFF6e9e37);
     });
   });
 
