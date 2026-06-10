@@ -11,6 +11,8 @@
 - `lib/screens/threads_screen.dart`: Hosts the gradient background, `ThreadsList`, and floating search FAB column.
 - `lib/widgets/threads_list.dart`: Stateful list that owns loading state, calls `ApiService.fetchThreads()`, exposes pull-to-refresh, and opens the detail modal.
 - `lib/services/api_service.dart`: Wraps `https://f95zone.to/sam/latest_alpha/latest_data.php` (`cmd=list` for threads, `cmd=tags` for popular tags), with an optional mock fallback (`createMockData`).
+- `lib/services/auth_service.dart`: Holds the F95Zone (XenForo) session cookies captured at login, persisted in platform secure storage; `ApiService` attaches them to every request, lifting the anonymous hourly rate limit.
+- `lib/screens/login_screen.dart` / `lib/screens/profile_screen.dart`: In-app webview pointed at the real f95zone.to login page (captcha/2FA work natively) that captures the `xf_user` remember-me cookie, and the Profile tab hosting sign-in/sign-out.
 - `lib/models/search_query.dart`: Immutable description of a feed/search request (category, title/creator search, tag/prefix include+exclude filters, sort) and its mapping to API query parameters.
 - `lib/models/f95_metadata.dart`: Typed access to the bundled prefix/tag vocabulary (`assets/f95_metadata.json`), loaded once at startup; powers engine labels and search autocomplete.
 - `lib/models/thread_summary.dart`: Strongly-typed model for API responses, including helpers for completion/abandoned/on-hold status flags and response scaffolding (`ApiResponse`, `Pagination`).
@@ -36,7 +38,7 @@
 
 ## Development Notes
 - Toolchain: Flutter SDK 3.8.1+, Dart 3.8+ (`pubspec.yaml`).
-- Dependencies in use: `http` (network), `cached_network_image` (cover caching), `flutter_staggered_grid_view` (reserved for upcoming layouts), `package_info_plus` (User-Agent versioning), `cupertino_icons`.
+- Dependencies in use: `http` (network), `cached_network_image` (cover caching), `flutter_staggered_grid_view` (reserved for upcoming layouts), `package_info_plus` (User-Agent versioning), `flutter_inappwebview` (login webview), `flutter_secure_storage` (session cookies), `cupertino_icons`.
 - Install & run:
   ```bash
   flutter pub get
@@ -52,9 +54,10 @@
 - Aim to keep the suite green after each change set - tests double as living documentation for API contracts and UI states.
 
 ## Current Limitations & Next Actions
-- Only the Threads tab is wired up; other tabs trigger snackbars and placeholder screens.
+- Threads and Profile tabs are wired up; Forum/Search/Settings still trigger snackbars and placeholder screens.
 - `ThreadDetailsModal` contains placeholder messaging.
-- Networking lacks pagination (the `page` parameter exists but nothing loads page 2), rich error messaging, and auth/session handling; consider introducing repository-level caching once live data usage stabilizes.
+- Networking lacks pagination (the `page` parameter exists but nothing loads page 2); consider introducing repository-level caching once live data usage stabilizes.
+- Sign-in state shows no username/avatar yet — the latest_alpha endpoint exposes no profile info, so that needs scraping a forum page.
 - Cover image aspect ratio is still being tweaked (docs say 4:1, `CoverImage` renders 3:1); settle during final design pass.
 
 ## Roadmap Seeds

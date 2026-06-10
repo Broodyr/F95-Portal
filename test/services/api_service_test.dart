@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:f95_portal/models/search_category.dart';
 import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/services/api_service.dart';
+import 'package:f95_portal/services/auth_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
+import '../helpers/in_memory_cookie_storage.dart';
 
 PackageInfo _packageInfo() =>
     PackageInfo(appName: 'F95 Portal', packageName: 'com.example.f95portal', version: '1.0.0', buildNumber: '42');
@@ -209,6 +212,35 @@ void main() {
         () => ApiService.fetchThreads(client: client, packageInfoLoader: () async => _packageInfo()),
         throwsA(isA<ApiException>()),
       );
+    });
+
+    test('attaches session cookies when logged in, none when logged out', () async {
+      final previous = AuthService.instance;
+      addTearDown(() => AuthService.instance = previous);
+
+      final requestCookies = <String?>[];
+      final client = MockClient((request) async {
+        requestCookies.add(request.headers['Cookie']);
+        return http.Response(
+          jsonEncode({
+            'status': 'ok',
+            'msg': {
+              'data': [],
+              'pagination': {'page': 1, 'total': 0},
+              'count': 0,
+            },
+          }),
+          200,
+        );
+      });
+
+      AuthService.instance = AuthService(InMemoryCookieStorage());
+      await ApiService.fetchThreads(client: client, packageInfoLoader: () async => _packageInfo());
+
+      await AuthService.instance.saveCookies({'xf_user': 'tok', 'xf_session': 's'});
+      await ApiService.fetchThreads(client: client, packageInfoLoader: () async => _packageInfo());
+
+      expect(requestCookies, [null, 'xf_user=tok; xf_session=s']);
     });
 
     test('surfaces the server error message from non-200 JSON bodies', () {

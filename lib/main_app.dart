@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/profile_screen.dart';
 import 'screens/threads_screen.dart';
 import 'widgets/bottom_navigation.dart';
 
@@ -23,8 +24,8 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _onTabTapped(int index) {
-    if (index == 0) {
-      // Threads tab - already implemented
+    if (index == 0 || index == 4) {
+      // Implemented tabs: Threads and Profile
       setState(() {
         _currentIndex = index;
       });
@@ -60,6 +61,8 @@ class _MainAppState extends State<MainApp> {
     switch (_currentIndex) {
       case 0:
         return ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible);
+      case 4:
+        return const ProfileScreen();
       default:
         // Placeholder for other tabs
         return Scaffold(

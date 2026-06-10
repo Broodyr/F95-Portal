@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../models/thread_summary.dart';
+import 'auth_service.dart';
 
 typedef PackageInfoLoader = Future<PackageInfo> Function();
 
@@ -94,7 +95,13 @@ class ApiService {
       final userAgent = await _resolveUserAgent(loader);
       final uri = Uri.parse(baseUrl).replace(queryParameters: queryParams);
 
-      final response = await httpClient.get(uri, headers: {'User-Agent': userAgent, 'Accept': 'application/json'});
+      final headers = {'User-Agent': userAgent, 'Accept': 'application/json'};
+      // Session cookies lift the anonymous hourly rate limit and unlock
+      // user-specific fields (watched/ignored) in responses.
+      final cookies = AuthService.instance.cookieHeader;
+      if (cookies != null) headers['Cookie'] = cookies;
+
+      final response = await httpClient.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         return parse(json.decode(response.body));
