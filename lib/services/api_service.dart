@@ -16,7 +16,7 @@ class PopularTag {
   const PopularTag({required this.tagId, required this.count});
 
   factory PopularTag.fromJson(Map<String, dynamic> json) {
-    return PopularTag(tagId: json['tag_id'] ?? 0, count: json['count'] ?? 0);
+    return PopularTag(tagId: (json['tag_id'] as num? ?? 0).toInt(), count: (json['count'] as num? ?? 0).toInt());
   }
 }
 

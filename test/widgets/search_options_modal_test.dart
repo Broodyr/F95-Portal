@@ -169,8 +169,14 @@ void main() {
     expect(query.sort, SortOrder.rating);
   });
 
-  testWidgets('popular tags appear as suggestions while the field is empty', (tester) async {
+  testWidgets('popular tags appear once the empty field is focused', (tester) async {
     final getResult = await pumpModal(tester, popularTags: const [PopularTag(tagId: 103, count: 999)]);
+
+    // Compact until the user shows intent by focusing the field.
+    expect(find.text('corruption'), findsNothing);
+
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
 
     expect(find.text('corruption'), findsOneWidget);
 

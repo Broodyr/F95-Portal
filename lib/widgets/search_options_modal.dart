@@ -4,6 +4,7 @@ import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../services/api_service.dart';
+import '../utils/formatters.dart';
 
 typedef FetchPopularTagsCallback = Future<List<PopularTag>> Function({SearchCategory category});
 
@@ -45,8 +46,9 @@ class SearchOptionsModal extends StatefulWidget {
 class _SearchOptionsModalState extends State<SearchOptionsModal> {
   static const int _maxTagSuggestions = 6;
   static const int _maxPrefixSuggestions = 4;
-  static const int _maxPopularTags = 12;
+  static const int _maxPopularTags = 8;
 
+  final FocusNode _searchFocus = FocusNode();
   late final TextEditingController _searchController;
   late SearchCategory _selectedCategory;
   late SortOrder _sort;
@@ -69,6 +71,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     _sort = query.sort;
     _searchController = TextEditingController(text: query.search);
     _searchController.addListener(_onTextChanged);
+    _searchFocus.addListener(_onTextChanged);
     _creator = query.creator.trim().isEmpty ? null : query.creator.trim();
     _restoreFilters(query);
     _loadPopularTags();
@@ -77,6 +80,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -207,6 +211,8 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
     final suggestions = _buildSuggestions(_searchController.text);
+    final bool showPopular =
+        _searchFocus.hasFocus && _searchController.text.trim().isEmpty && _popularSuggestions.isNotEmpty;
 
     return SafeArea(
       child: AnimatedPadding(
@@ -223,19 +229,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                 const SizedBox(height: 12),
               ],
               _buildSearchField(colorScheme),
-              if (suggestions.isNotEmpty || _hasCreatorSuggestion) ...[
+              if (suggestions.isNotEmpty || _hasCreatorSuggestion || showPopular) ...[
                 const SizedBox(height: 8),
-                _buildSuggestionList(colorScheme, suggestions),
-              ] else if (_popularSuggestions.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text('Popular tags', style: textTheme.titleSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                _buildPopularTags(colorScheme),
+                _buildSuggestionList(colorScheme, suggestions, showPopular: showPopular),
               ],
               const SizedBox(height: 24),
               Text('Category', style: textTheme.titleMedium),
               const SizedBox(height: 8),
-              _buildSelectorSurface(colorScheme, _buildCategorySelector(colorScheme)),
+              _buildCategorySelector(colorScheme),
               const SizedBox(height: 16),
               Text('Sort by', style: textTheme.titleMedium),
               const SizedBox(height: 8),
@@ -277,6 +278,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
       ),
       child: TextField(
         controller: _searchController,
+        focusNode: _searchFocus,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => _onSubmit(),
         decoration: const InputDecoration(
@@ -314,7 +316,8 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     );
   }
 
-  Widget _buildSuggestionList(ColorScheme colorScheme, List<_Suggestion> suggestions) {
+  Widget _buildSuggestionList(ColorScheme colorScheme, List<_Suggestion> suggestions, {bool showPopular = false}) {
+    final metadata = F95Metadata.instance;
     return Container(
       constraints: const BoxConstraints(maxHeight: 240),
       decoration: BoxDecoration(
@@ -348,89 +351,77 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               title: Text('Creator: "${_searchController.text.trim()}"'),
               onTap: _setCreatorFromText,
             ),
+          if (showPopular)
+            for (final tag in _popularSuggestions)
+              ListTile(
+                dense: true,
+                visualDensity: VisualDensity.compact,
+                leading: Icon(Icons.trending_up, size: 18, color: colorScheme.onSurfaceVariant),
+                title: Text(metadata.tagName(tag.tagId)!),
+                trailing: Text(
+                  NumberFormatter.formatNumber(tag.count),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                ),
+                onTap: () => _addFilter(_FilterKind.tag, tag.tagId, metadata.tagName(tag.tagId)!),
+              ),
         ],
       ),
     );
   }
 
-  Widget _buildPopularTags(ColorScheme colorScheme) {
-    final metadata = F95Metadata.instance;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final tag in _popularSuggestions)
-          GestureDetector(
-            onTap: () => _addFilter(_FilterKind.tag, tag.tagId, metadata.tagName(tag.tagId)!),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.25)),
+  Widget _buildChoicePill(
+    ColorScheme colorScheme, {
+    required String label,
+    IconData? icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final Color foreground = selected ? colorScheme.primary : colorScheme.onSurfaceVariant;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? colorScheme.primary.withValues(alpha: 0.18)
+              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? colorScheme.primary : Colors.transparent, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[Icon(icon, size: 16, color: foreground), const SizedBox(width: 6)],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: foreground,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
-              child: Text(metadata.tagName(tag.tagId)!, style: const TextStyle(fontSize: 13)),
             ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildSelectorSurface(ColorScheme colorScheme, Widget child) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.28)),
-        gradient: LinearGradient(
-          colors: [
-            colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-            colorScheme.surfaceContainerHighest.withValues(alpha: 0.12),
           ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
         ),
       ),
-      child: Padding(padding: const EdgeInsets.all(12), child: child),
     );
   }
 
   Widget _buildCategorySelector(ColorScheme colorScheme) {
-    final entries = SearchCategory.values.map((category) {
-      final bool isSelected = _selectedCategory == category;
-      final icon = _categoryIcons[category]!;
-
-      return Expanded(
-        child: Tooltip(
-          message: category.displayLabel,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? colorScheme.primary.withValues(alpha: 0.18)
-                    : colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isSelected ? colorScheme.primary : Colors.transparent, width: 1.5),
-              ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () => _onCategoryChanged(category),
-                  child: SizedBox(
-                    height: 56,
-                    child: Icon(icon, color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant, size: 26),
-                  ),
-                ),
-              ),
-            ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final category in SearchCategory.values)
+          _buildChoicePill(
+            colorScheme,
+            label: category.displayLabel,
+            icon: _categoryIcons[category],
+            selected: _selectedCategory == category,
+            onTap: () => _onCategoryChanged(category),
           ),
-        ),
-      );
-    }).toList();
-
-    return Row(children: entries);
+      ],
+    );
   }
 
   Widget _buildSortSelector(ColorScheme colorScheme) {
@@ -439,27 +430,11 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
       runSpacing: 8,
       children: [
         for (final order in SortOrder.values)
-          GestureDetector(
+          _buildChoicePill(
+            colorScheme,
+            label: order.displayLabel,
+            selected: _sort == order,
             onTap: () => setState(() => _sort = order),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: _sort == order
-                    ? colorScheme.primary.withValues(alpha: 0.18)
-                    : colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: _sort == order ? colorScheme.primary : Colors.transparent, width: 1.5),
-              ),
-              child: Text(
-                order.displayLabel,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: _sort == order ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                  fontWeight: _sort == order ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-            ),
           ),
       ],
     );
@@ -487,9 +462,10 @@ class _FilterChipPill extends StatelessWidget {
     final Color accent = exclude ? colorScheme.error : colorScheme.primary;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+        padding: const EdgeInsets.fromLTRB(10, 2, 0, 2),
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.16),
           borderRadius: BorderRadius.circular(999),
@@ -498,15 +474,20 @@ class _FilterChipPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(exclude ? Icons.remove : Icons.add, size: 14, color: accent),
-            const SizedBox(width: 2),
+            // The include/exclude state is the most important bit of the chip,
+            // so render it white and heavy rather than in the accent tint.
+            Icon(exclude ? Icons.remove : Icons.add, size: 18, color: Colors.white, weight: 700),
+            const SizedBox(width: 3),
             Icon(icon, size: 14, color: accent),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 13, color: accent)),
-            const SizedBox(width: 4),
+            Text(label, style: TextStyle(fontSize: 13, color: accent, fontWeight: FontWeight.w500)),
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: onRemove,
-              child: Icon(Icons.close, size: 14, color: accent.withValues(alpha: 0.7)),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 10, 8),
+                child: Icon(Icons.close, size: 16, color: accent.withValues(alpha: 0.8)),
+              ),
             ),
           ],
         ),

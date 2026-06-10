@@ -43,6 +43,31 @@ void main() {
       expect(thread.timestamp, 1234567890);
     });
 
+    test('fromJson tolerates numeric fields arriving as doubles', () {
+      // JSON numbers decode as double whenever the API emits a decimal point;
+      // one such thread must not kill the whole response parse.
+      final json = {
+        'thread_id': 42.0,
+        'title': 'Doubles',
+        'views': 12345.0,
+        'likes': 678.0,
+        'prefixes': [3.0, 18],
+        'tags': [107, 191.0],
+        'rating': 4,
+        'ts': 1234567890.0,
+      };
+
+      final thread = ThreadSummary.fromJson(json);
+
+      expect(thread.threadId, 42);
+      expect(thread.views, 12345);
+      expect(thread.likes, 678);
+      expect(thread.prefixes, [3, 18]);
+      expect(thread.tags, [107, 191]);
+      expect(thread.rating, 4.0);
+      expect(thread.timestamp, 1234567890);
+    });
+
     test('toJson serializes correctly', () {
       final thread = ThreadSummary(
         threadId: 7,
@@ -130,6 +155,23 @@ void main() {
       expect(response.data.pagination.total, 4);
       expect(response.data.count, 120);
       expect(response.data.threads.first.title, 'Nested');
+    });
+
+    test('tolerates double-typed pagination and count', () {
+      final json = {
+        'status': 'ok',
+        'msg': {
+          'data': [],
+          'pagination': {'page': 2.0, 'total': 4.0},
+          'count': 120.0,
+        },
+      };
+
+      final response = ApiResponse.fromJson(json);
+
+      expect(response.data.pagination.page, 2);
+      expect(response.data.pagination.total, 4);
+      expect(response.data.count, 120);
     });
   });
 }

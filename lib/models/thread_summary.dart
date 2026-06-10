@@ -1,3 +1,14 @@
+/// JSON numbers decode as double whenever the source emits a decimal point,
+/// so every numeric field must accept any [num].
+int _asInt(dynamic value, [int fallback = 0]) => value is num ? value.toInt() : fallback;
+
+double _asDouble(dynamic value, [double fallback = 0.0]) => value is num ? value.toDouble() : fallback;
+
+List<int> _asIntList(dynamic value) => [
+  for (final item in value as List? ?? const [])
+    if (item is num) item.toInt(),
+];
+
 class ThreadSummary {
   final int threadId;
   final String title;
@@ -37,22 +48,22 @@ class ThreadSummary {
 
   factory ThreadSummary.fromJson(Map<String, dynamic> json) {
     return ThreadSummary(
-      threadId: json['thread_id'] ?? 0,
+      threadId: _asInt(json['thread_id']),
       title: json['title'] ?? '',
       creator: json['creator'] ?? '',
       version: json['version'] ?? '',
-      views: json['views'] ?? 0,
-      likes: json['likes'] ?? 0,
-      prefixes: List<int>.from(json['prefixes'] ?? []),
-      tags: List<int>.from(json['tags'] ?? []),
-      rating: (json['rating'] ?? 0.0).toDouble(),
+      views: _asInt(json['views']),
+      likes: _asInt(json['likes']),
+      prefixes: _asIntList(json['prefixes']),
+      tags: _asIntList(json['tags']),
+      rating: _asDouble(json['rating']),
       cover: json['cover'] ?? '',
       screens: List<String>.from(json['screens'] ?? []),
       date: json['date'] ?? '',
       watched: json['watched'] ?? false,
       ignored: json['ignored'] ?? false,
       isNew: json['new'] ?? false,
-      timestamp: json['ts'] ?? 0,
+      timestamp: _asInt(json['ts']),
     );
   }
 
@@ -104,7 +115,7 @@ class ApiResponseData {
     return ApiResponseData(
       threads: (json['data'] as List? ?? []).map((item) => ThreadSummary.fromJson(item)).toList(),
       pagination: Pagination.fromJson(json['pagination'] ?? {}),
-      count: json['count'] ?? 0,
+      count: _asInt(json['count']),
     );
   }
 }
@@ -116,6 +127,6 @@ class Pagination {
   Pagination({required this.page, required this.total});
 
   factory Pagination.fromJson(Map<String, dynamic> json) {
-    return Pagination(page: json['page'] ?? 1, total: json['total'] ?? 0);
+    return Pagination(page: _asInt(json['page'], 1), total: _asInt(json['total']));
   }
 }
