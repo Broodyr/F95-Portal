@@ -12,6 +12,12 @@ import '../helpers/metadata_test_utils.dart';
 import '../helpers/test_data.dart';
 import '../helpers/widget_test_utils.dart';
 
+/// Builds a page of [count] distinct threads, titled "P(page) #(n)".
+List<ThreadSummary> pageOf(int page, int count, {int idOffset = 0}) => [
+  for (int i = 0; i < count; i++)
+    createThreadSummary(threadId: page * 1000 + idOffset + i, title: 'P$page #$i'),
+];
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -125,6 +131,112 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(reportedCount, 321);
+  });
+
+  testWidgets('loads the next page when scrolled near the end', (tester) async {
+    final requestedPages = <int>[];
+
+    pagedFetch({
+      SearchQuery query = const SearchQuery(),
+      int page = 1,
+      int rows = 90,
+      bool fallbackToMockOnError = false,
+    }) async {
+      requestedPages.add(page);
+      return createApiResponse(threads: pageOf(page, 8), page: page, total: 3, count: 24);
+    }
+
+    await pumpTestApp(tester, ThreadsList(fetchThreads: pagedFetch));
+    await tester.pumpAndSettle();
+
+    expect(requestedPages, [1]);
+    expect(find.text('P1 #0'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('P2 #0'), 400);
+    await tester.pumpAndSettle();
+
+    // Keep going: the third (final) page loads and its tail is reachable.
+    await tester.scrollUntilVisible(find.text('P3 #7'), 400);
+    await tester.pumpAndSettle();
+
+    // Pages requested sequentially, exactly once each, never beyond the last.
+    expect(requestedPages, [1, 2, 3]);
+    expect(find.text('P3 #7'), findsOneWidget);
+  });
+
+  testWidgets('does not request beyond the last page', (tester) async {
+    final requestedPages = <int>[];
+
+    singlePageFetch({
+      SearchQuery query = const SearchQuery(),
+      int page = 1,
+      int rows = 90,
+      bool fallbackToMockOnError = false,
+    }) async {
+      requestedPages.add(page);
+      return createApiResponse(threads: pageOf(page, 8), page: page, total: 1, count: 8);
+    }
+
+    await pumpTestApp(tester, ThreadsList(fetchThreads: singlePageFetch));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView), const Offset(0, -30000));
+    await tester.pumpAndSettle();
+
+    expect(requestedPages, [1]);
+  });
+
+  testWidgets('deduplicates threads that shift between pages', (tester) async {
+    overlappingFetch({
+      SearchQuery query = const SearchQuery(),
+      int page = 1,
+      int rows = 90,
+      bool fallbackToMockOnError = false,
+    }) async {
+      // Page 2 re-serves the last page-1 thread (id 1007) plus new ones.
+      final threads = page == 1 ? pageOf(1, 8) : [createThreadSummary(threadId: 1007, title: 'P1 #7'), ...pageOf(2, 4)];
+      return createApiResponse(threads: threads, page: page, total: 2, count: 12);
+    }
+
+    await pumpTestApp(tester, ThreadsList(fetchThreads: overlappingFetch));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView), const Offset(0, -30000));
+    await tester.pumpAndSettle();
+
+    // 8 from page 1 + 5 from page 2 minus the 1 duplicate = 12 list items
+    // (no load-more footer once the last page is reached).
+    final listView = tester.widget<ListView>(find.byType(ListView));
+    expect(listView.semanticChildCount, 12);
+  });
+
+  testWidgets('query change resets back to page one', (tester) async {
+    final requests = <(SearchQuery, int)>[];
+
+    recordingFetch({
+      SearchQuery query = const SearchQuery(),
+      int page = 1,
+      int rows = 90,
+      bool fallbackToMockOnError = false,
+    }) async {
+      requests.add((query, page));
+      return createApiResponse(threads: pageOf(page, 8), page: page, total: 3, count: 24);
+    }
+
+    Widget buildList(SearchQuery query) =>
+        MaterialApp(home: Scaffold(body: ThreadsList(fetchThreads: recordingFetch, query: query)));
+
+    await tester.pumpWidget(buildList(const SearchQuery()));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -30000));
+    await tester.pumpAndSettle();
+
+    const updated = SearchQuery(search: 'goblin');
+    await tester.pumpWidget(buildList(updated));
+    await tester.pumpAndSettle();
+
+    expect(requests.last, (updated, 1));
+    expect(find.text('P1 #0'), findsOneWidget);
   });
 
   testWidgets('does not refetch when rebuilt with an equal query', (tester) async {

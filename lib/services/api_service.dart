@@ -351,8 +351,9 @@ class ApiService {
       status: "ok",
       data: ApiResponseData(
         threads: mockThreads,
-        pagination: Pagination(page: 1, total: 7),
-        count: 1247, // More realistic total count
+        // total is the page count; the 7 fixtures are a single page.
+        pagination: Pagination(page: 1, total: 1),
+        count: mockThreads.length,
       ),
     );
   }
