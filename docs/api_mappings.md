@@ -17,6 +17,10 @@ GET https://f95zone.to/sam/latest_alpha/latest_data.php
 
 - **No authentication required** for `cmd=list`, `cmd=tags`, `cmd=rss`. (The HTML page at
   `/sam/latest_alpha/` *does* require login, but the data endpoint does not.)
+- **Anonymous requests are rate-limited per hour** — exceeding it returns a non-200 with
+  `{"status":"error","msg":"Anonymous users have a limited amount of requests per hour,
+  please login to continue"}`. Normal app usage is fine (it took a rapid probing session
+  to trip it); authenticated sessions get more headroom.
 - Web browsers are blocked by CORS; mobile/desktop clients are fine.
 - Any `User-Agent` works (the app sends `F95Portal/<version> (<build>)`).
 
@@ -59,12 +63,8 @@ dump is committed as [`assets/f95_metadata.json`](../assets/f95_metadata.json) (
 | `tags[N]` | tag ID | Threads must have **all** listed tags (AND). **Max 10** — an 11th causes ALL tag filters to be silently dropped (and `prefixes`/`tags` in the response switch to space-separated strings). |
 | `notags[N]` | tag ID | Excludes threads with any listed tag. Same 10-entry limit. |
 | `date` | days (int) | Only threads updated within the last N days (official UI uses 1/3/7/14/30/90/180/365; arbitrary values work). |
+| `tagtype` | `or` | Switches include-tag matching from ALL to ANY (verified: tags 107+130 AND=5 546, `tagtype=or`=19 045 = the union). Exclusions are unaffected. |
 | `_` | timestamp | Cache buster, optional. |
-
-The official frontend offers an OR mode for include-tags, but the parameter is unknown —
-probed and rejected 2026-06-09: `tagmode`, `tags_mode`, `anytags`, `tagsor`, `tags_op`,
-`logic`, `op`, `match`, comma/pipe-joined values, and a dozen others all leave the AND
-behavior unchanged. Capture the request the official page makes in OR mode to resolve.
 
 Unknown parameter names are silently ignored (so a typo'd filter returns the unfiltered
 list — verify with `msg.count` when testing).

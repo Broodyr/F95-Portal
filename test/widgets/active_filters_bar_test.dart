@@ -70,6 +70,21 @@ void main() {
     expect(updated!.tags, [225]);
   });
 
+  testWidgets('match-any mode renders as a chip and removal restores all-match', (tester) async {
+    SearchQuery? updated;
+    const anyQuery = SearchQuery(tags: [225, 103], anyTags: true);
+    await pumpTestApp(
+      tester,
+      ActiveFiltersBar(query: anyQuery, resultCount: null, onQueryChanged: (q) => updated = q),
+    );
+
+    await tester.tap(find.text('Match: any'));
+    await tester.pumpAndSettle();
+
+    expect(updated!.anyTags, isFalse);
+    expect(updated!.tags, [225, 103]);
+  });
+
   testWidgets('date limit renders as a chip and removal clears it', (tester) async {
     SearchQuery? updated;
     const dated = SearchQuery(dateDays: 30);

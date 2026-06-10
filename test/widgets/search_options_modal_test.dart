@@ -177,6 +177,28 @@ void main() {
     expect(query.tags, isNot(contains(258)));
   });
 
+  testWidgets('match-any toggle appears with two include tags and round-trips', (tester) async {
+    final getResult = await pumpModal(tester, initialQuery: const SearchQuery(tags: [225, 103]));
+
+    expect(find.text('Match: all'), findsOneWidget);
+
+    await tester.tap(find.text('Match: all'));
+    await tester.pumpAndSettle();
+    expect(find.text('Match: any'), findsOneWidget);
+
+    await submitModal(tester);
+
+    final query = getResult();
+    expect(query!.anyTags, isTrue);
+    expect(query.tags, [225, 103]);
+  });
+
+  testWidgets('match toggle is hidden with fewer than two include tags', (tester) async {
+    await pumpModal(tester, initialQuery: const SearchQuery(tags: [225]));
+
+    expect(find.textContaining('Match:'), findsNothing);
+  });
+
   testWidgets('date limit selection round-trips', (tester) async {
     final getResult = await pumpModal(tester);
 

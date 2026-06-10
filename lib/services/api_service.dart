@@ -100,7 +100,16 @@ class ApiService {
         return parse(json.decode(response.body));
       }
 
-      throw ApiException('Failed to load threads: ${response.statusCode}');
+      // Error bodies carry a human-readable msg (e.g. the anonymous
+      // hourly rate limit) — surface it instead of just the status code.
+      String detail = '${response.statusCode}';
+      try {
+        final body = json.decode(response.body);
+        if (body is Map && body['msg'] is String) {
+          detail = '${body['msg']} (HTTP ${response.statusCode})';
+        }
+      } catch (_) {}
+      throw ApiException('Failed to load threads: $detail');
     } on ApiException catch (e) {
       if (onError != null) {
         debugPrint('ApiService recovered from ApiException: ${e.message}');
@@ -151,7 +160,12 @@ class ApiService {
     final threads = response.data.threads.where((thread) {
       if (search.isNotEmpty && !thread.title.toLowerCase().contains(search)) return false;
       if (creator.isNotEmpty && !thread.creator.toLowerCase().contains(creator)) return false;
-      if (query.tags.any((tag) => !thread.tags.contains(tag))) return false;
+      if (query.tags.isNotEmpty) {
+        final matchesTags = query.anyTags
+            ? query.tags.any((tag) => thread.tags.contains(tag))
+            : query.tags.every((tag) => thread.tags.contains(tag));
+        if (!matchesTags) return false;
+      }
       if (query.notags.any((tag) => thread.tags.contains(tag))) return false;
       if (query.prefixes.isNotEmpty && !query.prefixes.any((p) => thread.prefixes.contains(p))) return false;
       if (query.noprefixes.any((p) => thread.prefixes.contains(p))) return false;

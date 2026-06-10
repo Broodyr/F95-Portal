@@ -63,6 +63,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   late SearchCategory _selectedCategory;
   late SortOrder _sort;
   int? _dateDays;
+  bool _anyTags = false;
   final List<_ActiveFilter> _filters = [];
   String? _creator;
   String? _title;
@@ -83,6 +84,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     _selectedCategory = query.category;
     _sort = query.sort;
     _dateDays = query.dateDays;
+    _anyTags = query.anyTags;
     _searchController = TextEditingController(text: query.search);
     _searchController.addListener(_onTextChanged);
     _searchFocus.addListener(_onTextChanged);
@@ -256,6 +258,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
         noprefixes: [for (final f in _filters) if (f.kind == _FilterKind.prefix && f.exclude) f.id],
         sort: _sort,
         dateDays: _dateDays,
+        anyTags: _anyTags,
       ),
     );
   }
@@ -390,6 +393,29 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             icon: Icons.person_outline,
             onTap: () {},
             onRemove: () => setState(() => _creator = null),
+          ),
+        if (_tagFilterCount(exclude: false) >= 2)
+          GestureDetector(
+            onTap: () => setState(() => _anyTags = !_anyTags),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(_anyTags ? Icons.join_full : Icons.join_inner, size: 14, color: Colors.white),
+                  const SizedBox(width: 4),
+                  Text(
+                    _anyTags ? 'Match: any' : 'Match: all',
+                    style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
           ),
       ],
     );

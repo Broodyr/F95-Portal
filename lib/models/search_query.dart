@@ -35,6 +35,10 @@ class SearchQuery {
   /// null means no limit. The API accepts arbitrary day counts.
   final int? dateDays;
 
+  /// When true, include-tags match ANY instead of ALL (`tagtype=or`).
+  /// Has no effect on exclusions, which are always any-match.
+  final bool anyTags;
+
   /// The API silently discards ALL tag filters when more than 10 are sent,
   /// so the UI must cap include and exclude tags at this many each.
   static const int maxTagsPerDirection = 10;
@@ -49,6 +53,7 @@ class SearchQuery {
     this.noprefixes = const [],
     this.sort = SortOrder.date,
     this.dateDays,
+    this.anyTags = false,
   });
 
   bool get hasActiveFilters =>
@@ -74,6 +79,7 @@ class SearchQuery {
     final trimmedCreator = creator.trim();
     if (trimmedCreator.isNotEmpty) params['creator'] = trimmedCreator;
     if (dateDays != null) params['date'] = dateDays.toString();
+    if (anyTags && tags.isNotEmpty) params['tagtype'] = 'or';
 
     void addArray(String name, List<int> values) {
       for (int i = 0; i < values.length; i++) {
@@ -101,6 +107,7 @@ class SearchQuery {
     List<int>? noprefixes,
     SortOrder? sort,
     Object? dateDays = _unset,
+    bool? anyTags,
   }) {
     return SearchQuery(
       category: category ?? this.category,
@@ -112,6 +119,7 @@ class SearchQuery {
       noprefixes: noprefixes ?? this.noprefixes,
       sort: sort ?? this.sort,
       dateDays: identical(dateDays, _unset) ? this.dateDays : dateDays as int?,
+      anyTags: anyTags ?? this.anyTags,
     );
   }
 
@@ -126,7 +134,8 @@ class SearchQuery {
         listEquals(other.prefixes, prefixes) &&
         listEquals(other.noprefixes, noprefixes) &&
         other.sort == sort &&
-        other.dateDays == dateDays;
+        other.dateDays == dateDays &&
+        other.anyTags == anyTags;
   }
 
   @override
@@ -140,5 +149,6 @@ class SearchQuery {
     Object.hashAll(noprefixes),
     sort,
     dateDays,
+    anyTags,
   );
 }

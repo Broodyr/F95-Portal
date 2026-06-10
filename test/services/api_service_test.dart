@@ -61,6 +61,18 @@ void main() {
       expect(excluded.data.threads.every((t) => !t.tags.contains(107)), isTrue);
     });
 
+    test('anyTags switches tag matching to OR', () {
+      final all = ApiService.createMockData();
+      // 2214 (2d game) and 179 (fantasy) never co-occur in the fixtures.
+      const both = SearchQuery(tags: [2214, 179]);
+
+      expect(ApiService.filterMockData(all, both).data.threads, isEmpty);
+
+      final any = ApiService.filterMockData(all, both.copyWith(anyTags: true));
+      expect(any.data.threads, isNotEmpty);
+      expect(any.data.threads.every((t) => t.tags.contains(2214) || t.tags.contains(179)), isTrue);
+    });
+
     test('prefix filters OR together', () {
       final all = ApiService.createMockData();
       final result = ApiService.filterMockData(all, const SearchQuery(prefixes: [7, 116]));
@@ -196,6 +208,22 @@ void main() {
       expect(
         () => ApiService.fetchThreads(client: client, packageInfoLoader: () async => _packageInfo()),
         throwsA(isA<ApiException>()),
+      );
+    });
+
+    test('surfaces the server error message from non-200 JSON bodies', () {
+      final client = MockClient(
+        (_) async => http.Response(
+          jsonEncode({'status': 'error', 'msg': 'Anonymous users have a limited amount of requests per hour'}),
+          429,
+        ),
+      );
+
+      expect(
+        () => ApiService.fetchThreads(client: client, packageInfoLoader: () async => _packageInfo()),
+        throwsA(
+          isA<ApiException>().having((e) => e.message, 'message', contains('Anonymous users')),
+        ),
       );
     });
 

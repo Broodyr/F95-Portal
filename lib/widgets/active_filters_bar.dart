@@ -77,6 +77,12 @@ class ActiveFiltersBar extends StatelessWidget {
       );
     }
 
+    if (query.anyTags && query.tags.length >= 2) {
+      chips.add(
+        _BarChip(icon: Icons.join_full, label: 'Match: any', remove: () => query.copyWith(anyTags: false)),
+      );
+    }
+
     final dateDays = query.dateDays;
     if (dateDays != null) {
       chips.add(
