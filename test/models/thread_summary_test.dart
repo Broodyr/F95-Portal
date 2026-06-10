@@ -68,6 +68,24 @@ void main() {
       expect(thread.timestamp, 1234567890);
     });
 
+    test('fromJson tolerates string fields arriving as numbers', () {
+      // Live counterexample: thread 200660 "Brothel of Darkness" ships
+      // "version": 1.3 as a raw JSON number.
+      final json = {
+        'thread_id': 200660,
+        'title': 'Brothel of Darkness',
+        'version': 1.3,
+        'date': 2,
+      };
+
+      final thread = ThreadSummary.fromJson(json);
+
+      expect(thread.version, '1.3');
+      expect(thread.date, '2');
+      expect(thread.title, 'Brothel of Darkness');
+      expect(thread.cover, '');
+    });
+
     test('toJson serializes correctly', () {
       final thread = ThreadSummary(
         threadId: 7,

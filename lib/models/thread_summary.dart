@@ -1,8 +1,12 @@
 /// JSON numbers decode as double whenever the source emits a decimal point,
-/// so every numeric field must accept any [num].
+/// so every numeric field must accept any [num]. The reverse also happens:
+/// nominally-string fields occasionally ship as raw numbers (e.g. thread
+/// 200660 has "version": 1.3), so string fields must accept anything.
 int _asInt(dynamic value, [int fallback = 0]) => value is num ? value.toInt() : fallback;
 
 double _asDouble(dynamic value, [double fallback = 0.0]) => value is num ? value.toDouble() : fallback;
+
+String _asString(dynamic value, [String fallback = '']) => value == null ? fallback : value.toString();
 
 List<int> _asIntList(dynamic value) => [
   for (final item in value as List? ?? const [])
@@ -49,17 +53,17 @@ class ThreadSummary {
   factory ThreadSummary.fromJson(Map<String, dynamic> json) {
     return ThreadSummary(
       threadId: _asInt(json['thread_id']),
-      title: json['title'] ?? '',
-      creator: json['creator'] ?? '',
-      version: json['version'] ?? '',
+      title: _asString(json['title']),
+      creator: _asString(json['creator']),
+      version: _asString(json['version']),
       views: _asInt(json['views']),
       likes: _asInt(json['likes']),
       prefixes: _asIntList(json['prefixes']),
       tags: _asIntList(json['tags']),
       rating: _asDouble(json['rating']),
-      cover: json['cover'] ?? '',
-      screens: List<String>.from(json['screens'] ?? []),
-      date: json['date'] ?? '',
+      cover: _asString(json['cover']),
+      screens: [for (final screen in json['screens'] as List? ?? const []) screen.toString()],
+      date: _asString(json['date']),
       watched: json['watched'] ?? false,
       ignored: json['ignored'] ?? false,
       isNew: json['new'] ?? false,

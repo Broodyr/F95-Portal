@@ -51,7 +51,7 @@ dump is committed as [`assets/f95_metadata.json`](../assets/f95_metadata.json) (
 | `cat` | `games`, `comics`, `animations`, `assets`, `mods` | Required. `mods` is accepted but always returns `count: 0` — the feed doesn't index mods. |
 | `page` | 1-based int | `msg.pagination.total` is the total page count. |
 | `rows` | int | Page size (site uses 90). |
-| `sort` | `date`, `likes`, `views`, `title`, `rating` | Unknown values silently fall back to `date`. |
+| `sort` | `date`, `likes`, `views`, `title`, `rating` | Unknown values silently fall back to `date`. All sorts are fixed-direction (descending; `title` ascending) — there is no ascending variant (`<sort>_asc`, `order=`, `dir=`, `asc=` etc. were probed 2026-06-09 and are all ignored). |
 | `search` | string | Title search (e.g. `search=goblin` → 81 games). |
 | `creator` | string | Developer/creator name search. Independent of `search`. |
 | `prefixes[N]` | prefix ID | Threads must have **all** listed prefixes. |
@@ -161,7 +161,7 @@ Also wrong in spirit:
   "thread_id": 297700,
   "title": "Game Title",
   "creator": "Developer Name",
-  "version": "v0.2",            // may be "Final", "Demo", etc.
+  "version": "v0.2",            // may be "Final", "Demo", etc. — or a RAW NUMBER (thread 200660 ships 1.3)
   "views": 44337,
   "likes": 61,
   "prefixes": [13, 7],          // engine/format + status IDs (see tables)
@@ -184,3 +184,10 @@ refresh: log in to <https://f95zone.to/sam/latest_alpha/> in a browser and run
 `copy(JSON.stringify({prefixes: latestUpdates.prefixes, tags: latestUpdates.tags}))`
 in the dev-tools console, then paste over the file. Unknown IDs encountered in API
 responses should be flagged in the UI rather than crashing (render the raw ID).
+
+## Field-type hygiene
+
+Thread JSON is not strictly typed: numeric fields may arrive as doubles, and
+nominally-string fields may arrive as raw numbers (`"version": 1.3`). Parse every
+field leniently (`num`-tolerant ints/doubles, `toString()` for strings) — one
+malformed thread otherwise kills the whole response parse.

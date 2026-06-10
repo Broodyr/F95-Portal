@@ -71,7 +71,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: DecoratedBox(
-              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.32)),
+              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.65)),
               child: SearchOptionsModal(initialQuery: _activeQuery),
             ),
           ),
