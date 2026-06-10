@@ -2,88 +2,115 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import '../models/thread_summary.dart';
 import '../models/search_category.dart';
+import '../models/search_query.dart';
+import '../models/thread_summary.dart';
 
 typedef PackageInfoLoader = Future<PackageInfo> Function();
+
+/// A tag id with its usage count, as returned by `cmd=tags`.
+class PopularTag {
+  final int tagId;
+  final int count;
+
+  const PopularTag({required this.tagId, required this.count});
+
+  factory PopularTag.fromJson(Map<String, dynamic> json) {
+    return PopularTag(tagId: json['tag_id'] ?? 0, count: json['count'] ?? 0);
+  }
+}
 
 class ApiService {
   static const String baseUrl = 'https://f95zone.to/sam/latest_alpha/latest_data.php';
   static String? _cachedUserAgent;
 
-  /// Fetches threads from the f95zone API
-  /// Parameters match the sample endpoint from notes.txt
+  /// Fetches threads from the f95zone latest-updates API.
+  /// Endpoint behavior is documented in docs/api_mappings.md.
   ///
-  /// Note: Web platforms will use mock data due to CORS restrictions.
-  /// Mobile/desktop platforms will attempt real API calls.
+  /// Note: Web platforms use (query-filtered) mock data due to CORS
+  /// restrictions. Mobile/desktop platforms make real API calls.
   static Future<ApiResponse> fetchThreads({
-    String cmd = 'list',
-    SearchCategory category = SearchCategory.games,
+    SearchQuery query = const SearchQuery(),
     int page = 1,
-    List<int> noprefixes = const [2, 7, 13],
-    List<int> tags = const [191],
-    List<int> notags = const [173, 174, 324, 522],
-    String sort = 'date',
     int rows = 90,
     bool fallbackToMockOnError = false,
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) async {
-    // On web, F95Zone API blocks CORS requests, so use mock data
+    // On web, the F95Zone API blocks CORS requests, so use mock data
     if (kIsWeb) {
       // Simulate network delay for realistic behavior
       await Future.delayed(const Duration(milliseconds: 800));
-      return createMockData();
+      return filterMockData(createMockData(), query);
     }
 
+    final queryParams = <String, String>{
+      'cmd': 'list',
+      ...query.toQueryParameters(page: page, rows: rows),
+      '_': DateTime.now().millisecondsSinceEpoch.toString(),
+    };
+
+    return _getJson(
+      queryParams,
+      parse: ApiResponse.fromJson,
+      onError: fallbackToMockOnError ? () => filterMockData(createMockData(), query) : null,
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
+  /// Fetches the most-used tags for a category (`cmd=tags`), used to seed
+  /// search suggestions before the user types anything.
+  static Future<List<PopularTag>> fetchPopularTags({
+    SearchCategory category = SearchCategory.games,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return _mockPopularTags();
+    }
+
+    return _getJson({'cmd': 'tags', 'cat': category.apiValue}, parse: (jsonData) {
+      final items = (jsonData['msg']?['data'] as List? ?? const []);
+      final tags = items.map((item) => PopularTag.fromJson(item as Map<String, dynamic>)).toList();
+      tags.sort((a, b) => b.count.compareTo(a.count));
+      return tags;
+    }, onError: null, client: client, packageInfoLoader: packageInfoLoader);
+  }
+
+  static Future<T> _getJson<T>(
+    Map<String, String> queryParams, {
+    required T Function(Map<String, dynamic>) parse,
+    required T Function()? onError,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
     final http.Client httpClient = client ?? http.Client();
     final PackageInfoLoader loader = packageInfoLoader ?? PackageInfo.fromPlatform;
     final bool shouldCloseClient = client == null;
 
     try {
       final userAgent = await _resolveUserAgent(loader);
-
-      // Build query parameters
-      final Map<String, String> queryParams = {
-        'cmd': cmd,
-        'cat': category.apiValue,
-        'page': page.toString(),
-        'sort': sort,
-        'rows': rows.toString(),
-        '_': DateTime.now().millisecondsSinceEpoch.toString(),
-      };
-
-      // Add array parameters
-      for (int i = 0; i < noprefixes.length; i++) {
-        queryParams['noprefixes[$i]'] = noprefixes[i].toString();
-      }
-      for (int i = 0; i < tags.length; i++) {
-        queryParams['tags[$i]'] = tags[i].toString();
-      }
-      for (int i = 0; i < notags.length; i++) {
-        queryParams['notags[$i]'] = notags[i].toString();
-      }
-
       final uri = Uri.parse(baseUrl).replace(queryParameters: queryParams);
 
       final response = await httpClient.get(uri, headers: {'User-Agent': userAgent, 'Accept': 'application/json'});
 
       if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        return ApiResponse.fromJson(jsonData);
+        return parse(json.decode(response.body));
       }
 
       throw ApiException('Failed to load threads: ${response.statusCode}');
     } on ApiException catch (e) {
-      if (fallbackToMockOnError) {
-        debugPrint('ApiService.fetchThreads recovered from ApiException: ${e.message}');
-        return createMockData();
+      if (onError != null) {
+        debugPrint('ApiService recovered from ApiException: ${e.message}');
+        return onError();
       }
       rethrow;
     } catch (e, stackTrace) {
-      debugPrint('ApiService.fetchThreads error: $e\n$stackTrace');
-      if (fallbackToMockOnError) {
-        return createMockData();
+      debugPrint('ApiService error: $e\n$stackTrace');
+      if (onError != null) {
+        return onError();
       }
       throw ApiException('Failed to load threads: ${e.toString()}');
     } finally {
@@ -114,8 +141,61 @@ class ApiService {
     _cachedUserAgent = null;
   }
 
-  /// Creates mock data for testing UI before API integration
-  /// Enhanced with diverse threads showing different engines and features
+  /// Applies a [SearchQuery] to mock data client-side so the web build
+  /// behaves like the real API: tags AND, prefixes OR, `no*` lists exclude.
+  @visibleForTesting
+  static ApiResponse filterMockData(ApiResponse response, SearchQuery query) {
+    final search = query.search.trim().toLowerCase();
+    final creator = query.creator.trim().toLowerCase();
+
+    final threads = response.data.threads.where((thread) {
+      if (search.isNotEmpty && !thread.title.toLowerCase().contains(search)) return false;
+      if (creator.isNotEmpty && !thread.creator.toLowerCase().contains(creator)) return false;
+      if (query.tags.any((tag) => !thread.tags.contains(tag))) return false;
+      if (query.notags.any((tag) => thread.tags.contains(tag))) return false;
+      if (query.prefixes.isNotEmpty && !query.prefixes.any((p) => thread.prefixes.contains(p))) return false;
+      if (query.noprefixes.any((p) => thread.prefixes.contains(p))) return false;
+      return true;
+    }).toList();
+
+    switch (query.sort) {
+      case SortOrder.date:
+        threads.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      case SortOrder.likes:
+        threads.sort((a, b) => b.likes.compareTo(a.likes));
+      case SortOrder.views:
+        threads.sort((a, b) => b.views.compareTo(a.views));
+      case SortOrder.title:
+        threads.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+      case SortOrder.rating:
+        threads.sort((a, b) => b.rating.compareTo(a.rating));
+    }
+
+    return ApiResponse(
+      status: response.status,
+      data: ApiResponseData(
+        threads: threads,
+        pagination: Pagination(page: 1, total: 1),
+        count: threads.length,
+      ),
+    );
+  }
+
+  static List<PopularTag> _mockPopularTags() {
+    final counts = <int, int>{};
+    for (final thread in createMockData().data.threads) {
+      for (final tag in thread.tags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+    final tags = counts.entries.map((e) => PopularTag(tagId: e.key, count: e.value)).toList();
+    tags.sort((a, b) => b.count.compareTo(a.count));
+    return tags;
+  }
+
+  /// Creates mock data for the web build and tests. Prefix/tag IDs follow the
+  /// verified vocabulary in assets/f95_metadata.json (3=Unity, 7=Ren'Py,
+  /// 2=RPGM, 13=VN, 116=Godot; 18/20/22 = Completed/Onhold/Abandoned).
   static ApiResponse createMockData() {
     final mockThreads = [
       ThreadSummary(
@@ -125,8 +205,8 @@ class ApiService {
         version: "v1.0.6",
         views: 3200000,
         likes: 528,
-        prefixes: [3, 18], // includes 18 for completion flag
-        tags: [107, 130, 191],
+        prefixes: [3, 18], // Unity, Completed
+        tags: [2214, 783, 392, 776], // 2d game, animated, female protagonist, side-scroller
         rating: 4.9,
         cover: "https://attachments.f95zone.to/2021/09/1418241_cover.png",
         screens: [],
@@ -143,8 +223,8 @@ class ApiService {
         version: "v0.4 EA 4",
         views: 1000000,
         likes: 342,
-        prefixes: [3], // Ren'Py thread, no completion flag
-        tags: [130, 191],
+        prefixes: [116], // Godot
+        tags: [2214, 783, 75], // 2d game, animated, milf
         rating: 4.7,
         cover: "https://attachments.f95zone.to/2022/05/1822341_cover.png",
         screens: [],
@@ -161,8 +241,8 @@ class ApiService {
         version: "v1.4",
         views: 3400000,
         likes: 1290,
-        prefixes: [8], // Unity thread
-        tags: [107, 191],
+        prefixes: [3, 20], // Unity, Onhold
+        tags: [107, 173, 448], // 3dcg, male protagonist, simulator
         rating: 4.6,
         cover: "https://attachments.f95zone.to/2023/01/2341232_cover.png",
         screens: [],
@@ -179,8 +259,8 @@ class ApiService {
         version: "v2.1",
         views: 850000,
         likes: 425,
-        prefixes: [7, 18], // RPGM thread with completion flag
-        tags: [107, 191],
+        prefixes: [2, 18], // RPGM, Completed
+        tags: [107, 179, 162], // 3dcg, fantasy, adventure
         rating: 4.8,
         cover: "https://attachments.f95zone.to/2023/06/2756341_cover.png",
         screens: [],
@@ -197,8 +277,8 @@ class ApiService {
         version: "v0.8.2",
         views: 2100000,
         likes: 789,
-        prefixes: [3], // Ren'Py thread
-        tags: [130, 191],
+        prefixes: [7], // Ren'Py
+        tags: [107, 173, 254, 547], // 3dcg, male protagonist, harem, school setting
         rating: 4.5,
         cover: "https://attachments.f95zone.to/2023/08/2891234_cover.png",
         screens: [],
@@ -215,8 +295,8 @@ class ApiService {
         version: "v1.2 Final",
         views: 4500000,
         likes: 1456,
-        prefixes: [8, 18], // Unity thread with completion flag
-        tags: [107, 191],
+        prefixes: [13, 7, 18], // VN, Ren'Py, Completed
+        tags: [107, 141, 392], // 3dcg, sci-fi, female protagonist
         rating: 4.7,
         cover: "https://attachments.f95zone.to/2023/09/2934567_cover.png",
         screens: [],
@@ -233,8 +313,8 @@ class ApiService {
         version: "v1.0",
         views: 1800000,
         likes: 634,
-        prefixes: [7, 18], // RPGM thread with completion flag
-        tags: [107, 130, 191],
+        prefixes: [2, 22], // RPGM, Abandoned
+        tags: [107, 330, 225], // 3dcg, romance, pregnancy
         rating: 4.4,
         cover: "https://attachments.f95zone.to/2023/10/3045678_cover.png",
         screens: [],

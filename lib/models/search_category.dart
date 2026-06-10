@@ -1,4 +1,6 @@
-enum SearchCategory { games, comics, animations, assets, mods }
+/// Categories the latest-updates API actually serves. `mods` is accepted by
+/// the endpoint but always returns zero results, so it is intentionally absent.
+enum SearchCategory { games, comics, animations, assets }
 
 extension SearchCategoryX on SearchCategory {
   /// Value expected by the remote API.

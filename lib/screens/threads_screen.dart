@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-import '../models/search_category.dart';
+import '../models/search_query.dart';
 import '../widgets/search_fab.dart';
 import '../widgets/search_options_modal.dart';
 import '../widgets/threads_list.dart';
@@ -22,8 +22,7 @@ class ThreadsScreen extends StatefulWidget {
 class _ThreadsScreenState extends State<ThreadsScreen> {
   // Use external ScrollController if provided, otherwise create internal one
   late final ScrollController _scrollController;
-  SearchCategory _activeCategory = SearchCategory.games;
-  String _activeQuery = '';
+  SearchQuery _activeQuery = const SearchQuery();
 
   @override
   void initState() {
@@ -56,7 +55,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
   }
 
   void _onSearchPressed() async {
-    final result = await showModalBottomSheet<SearchOptionsResult>(
+    final result = await showModalBottomSheet<SearchQuery>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -69,7 +68,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: DecoratedBox(
               decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.32)),
-              child: SearchOptionsModal(initialCategory: _activeCategory, initialQuery: _activeQuery),
+              child: SearchOptionsModal(initialQuery: _activeQuery),
             ),
           ),
         );
@@ -81,8 +80,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
     }
 
     setState(() {
-      _activeCategory = result.category;
-      _activeQuery = result.query;
+      _activeQuery = result;
     });
   }
 
@@ -102,7 +100,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
               ),
             ),
           ),
-          ThreadsList(scrollController: _scrollController, category: _activeCategory),
+          ThreadsList(scrollController: _scrollController, query: _activeQuery),
           SearchFab(
             scrollController: _scrollController,
             onSearchPressed: _onSearchPressed,

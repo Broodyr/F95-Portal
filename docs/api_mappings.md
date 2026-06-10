@@ -7,7 +7,7 @@ Reverse-engineered documentation for the endpoint this app consumes. Verified li
 
 > **2026-06-09: this file replaces the old guesswork mappings.** Several of the original
 > prefix IDs were misassigned (see [Corrections](#corrections-vs-the-old-mappings)).
-> The canonical prefix/tag vocabulary lives in [`f95_metadata.json`](f95_metadata.json).
+> The canonical prefix/tag vocabulary lives in [`assets/f95_metadata.json`](../assets/f95_metadata.json).
 
 ## Endpoint
 
@@ -41,7 +41,7 @@ for an unknown `cmd`, `"Missing category"` for a bad `cat`, or a human-readable 
 
 There is **no metadata command** — prefix/tag names are only embedded in the logged-in
 HTML page as the `latestUpdates.prefixes` / `latestUpdates.tags` JS globals. A captured
-dump is committed as [`f95_metadata.json`](f95_metadata.json) (shape:
+dump is committed as [`assets/f95_metadata.json`](../assets/f95_metadata.json) (shape:
 `{"prefixes": {<category>: [<group>…]}, "tags": {<id>: <name>}}`).
 
 ## `cmd=list` parameters
@@ -66,7 +66,7 @@ list — verify with `msg.count` when testing).
 ## Prefix IDs
 
 Prefixes are grouped per category. Group ID **4 = Status** everywhere; the rest are
-engine/format groups. Full data in [`f95_metadata.json`](f95_metadata.json); summary:
+engine/format groups. Full data in [`assets/f95_metadata.json`](../assets/f95_metadata.json); summary:
 
 ### Games — Engine group (group 1)
 
@@ -116,7 +116,7 @@ known Godot games (Strive for Power, Queen's Brothel, Beat Banger, Hardcoded, Er
 ## Tag IDs
 
 Tags are **content/genre descriptors, not engines**. The full ~150-entry map is in
-[`f95_metadata.json`](f95_metadata.json). Ones currently referenced in code/data:
+[`assets/f95_metadata.json`](../assets/f95_metadata.json). Ones currently referenced in code/data:
 
 | ID | Tag | | ID | Tag |
 |----|-----|-|----|-----|
@@ -179,7 +179,7 @@ Also wrong in spirit:
 
 ## Refreshing the metadata
 
-`f95_metadata.json` changes only when F95Zone adds prefixes/tags (e.g. Godot). To
+`assets/f95_metadata.json` changes only when F95Zone adds prefixes/tags (e.g. Godot). To
 refresh: log in to <https://f95zone.to/sam/latest_alpha/> in a browser and run
 `copy(JSON.stringify({prefixes: latestUpdates.prefixes, tags: latestUpdates.tags}))`
 in the dev-tools console, then paste over the file. Unknown IDs encountered in API

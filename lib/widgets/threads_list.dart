@@ -1,34 +1,24 @@
 import 'package:flutter/material.dart';
 
-import '../models/search_category.dart';
+import '../models/search_query.dart';
 import '../models/thread_summary.dart';
 import '../services/api_service.dart';
 import 'thread_card.dart';
 import 'thread_details_modal.dart';
 
 typedef FetchThreadsCallback =
-    Future<ApiResponse> Function({
-      String cmd,
-      SearchCategory category,
-      int page,
-      List<int> noprefixes,
-      List<int> tags,
-      List<int> notags,
-      String sort,
-      int rows,
-      bool fallbackToMockOnError,
-    });
+    Future<ApiResponse> Function({SearchQuery query, int page, int rows, bool fallbackToMockOnError});
 
 class ThreadsList extends StatefulWidget {
   final ScrollController? scrollController;
   final FetchThreadsCallback fetchThreads;
-  final SearchCategory category;
+  final SearchQuery query;
 
   const ThreadsList({
     super.key,
     this.scrollController,
     this.fetchThreads = ApiService.fetchThreads,
-    this.category = SearchCategory.games,
+    this.query = const SearchQuery(),
   });
 
   @override
@@ -49,7 +39,7 @@ class _ThreadsListState extends State<ThreadsList> {
   @override
   void didUpdateWidget(ThreadsList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.category != widget.category) {
+    if (oldWidget.query != widget.query) {
       _loadThreads();
     }
   }
@@ -62,7 +52,7 @@ class _ThreadsListState extends State<ThreadsList> {
         _error = null;
       });
 
-      final apiResponse = await widget.fetchThreads(category: widget.category);
+      final apiResponse = await widget.fetchThreads(query: widget.query);
 
       if (!mounted) return;
       setState(() {
@@ -120,6 +110,19 @@ class _ThreadsListState extends State<ThreadsList> {
       );
     }
 
+    if (_threads.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text('No threads match this search', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
+          ],
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: _onRefresh,
       color: Theme.of(context).colorScheme.primary,
@@ -131,7 +134,11 @@ class _ThreadsListState extends State<ThreadsList> {
         itemCount: _threads.length,
         itemBuilder: (context, index) {
           final thread = _threads[index];
-          return ThreadCard(thread: thread, onTap: () => _onThreadTap(thread));
+          return ThreadCard(
+            thread: thread,
+            category: widget.query.category,
+            onTap: () => _onThreadTap(thread),
+          );
         },
       ),
     );

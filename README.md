@@ -10,15 +10,18 @@
 - `lib/main_app.dart`: App shell with the shared `ScrollController`, `ValueNotifier` that hides/shows the nav bar, and tab switching logic.
 - `lib/screens/threads_screen.dart`: Hosts the gradient background, `ThreadsList`, and floating search FAB column.
 - `lib/widgets/threads_list.dart`: Stateful list that owns loading state, calls `ApiService.fetchThreads()`, exposes pull-to-refresh, and opens the detail modal.
-- `lib/services/api_service.dart`: Wraps `https://f95zone.to/sam/latest_alpha/latest_data.php` with default query params, custom headers, and an optional mock fallback (`createMockData`).
+- `lib/services/api_service.dart`: Wraps `https://f95zone.to/sam/latest_alpha/latest_data.php` (`cmd=list` for threads, `cmd=tags` for popular tags), with an optional mock fallback (`createMockData`).
+- `lib/models/search_query.dart`: Immutable description of a feed/search request (category, title/creator search, tag/prefix include+exclude filters, sort) and its mapping to API query parameters.
+- `lib/models/f95_metadata.dart`: Typed access to the bundled prefix/tag vocabulary (`assets/f95_metadata.json`), loaded once at startup; powers engine labels and search autocomplete.
 - `lib/models/thread_summary.dart`: Strongly-typed model for API responses, including helpers for completion/abandoned/on-hold status flags and response scaffolding (`ApiResponse`, `Pagination`).
-- `docs/api_mappings.md`: Running catalog of numeric prefix/tag IDs mapped to engine/status semantics used by `ThreadUtils`.
+- `docs/api_mappings.md`: Verified reference for the API surface and the numeric prefix/tag vocabulary.
 
 ## Data Flow
-1. `ThreadsList` runs `_loadThreads`, which awaits `ApiService.fetchThreads()`.
-2. `ApiService` builds the request from default filter parameters (`cmd=list`, `cat=games`, prefix/tag filters, `rows=90`) and tries the live endpoint.
-   - When `kIsWeb == true`, `createMockData()` returns a curated set of `ThreadSummary` objects to keep the UI flowing without network access. On other platforms the service throws `ApiException` on failure (unless `fallbackToMockOnError` is explicitly enabled).
-3. The resolved `ApiResponse` populates `_threads`; list items render via `ThreadCard`, and pull-to-refresh re-runs `_loadThreads`.
+1. `ThreadsScreen` owns the active `SearchQuery` (defaults to an unfiltered games feed); the search FAB opens `SearchOptionsModal`, which pops an updated query.
+2. `ThreadsList` reloads whenever its query changes, awaiting `ApiService.fetchThreads(query: …)`.
+3. `ApiService` maps the query onto the endpoint's parameters (`search`, `creator`, `tags[]`/`notags[]` ANDed, `prefixes[]`/`noprefixes[]` ORed, `sort`).
+   - When `kIsWeb == true`, `createMockData()` is filtered client-side by the same query semantics to keep the UI flowing without network access. On other platforms the service throws `ApiException` on failure (unless `fallbackToMockOnError` is explicitly enabled).
+4. The resolved `ApiResponse` populates `_threads`; list items render via `ThreadCard`, and pull-to-refresh re-runs `_loadThreads`.
 
 `ThreadSummary` exposes `isCompleted`, `isAbandoned`, and `isOnhold` based on prefix IDs 18, 22, and 20 respectively.
 
@@ -27,7 +30,7 @@
 - `EngineTag` & `VersionPill`: Use `ThreadUtils` and `EngineColors` (`lib/utils/formatters.dart`) to map prefix/tag IDs to display strings and palette.
 - `CustomBottomNavigation` (`lib/widgets/bottom_navigation.dart`): Glass pill nav with animated icons; vertical drags and taps pass through to the shared scroll controller for gesture continuity.
 - `SearchFab` (`lib/widgets/search_fab.dart`): Floating search button that also forwards vertical drags to scrolling; opens `SearchOptionsModal`.
-- `SearchOptionsModal` (`lib/widgets/search_options_modal.dart`): Glass bottom sheet with a query field and category selector; returns a `SearchOptionsResult`. Category switching re-fetches the list, but the query text is not yet sent to the API.
+- `SearchOptionsModal` (`lib/widgets/search_options_modal.dart`): Omni-search bottom sheet — one field autocompletes tags, engines, statuses, and creators from the bundled vocabulary; selections become chips (tap toggles include/exclude, x removes), leftover text is the title search. Shows popular tags (live `cmd=tags`) while empty; pops a `SearchQuery`.
 - `ThreadDetailsModal` (`lib/widgets/thread_details_modal.dart`): Bottom sheet placeholder opened on card tap, ready for richer detail content.
 - `PreRenderedNoisyBackground` (`lib/widgets/noisy_background.dart`): Utility for caching a noise texture; the call is currently commented out in `ThreadsScreen`.
 
@@ -50,10 +53,9 @@
 
 ## Current Limitations & Next Actions
 - Only the Threads tab is wired up; other tabs trigger snackbars and placeholder screens.
-- The search modal collects a query string, but `ApiService.fetchThreads` has no search parameter yet, so the query is currently ignored.
 - `ThreadDetailsModal` contains placeholder messaging.
-- Engine and tag mappings in `ThreadUtils` are incomplete and based on a small sample set; update alongside `docs/api_mappings.md` as more API data is observed.
-- Networking lacks pagination, rich error messaging, and auth/session handling; consider introducing repository-level caching once live data usage stabilizes.
+- Networking lacks pagination (the `page` parameter exists but nothing loads page 2), rich error messaging, and auth/session handling; consider introducing repository-level caching once live data usage stabilizes.
+- Cover image aspect ratio is still being tweaked (docs say 4:1, `CoverImage` renders 3:1); settle during final design pass.
 
 ## Roadmap Seeds
 - Filtering and advanced search that leverage the existing query-parameter hooks.

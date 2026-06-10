@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../models/search_category.dart';
 import '../models/thread_summary.dart';
 import '../utils/formatters.dart';
 import 'cover_image.dart';
@@ -11,9 +12,10 @@ import 'metadata_row.dart';
 
 class ThreadCard extends StatelessWidget {
   final ThreadSummary thread;
+  final SearchCategory category;
   final VoidCallback? onTap;
 
-  const ThreadCard({super.key, required this.thread, this.onTap});
+  const ThreadCard({super.key, required this.thread, this.category = SearchCategory.games, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +44,7 @@ class ThreadCard extends StatelessWidget {
                 Positioned(
                   top: 8,
                   left: 8,
-                  child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, thread.tags)),
+                  child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: category)),
                 ),
 
                 // Version pill (top-right)

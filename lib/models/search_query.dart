@@ -1,0 +1,127 @@
+import 'package:flutter/foundation.dart';
+
+import 'search_category.dart';
+
+/// Sort orders accepted by the latest-updates API (docs/api_mappings.md);
+/// unknown values silently fall back to date server-side, so stick to these.
+enum SortOrder { date, likes, views, title, rating }
+
+extension SortOrderX on SortOrder {
+  String get apiValue => name;
+
+  String get displayLabel => name[0].toUpperCase() + name.substring(1);
+}
+
+/// Immutable description of one feed/search request. Tag filters are ANDed
+/// by the server while prefix filters are ORed; the `no*` lists exclude
+/// threads matching any entry.
+@immutable
+class SearchQuery {
+  final SearchCategory category;
+
+  /// Title search (`search=` parameter).
+  final String search;
+
+  /// Developer/creator search (`creator=` parameter).
+  final String creator;
+
+  final List<int> tags;
+  final List<int> notags;
+  final List<int> prefixes;
+  final List<int> noprefixes;
+  final SortOrder sort;
+
+  const SearchQuery({
+    this.category = SearchCategory.games,
+    this.search = '',
+    this.creator = '',
+    this.tags = const [],
+    this.notags = const [],
+    this.prefixes = const [],
+    this.noprefixes = const [],
+    this.sort = SortOrder.date,
+  });
+
+  bool get hasActiveFilters =>
+      search.trim().isNotEmpty ||
+      creator.trim().isNotEmpty ||
+      tags.isNotEmpty ||
+      notags.isNotEmpty ||
+      prefixes.isNotEmpty ||
+      noprefixes.isNotEmpty ||
+      sort != SortOrder.date;
+
+  Map<String, String> toQueryParameters({required int page, required int rows}) {
+    final params = <String, String>{
+      'cat': category.apiValue,
+      'page': page.toString(),
+      'sort': sort.apiValue,
+      'rows': rows.toString(),
+    };
+
+    final trimmedSearch = search.trim();
+    if (trimmedSearch.isNotEmpty) params['search'] = trimmedSearch;
+    final trimmedCreator = creator.trim();
+    if (trimmedCreator.isNotEmpty) params['creator'] = trimmedCreator;
+
+    void addArray(String name, List<int> values) {
+      for (int i = 0; i < values.length; i++) {
+        params['$name[$i]'] = values[i].toString();
+      }
+    }
+
+    addArray('tags', tags);
+    addArray('notags', notags);
+    addArray('prefixes', prefixes);
+    addArray('noprefixes', noprefixes);
+
+    return params;
+  }
+
+  SearchQuery copyWith({
+    SearchCategory? category,
+    String? search,
+    String? creator,
+    List<int>? tags,
+    List<int>? notags,
+    List<int>? prefixes,
+    List<int>? noprefixes,
+    SortOrder? sort,
+  }) {
+    return SearchQuery(
+      category: category ?? this.category,
+      search: search ?? this.search,
+      creator: creator ?? this.creator,
+      tags: tags ?? this.tags,
+      notags: notags ?? this.notags,
+      prefixes: prefixes ?? this.prefixes,
+      noprefixes: noprefixes ?? this.noprefixes,
+      sort: sort ?? this.sort,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SearchQuery &&
+        other.category == category &&
+        other.search == search &&
+        other.creator == creator &&
+        listEquals(other.tags, tags) &&
+        listEquals(other.notags, notags) &&
+        listEquals(other.prefixes, prefixes) &&
+        listEquals(other.noprefixes, noprefixes) &&
+        other.sort == sort;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    category,
+    search,
+    creator,
+    Object.hashAll(tags),
+    Object.hashAll(notags),
+    Object.hashAll(prefixes),
+    Object.hashAll(noprefixes),
+    sort,
+  );
+}
