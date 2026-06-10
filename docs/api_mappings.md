@@ -35,7 +35,7 @@ for an unknown `cmd`, `"Missing category"` for a bad `cat`, or a human-readable 
 | `cmd` | Auth | Returns |
 |-------|------|---------|
 | `list` | no | Thread list (the main feed/search). See parameters below. |
-| `tags` | no | Popular tags for the category: `{"data":[{"tag_id":2214,"count":6268},…]}` — IDs and usage counts only, no names. |
+| `tags` | no | All tags in use for the category with usage counts (115 entries for games): `{"data":[{"tag_id":2214,"count":6268},…]}` — IDs and counts only, no names. |
 | `rss` | no | RSS 2.0 XML of the latest updates. |
 | `options` | **yes** | Persists feed display options for the logged-in user. |
 
@@ -54,11 +54,17 @@ dump is committed as [`assets/f95_metadata.json`](../assets/f95_metadata.json) (
 | `sort` | `date`, `likes`, `views`, `title`, `rating` | Unknown values silently fall back to `date`. All sorts are fixed-direction (descending; `title` ascending) — there is no ascending variant (`<sort>_asc`, `order=`, `dir=`, `asc=` etc. were probed 2026-06-09 and are all ignored). |
 | `search` | string | Title search (e.g. `search=goblin` → 81 games). |
 | `creator` | string | Developer/creator name search. Independent of `search`. |
-| `prefixes[N]` | prefix ID | Threads must have **all** listed prefixes. |
+| `prefixes[N]` | prefix ID | Threads matching **any** listed prefix (OR). No count limit observed. |
 | `noprefixes[N]` | prefix ID | Excludes threads with any listed prefix. |
-| `tags[N]` | tag ID | Threads must have **all** listed tags. |
-| `notags[N]` | tag ID | Excludes threads with any listed tag. |
+| `tags[N]` | tag ID | Threads must have **all** listed tags (AND). **Max 10** — an 11th causes ALL tag filters to be silently dropped (and `prefixes`/`tags` in the response switch to space-separated strings). |
+| `notags[N]` | tag ID | Excludes threads with any listed tag. Same 10-entry limit. |
+| `date` | days (int) | Only threads updated within the last N days (official UI uses 1/3/7/14/30/90/180/365; arbitrary values work). |
 | `_` | timestamp | Cache buster, optional. |
+
+The official frontend offers an OR mode for include-tags, but the parameter is unknown —
+probed and rejected 2026-06-09: `tagmode`, `tags_mode`, `anytags`, `tagsor`, `tags_op`,
+`logic`, `op`, `match`, comma/pipe-joined values, and a dozen others all leave the AND
+behavior unchanged. Capture the request the official page makes in OR mode to resolve.
 
 Unknown parameter names are silently ignored (so a typo'd filter returns the unfiltered
 list — verify with `msg.count` when testing).

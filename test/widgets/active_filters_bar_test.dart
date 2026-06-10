@@ -70,6 +70,20 @@ void main() {
     expect(updated!.tags, [225]);
   });
 
+  testWidgets('date limit renders as a chip and removal clears it', (tester) async {
+    SearchQuery? updated;
+    const dated = SearchQuery(dateDays: 30);
+    await pumpTestApp(
+      tester,
+      ActiveFiltersBar(query: dated, resultCount: null, onQueryChanged: (q) => updated = q),
+    );
+
+    await tester.tap(find.text('Updated: 30d'));
+    await tester.pumpAndSettle();
+
+    expect(updated!.dateDays, isNull);
+  });
+
   testWidgets('clear all resets everything except the category', (tester) async {
     SearchQuery? updated;
     const comicsQuery = SearchQuery(category: SearchCategory.comics, tags: [225], search: 'x');

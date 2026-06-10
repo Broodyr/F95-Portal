@@ -31,6 +31,14 @@ class SearchQuery {
   final List<int> noprefixes;
   final SortOrder sort;
 
+  /// Only show threads updated within this many days (`date=` parameter);
+  /// null means no limit. The API accepts arbitrary day counts.
+  final int? dateDays;
+
+  /// The API silently discards ALL tag filters when more than 10 are sent,
+  /// so the UI must cap include and exclude tags at this many each.
+  static const int maxTagsPerDirection = 10;
+
   const SearchQuery({
     this.category = SearchCategory.games,
     this.search = '',
@@ -40,6 +48,7 @@ class SearchQuery {
     this.prefixes = const [],
     this.noprefixes = const [],
     this.sort = SortOrder.date,
+    this.dateDays,
   });
 
   bool get hasActiveFilters =>
@@ -49,7 +58,8 @@ class SearchQuery {
       notags.isNotEmpty ||
       prefixes.isNotEmpty ||
       noprefixes.isNotEmpty ||
-      sort != SortOrder.date;
+      sort != SortOrder.date ||
+      dateDays != null;
 
   Map<String, String> toQueryParameters({required int page, required int rows}) {
     final params = <String, String>{
@@ -63,6 +73,7 @@ class SearchQuery {
     if (trimmedSearch.isNotEmpty) params['search'] = trimmedSearch;
     final trimmedCreator = creator.trim();
     if (trimmedCreator.isNotEmpty) params['creator'] = trimmedCreator;
+    if (dateDays != null) params['date'] = dateDays.toString();
 
     void addArray(String name, List<int> values) {
       for (int i = 0; i < values.length; i++) {
@@ -78,6 +89,8 @@ class SearchQuery {
     return params;
   }
 
+  static const Object _unset = Object();
+
   SearchQuery copyWith({
     SearchCategory? category,
     String? search,
@@ -87,6 +100,7 @@ class SearchQuery {
     List<int>? prefixes,
     List<int>? noprefixes,
     SortOrder? sort,
+    Object? dateDays = _unset,
   }) {
     return SearchQuery(
       category: category ?? this.category,
@@ -97,6 +111,7 @@ class SearchQuery {
       prefixes: prefixes ?? this.prefixes,
       noprefixes: noprefixes ?? this.noprefixes,
       sort: sort ?? this.sort,
+      dateDays: identical(dateDays, _unset) ? this.dateDays : dateDays as int?,
     );
   }
 
@@ -110,7 +125,8 @@ class SearchQuery {
         listEquals(other.notags, notags) &&
         listEquals(other.prefixes, prefixes) &&
         listEquals(other.noprefixes, noprefixes) &&
-        other.sort == sort;
+        other.sort == sort &&
+        other.dateDays == dateDays;
   }
 
   @override
@@ -123,5 +139,6 @@ class SearchQuery {
     Object.hashAll(prefixes),
     Object.hashAll(noprefixes),
     sort,
+    dateDays,
   );
 }

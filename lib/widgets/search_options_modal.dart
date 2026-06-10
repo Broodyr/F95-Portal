@@ -48,13 +48,26 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   static const int _maxPrefixSuggestions = 4;
   static const int _maxPopularTags = 8;
 
+  /// Day counts offered by the "Updated within" row; null = anytime.
+  static const Map<String, int?> _dateLimits = {
+    'Any': null,
+    '24h': 1,
+    '7d': 7,
+    '30d': 30,
+    '90d': 90,
+    '1y': 365,
+  };
+
   final FocusNode _searchFocus = FocusNode();
   late final TextEditingController _searchController;
   late SearchCategory _selectedCategory;
   late SortOrder _sort;
+  int? _dateDays;
   final List<_ActiveFilter> _filters = [];
   String? _creator;
+  String? _title;
   List<PopularTag> _popularTags = const [];
+  Map<int, int> _tagCounts = const {};
 
   static const Map<SearchCategory, IconData> _categoryIcons = {
     SearchCategory.games: Icons.sports_esports_outlined,
@@ -69,6 +82,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     final query = widget.initialQuery;
     _selectedCategory = query.category;
     _sort = query.sort;
+    _dateDays = query.dateDays;
     _searchController = TextEditingController(text: query.search);
     _searchController.addListener(_onTextChanged);
     _searchFocus.addListener(_onTextChanged);
@@ -115,10 +129,16 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     try {
       final tags = await fetch(category: _selectedCategory);
       if (!mounted) return;
-      setState(() => _popularTags = tags);
+      setState(() {
+        _popularTags = tags;
+        _tagCounts = {for (final tag in tags) tag.tagId: tag.count};
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _popularTags = const []);
+      setState(() {
+        _popularTags = const [];
+        _tagCounts = const {};
+      });
     }
   }
 
@@ -151,7 +171,13 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
 
     return [
       for (final entry in tagMatches.take(_maxTagSuggestions))
-        _Suggestion(kind: _FilterKind.tag, id: entry.value, label: entry.key, icon: Icons.tag),
+        _Suggestion(
+          kind: _FilterKind.tag,
+          id: entry.value,
+          label: entry.key,
+          icon: Icons.tag,
+          trailing: _tagCounts.containsKey(entry.value) ? NumberFormatter.formatNumber(_tagCounts[entry.value]!) : null,
+        ),
       for (final prefix in prefixMatches.take(_maxPrefixSuggestions))
         _Suggestion(
           kind: _FilterKind.prefix,
@@ -163,16 +189,44 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     ];
   }
 
+  int _tagFilterCount({required bool exclude}) =>
+      _filters.where((f) => f.kind == _FilterKind.tag && f.exclude == exclude).length;
+
+  void _showTagLimitNotice() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('The API supports at most ${SearchQuery.maxTagsPerDirection} tags per direction.')),
+    );
+  }
+
   void _addFilter(_FilterKind kind, int id, String label) {
+    if (kind == _FilterKind.tag && _tagFilterCount(exclude: false) >= SearchQuery.maxTagsPerDirection) {
+      _showTagLimitNotice();
+      return;
+    }
     setState(() {
       _filters.add(_ActiveFilter(kind: kind, id: id, label: label));
       _searchController.clear();
     });
   }
 
+  void _toggleFilter(_ActiveFilter filter) {
+    if (filter.kind == _FilterKind.tag && _tagFilterCount(exclude: !filter.exclude) >= SearchQuery.maxTagsPerDirection) {
+      _showTagLimitNotice();
+      return;
+    }
+    setState(() => filter.exclude = !filter.exclude);
+  }
+
   void _setCreatorFromText() {
     setState(() {
       _creator = _searchController.text.trim();
+      _searchController.clear();
+    });
+  }
+
+  void _setTitleFromText() {
+    setState(() {
+      _title = _searchController.text.trim();
       _searchController.clear();
     });
   }
@@ -190,16 +244,18 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   }
 
   void _onSubmit() {
+    final leftoverText = _searchController.text.trim();
     Navigator.of(context).pop(
       SearchQuery(
         category: _selectedCategory,
-        search: _searchController.text.trim(),
+        search: _title ?? leftoverText,
         creator: _creator ?? '',
         tags: [for (final f in _filters) if (f.kind == _FilterKind.tag && !f.exclude) f.id],
         notags: [for (final f in _filters) if (f.kind == _FilterKind.tag && f.exclude) f.id],
         prefixes: [for (final f in _filters) if (f.kind == _FilterKind.prefix && !f.exclude) f.id],
         noprefixes: [for (final f in _filters) if (f.kind == _FilterKind.prefix && f.exclude) f.id],
         sort: _sort,
+        dateDays: _dateDays,
       ),
     );
   }
@@ -235,7 +291,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                   ),
                 ),
               ),
-              if (_filters.isNotEmpty || _creator != null) ...[
+              if (_filters.isNotEmpty || _creator != null || _title != null) ...[
                 _buildActiveFilters(colorScheme),
                 const SizedBox(height: 12),
               ],
@@ -252,6 +308,10 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               Text('Sort by', style: textTheme.titleMedium),
               const SizedBox(height: 8),
               _buildSortSelector(colorScheme),
+              const SizedBox(height: 16),
+              Text('Updated within', style: textTheme.titleMedium),
+              const SizedBox(height: 8),
+              _buildDateLimitSelector(colorScheme),
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: _onSubmit,
@@ -312,8 +372,16 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             label: filter.label,
             exclude: filter.exclude,
             icon: filter.kind == _FilterKind.tag ? Icons.tag : Icons.memory,
-            onTap: () => setState(() => filter.exclude = !filter.exclude),
+            onTap: () => _toggleFilter(filter),
             onRemove: () => setState(() => _filters.remove(filter)),
+          ),
+        if (_title != null)
+          _FilterChipPill(
+            label: 'Title: $_title',
+            exclude: false,
+            icon: Icons.search,
+            onTap: () {},
+            onRemove: () => setState(() => _title = null),
           ),
         if (_creator != null)
           _FilterChipPill(
@@ -354,7 +422,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                     ),
               onTap: () => _addFilter(suggestion.kind, suggestion.id, suggestion.label),
             ),
-          if (_hasCreatorSuggestion)
+          if (_hasCreatorSuggestion) ...[
+            ListTile(
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              leading: Icon(Icons.search, size: 18, color: colorScheme.onSurfaceVariant),
+              title: Text('Title: "${_searchController.text.trim()}"'),
+              onTap: _setTitleFromText,
+            ),
             ListTile(
               dense: true,
               visualDensity: VisualDensity.compact,
@@ -362,6 +437,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               title: Text('Creator: "${_searchController.text.trim()}"'),
               onTap: _setCreatorFromText,
             ),
+          ],
           if (showPopular) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -454,6 +530,22 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             label: order.displayLabel,
             selected: _sort == order,
             onTap: () => setState(() => _sort = order),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDateLimitSelector(ColorScheme colorScheme) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final entry in _dateLimits.entries)
+          _buildChoicePill(
+            colorScheme,
+            label: entry.key,
+            selected: _dateDays == entry.value,
+            onTap: () => setState(() => _dateDays = entry.value),
           ),
       ],
     );

@@ -77,7 +77,29 @@ class ActiveFiltersBar extends StatelessWidget {
       );
     }
 
+    final dateDays = query.dateDays;
+    if (dateDays != null) {
+      chips.add(
+        _BarChip(
+          icon: Icons.schedule,
+          label: 'Updated: ${_dateLabel(dateDays)}',
+          remove: () => query.copyWith(dateDays: null),
+        ),
+      );
+    }
+
     return chips;
+  }
+
+  static String _dateLabel(int days) {
+    switch (days) {
+      case 1:
+        return '24h';
+      case 365:
+        return '1y';
+      default:
+        return '${days}d';
+    }
   }
 
   @override

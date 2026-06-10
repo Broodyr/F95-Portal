@@ -47,6 +47,11 @@ void main() {
       expect(params['noprefixes[0]'], '22');
     });
 
+    test('date limit maps to the date parameter in days', () {
+      expect(const SearchQuery(dateDays: 30).toQueryParameters(page: 1, rows: 90)['date'], '30');
+      expect(const SearchQuery().toQueryParameters(page: 1, rows: 90).containsKey('date'), isFalse);
+    });
+
     test('trims and omits whitespace-only search terms', () {
       final params = const SearchQuery(search: '   ', creator: ' dev ').toQueryParameters(page: 1, rows: 90);
 
@@ -74,6 +79,14 @@ void main() {
       expect(copy.tags, [1]);
       expect(copy.category, SearchCategory.games);
     });
+
+    test('copyWith can explicitly clear the date limit', () {
+      const original = SearchQuery(dateDays: 30);
+
+      expect(original.copyWith(dateDays: null).dateDays, isNull);
+      expect(original.copyWith(search: 'x').dateDays, 30);
+      expect(original.copyWith(dateDays: 7).dateDays, 7);
+    });
   });
 
   group('SearchQuery.hasActiveFilters', () {
@@ -82,6 +95,7 @@ void main() {
       expect(const SearchQuery(search: 'x').hasActiveFilters, isTrue);
       expect(const SearchQuery(notags: [1]).hasActiveFilters, isTrue);
       expect(const SearchQuery(sort: SortOrder.rating).hasActiveFilters, isTrue);
+      expect(const SearchQuery(dateDays: 7).hasActiveFilters, isTrue);
     });
   });
 

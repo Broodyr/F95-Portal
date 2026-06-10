@@ -47,6 +47,7 @@ Future<SearchQuery? Function()> pumpModal(
 }
 
 Future<void> submitModal(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('Search'));
   await tester.tap(find.text('Search'));
   await tester.pumpAndSettle();
 }
@@ -130,6 +131,63 @@ void main() {
     final query = getResult();
     expect(query!.creator, 'Caribdis');
     expect(query.search, isEmpty);
+  });
+
+  testWidgets('title suggestion converts the text into a title filter', (tester) async {
+    final getResult = await pumpModal(tester);
+
+    await tester.enterText(find.byType(TextField), 'goblin layer');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('Title:'));
+    await tester.pumpAndSettle();
+
+    await submitModal(tester);
+
+    final query = getResult();
+    expect(query!.search, 'goblin layer');
+    expect(query.creator, isEmpty);
+  });
+
+  testWidgets('tag suggestions show their per-category match counts', (tester) async {
+    await pumpModal(tester, popularTags: const [PopularTag(tagId: 225, count: 4700)]);
+
+    await tester.enterText(find.byType(TextField), 'pregn');
+    await tester.pumpAndSettle();
+
+    expect(find.text('pregnancy'), findsOneWidget);
+    expect(find.text('4.7K'), findsOneWidget);
+  });
+
+  testWidgets('include tags are capped at 10, matching the API limit', (tester) async {
+    final getResult = await pumpModal(
+      tester,
+      initialQuery: const SearchQuery(tags: [30, 44, 45, 75, 103, 105, 107, 111, 130, 141]),
+    );
+
+    await tester.enterText(find.byType(TextField), 'netorar');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('netorare').first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    await submitModal(tester);
+
+    final query = getResult();
+    expect(query!.tags, hasLength(10));
+    expect(query.tags, isNot(contains(258)));
+  });
+
+  testWidgets('date limit selection round-trips', (tester) async {
+    final getResult = await pumpModal(tester);
+
+    await tester.ensureVisible(find.text('30d'));
+    await tester.tap(find.text('30d'));
+    await tester.pumpAndSettle();
+
+    await submitModal(tester);
+
+    final query = getResult();
+    expect(query!.dateDays, 30);
   });
 
   testWidgets('leftover text in the field becomes the title search', (tester) async {
