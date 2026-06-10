@@ -14,11 +14,19 @@ class ThreadsList extends StatefulWidget {
   final FetchThreadsCallback fetchThreads;
   final SearchQuery query;
 
+  /// Reports the server-side total result count after each successful load.
+  final ValueChanged<int>? onCountChanged;
+
+  /// Extra space reserved at the top of the list (e.g. for an overlay bar).
+  final double topInset;
+
   const ThreadsList({
     super.key,
     this.scrollController,
     this.fetchThreads = ApiService.fetchThreads,
     this.query = const SearchQuery(),
+    this.onCountChanged,
+    this.topInset = 0,
   });
 
   @override
@@ -59,6 +67,7 @@ class _ThreadsListState extends State<ThreadsList> {
         _threads = apiResponse.data.threads;
         _isLoading = false;
       });
+      widget.onCountChanged?.call(apiResponse.data.count);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -130,7 +139,7 @@ class _ThreadsListState extends State<ThreadsList> {
       child: ListView.builder(
         controller: widget.scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: MediaQuery.of(context).padding,
+        padding: MediaQuery.of(context).padding.add(EdgeInsets.only(top: widget.topInset)),
         itemCount: _threads.length,
         itemBuilder: (context, index) {
           final thread = _threads[index];

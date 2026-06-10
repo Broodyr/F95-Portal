@@ -106,6 +106,27 @@ void main() {
     expect(receivedQueries.last, updated);
   });
 
+  testWidgets('reports the result count after a successful fetch', (tester) async {
+    int? reportedCount;
+
+    countFetch({
+      SearchQuery query = const SearchQuery(),
+      int page = 1,
+      int rows = 90,
+      bool fallbackToMockOnError = false,
+    }) async {
+      return createApiResponse(count: 321);
+    }
+
+    await pumpTestApp(
+      tester,
+      ThreadsList(fetchThreads: countFetch, onCountChanged: (count) => reportedCount = count),
+    );
+    await tester.pumpAndSettle();
+
+    expect(reportedCount, 321);
+  });
+
   testWidgets('does not refetch when rebuilt with an equal query', (tester) async {
     int calls = 0;
 

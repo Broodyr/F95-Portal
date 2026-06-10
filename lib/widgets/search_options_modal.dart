@@ -224,6 +224,17 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               if (_filters.isNotEmpty || _creator != null) ...[
                 _buildActiveFilters(colorScheme),
                 const SizedBox(height: 12),
@@ -351,7 +362,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               title: Text('Creator: "${_searchController.text.trim()}"'),
               onTap: _setCreatorFromText,
             ),
-          if (showPopular)
+          if (showPopular) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                'Popular tags — engines, statuses & creators match here too',
+                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+              ),
+            ),
             for (final tag in _popularSuggestions)
               ListTile(
                 dense: true,
@@ -364,6 +382,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                 ),
                 onTap: () => _addFilter(_FilterKind.tag, tag.tagId, metadata.tagName(tag.tagId)!),
               ),
+          ],
         ],
       ),
     );

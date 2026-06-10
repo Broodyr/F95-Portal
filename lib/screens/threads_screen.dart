@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../models/search_query.dart';
+import '../widgets/active_filters_bar.dart';
 import '../widgets/search_fab.dart';
 import '../widgets/search_options_modal.dart';
 import '../widgets/threads_list.dart';
@@ -21,8 +22,11 @@ class ThreadsScreen extends StatefulWidget {
 
 class _ThreadsScreenState extends State<ThreadsScreen> {
   // Use external ScrollController if provided, otherwise create internal one
+  static const double _filtersBarHeight = 56;
+
   late final ScrollController _scrollController;
   SearchQuery _activeQuery = const SearchQuery();
+  int? _resultCount;
 
   @override
   void initState() {
@@ -79,13 +83,22 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
       return;
     }
 
+    _onQueryChanged(result);
+  }
+
+  void _onQueryChanged(SearchQuery query) {
     setState(() {
-      _activeQuery = result;
+      if (query != _activeQuery) {
+        _resultCount = null;
+      }
+      _activeQuery = query;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool showFiltersBar = _activeQuery.hasActiveFilters;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -100,7 +113,29 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
               ),
             ),
           ),
-          ThreadsList(scrollController: _scrollController, query: _activeQuery),
+          ThreadsList(
+            scrollController: _scrollController,
+            query: _activeQuery,
+            topInset: showFiltersBar ? _filtersBarHeight : 0,
+            onCountChanged: (count) => setState(() => _resultCount = count),
+          ),
+          if (showFiltersBar)
+            Positioned(
+              top: 0,
+              left: 16,
+              right: 16,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: ActiveFiltersBar(
+                    query: _activeQuery,
+                    resultCount: _resultCount,
+                    onQueryChanged: _onQueryChanged,
+                  ),
+                ),
+              ),
+            ),
           SearchFab(
             scrollController: _scrollController,
             onSearchPressed: _onSearchPressed,
