@@ -67,13 +67,13 @@ All supported engines with their chosen colors for representation:
   "views": 184425,              // View count (formatted with K/M suffixes)
   "likes": 88,                  // Like count
   "prefixes": [13, 3, 47, 22],  // Engine + Status flags (see tables above)
-  "tags": [173, 259, ...],      // Content/genre tags (mostly unused)
+  "tags": [173, 259, ...],      // Content/genre tags
   "rating": 2.4,                // Average rating (0.0 shows as "-")
   "cover": "https://...",       // Cover image URL (4:1 aspect ratio)
   "screens": ["https://..."],   // Screenshot URLs array
   "date": "2 years",            // Last update time (human readable)
   "watched": false,             // User tracking flag
-  "ignored": false,             // User tracking flag  
+  "ignored": false,             // User tracking flag
   "new": false,                 // New content flag
   "ts": 1696011720              // Unix timestamp
 }
@@ -89,7 +89,7 @@ All supported engines with their chosen colors for representation:
 ### Status Priority
 Status prefixes are mutually exclusive and checked in this order:
 1. `isCompleted` (prefix 18)
-2. `isAbandoned` (prefix 22) 
+2. `isAbandoned` (prefix 22)
 3. `isOnhold` (prefix 20)
 4. Default to normal status
 
@@ -108,7 +108,7 @@ This documentation is based on analysis of these API responses:
    - Prefixes: `[13, 3, 47, 22]` (WebGL, VN, Unity, Abandoned)
    - Demonstrated multi-engine and abandoned status
 
-2. **"Cocky Me"** - Thread ID 220563  
+2. **"Cocky Me"** - Thread ID 220563
    - Prefixes: `[13, 7, 20]` (WebGL, HTML, Onhold)
    - Demonstrated onhold status and HTML engine
 
