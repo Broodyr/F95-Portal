@@ -56,7 +56,7 @@
 ## Current Limitations & Next Actions
 - Threads and Profile tabs are wired up; Forum/Search/Settings still trigger snackbars and placeholder screens.
 - `ThreadDetailsModal` contains placeholder messaging.
-- Networking lacks pagination (the `page` parameter exists but nothing loads page 2); consider introducing repository-level caching once live data usage stabilizes.
+- Consider introducing repository-level caching once live data usage stabilizes.
 - Sign-in state shows no username/avatar yet — the latest_alpha endpoint exposes no profile info, so that needs scraping a forum page.
 - Cover image aspect ratio is still being tweaked (docs say 4:1, `CoverImage` renders 3:1); settle during final design pass.
 
