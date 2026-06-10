@@ -53,4 +53,17 @@ void main() {
       F95Metadata.instance = previous;
     });
   });
+
+  group('F95Metadata.load', () {
+    testWidgets('loads the bundled asset via rootBundle as main() does', (tester) async {
+      final previous = F95Metadata.instance;
+      F95Metadata.reset();
+
+      final loaded = await F95Metadata.load();
+
+      expect(loaded.prefixById(SearchCategory.games, 7)?.name, "Ren'Py");
+      expect(identical(F95Metadata.instance, loaded), isTrue);
+      F95Metadata.instance = previous;
+    });
+  });
 }
