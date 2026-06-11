@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import 'sfw_blur.dart';
+
 class CoverImage extends StatelessWidget {
   final String? imageUrl;
 
@@ -18,11 +20,13 @@ class CoverImage extends StatelessWidget {
             topRight: Radius.circular(8),
           ),
           child: imageUrl != null && imageUrl!.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: imageUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => _buildPlaceholder(),
-                  errorWidget: (context, url, error) => _buildPlaceholder(),
+              ? SfwBlur(
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => _buildPlaceholder(),
+                    errorWidget: (context, url, error) => _buildPlaceholder(),
+                  ),
                 )
               : _buildPlaceholder(),
         ),

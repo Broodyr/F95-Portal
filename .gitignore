@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Saved-page asset folders; only the .htm fixtures are used
+test/fixtures/*_files/

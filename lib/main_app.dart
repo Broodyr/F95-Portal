@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'screens/profile_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/threads_screen.dart';
 import 'widgets/bottom_navigation.dart';
 
@@ -24,8 +25,8 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _onTabTapped(int index) {
-    if (index == 0 || index == 3) {
-      // Implemented tabs: Browse and Profile
+    if (index != 1) {
+      // Everything except Forum is implemented.
       setState(() {
         _currentIndex = index;
       });
@@ -59,6 +60,8 @@ class _MainAppState extends State<MainApp> {
     switch (_currentIndex) {
       case 0:
         return ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible);
+      case 2:
+        return const SettingsScreen();
       case 3:
         return const ProfileScreen();
       default:

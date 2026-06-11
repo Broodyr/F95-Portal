@@ -95,6 +95,39 @@ class SearchQuery {
     return params;
   }
 
+  Map<String, dynamic> toJson() => {
+    'category': category.name,
+    'search': search,
+    'creator': creator,
+    'tags': tags,
+    'notags': notags,
+    'prefixes': prefixes,
+    'noprefixes': noprefixes,
+    'sort': sort.name,
+    'dateDays': dateDays,
+    'anyTags': anyTags,
+  };
+
+  factory SearchQuery.fromJson(Map<String, dynamic> json) {
+    List<int> intList(dynamic value) => [
+      for (final item in value as List? ?? const [])
+        if (item is num) item.toInt(),
+    ];
+
+    return SearchQuery(
+      category: SearchCategory.values.asNameMap()[json['category']] ?? SearchCategory.games,
+      search: json['search'] ?? '',
+      creator: json['creator'] ?? '',
+      tags: intList(json['tags']),
+      notags: intList(json['notags']),
+      prefixes: intList(json['prefixes']),
+      noprefixes: intList(json['noprefixes']),
+      sort: SortOrder.values.asNameMap()[json['sort']] ?? SortOrder.date,
+      dateDays: json['dateDays'] is num ? (json['dateDays'] as num).toInt() : null,
+      anyTags: json['anyTags'] ?? false,
+    );
+  }
+
   /// Adds [tagId] as an include tag (removing it from the exclusions if
   /// present). Returns this instance unchanged when the tag is already
   /// included or the include list is at the API cap.

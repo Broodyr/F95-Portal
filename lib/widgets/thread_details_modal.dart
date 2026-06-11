@@ -12,6 +12,7 @@ import '../models/thread_summary.dart';
 import '../utils/formatters.dart';
 import 'engine_tag.dart';
 import 'screenshot_gallery.dart';
+import 'sfw_blur.dart';
 import 'version_pill.dart';
 
 /// Popped by the modal when the user picks a tag: tap adds it to the active
@@ -182,12 +183,14 @@ class ThreadDetailsModal extends StatelessWidget {
                         color: const Color(0xFF2A2A2A),
                         child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
                       )
-                    : CachedNetworkImage(
-                        imageUrl: thread.cover,
-                        fit: BoxFit.cover,
-                        errorWidget: (context, url, error) => Container(
-                          color: const Color(0xFF2A2A2A),
-                          child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
+                    : SfwBlur(
+                        child: CachedNetworkImage(
+                          imageUrl: thread.cover,
+                          fit: BoxFit.cover,
+                          errorWidget: (context, url, error) => Container(
+                            color: const Color(0xFF2A2A2A),
+                            child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
+                          ),
                         ),
                       ),
               ),
@@ -283,13 +286,15 @@ class ThreadDetailsModal extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
           width: 150,
-          child: CachedNetworkImage(
-            imageUrl: thread.screens[index],
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(color: const Color(0xFF2A2A2A)),
-            errorWidget: (context, url, error) => Container(
-              color: const Color(0xFF2A2A2A),
-              child: const Icon(Icons.broken_image_outlined, color: Color(0xFF666666)),
+          child: SfwBlur(
+            child: CachedNetworkImage(
+              imageUrl: thread.screens[index],
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(color: const Color(0xFF2A2A2A)),
+              errorWidget: (context, url, error) => Container(
+                color: const Color(0xFF2A2A2A),
+                child: const Icon(Icons.broken_image_outlined, color: Color(0xFF666666)),
+              ),
             ),
           ),
         ),

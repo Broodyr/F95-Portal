@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import 'sfw_blur.dart';
+
 /// Fullscreen swipeable screenshot viewer with pinch-zoom.
 class ScreenshotGallery extends StatefulWidget {
   final List<String> urls;
@@ -105,13 +107,15 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
                 transformationController: index == _index ? _transformation : null,
                 maxScale: 5,
                 child: Center(
-                  child: CachedNetworkImage(
-                    imageUrl: widget.urls[index],
-                    fit: BoxFit.contain,
-                    placeholder: (context, url) =>
-                        const Center(child: CircularProgressIndicator(color: Colors.white54)),
-                    errorWidget: (context, url, error) =>
-                        const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+                  child: SfwBlur(
+                    child: CachedNetworkImage(
+                      imageUrl: widget.urls[index],
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) =>
+                          const Center(child: CircularProgressIndicator(color: Colors.white54)),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+                    ),
                   ),
                 ),
               ),

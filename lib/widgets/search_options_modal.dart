@@ -4,7 +4,10 @@ import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../services/api_service.dart';
+import '../services/settings_service.dart';
 import '../utils/formatters.dart';
+
+typedef _EmptyTag = ({int id, String name, int? count});
 
 typedef FetchPopularTagsCallback = Future<List<PopularTag>> Function({SearchCategory category});
 
@@ -270,8 +273,8 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
     final suggestions = _buildSuggestions(_searchController.text);
-    final bool showPopular =
-        _searchFocus.hasFocus && _searchController.text.trim().isEmpty && _popularSuggestions.isNotEmpty;
+    final (emptyTags, recentMode) = _emptyTagSuggestions();
+    final bool showEmptyTags = _searchFocus.hasFocus && _searchController.text.trim().isEmpty && emptyTags.isNotEmpty;
 
     return SafeArea(
       child: AnimatedPadding(
@@ -299,9 +302,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                 const SizedBox(height: 12),
               ],
               _buildSearchField(colorScheme),
-              if (suggestions.isNotEmpty || _hasCreatorSuggestion || showPopular) ...[
+              if (suggestions.isNotEmpty || _hasCreatorSuggestion || showEmptyTags) ...[
                 const SizedBox(height: 8),
-                _buildSuggestionList(colorScheme, suggestions, showPopular: showPopular),
+                _buildSuggestionList(
+                  colorScheme,
+                  suggestions,
+                  emptyTags: showEmptyTags ? emptyTags : const [],
+                  recentMode: recentMode,
+                ),
               ],
               const SizedBox(height: 24),
               Text('Category', style: textTheme.titleMedium),
@@ -335,12 +343,28 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
 
   bool get _hasCreatorSuggestion => _searchController.text.trim().isNotEmpty;
 
-  List<PopularTag> get _popularSuggestions {
+  /// What to suggest while the field is empty: the user's recently used
+  /// tags when that source is selected (and non-empty), else popular tags
+  /// for the category. The bool is true when recents are being shown.
+  (List<_EmptyTag>, bool) _emptyTagSuggestions() {
     final metadata = F95Metadata.instance;
-    return _popularTags
-        .where((t) => metadata.tagName(t.tagId) != null && !_isActive(_FilterKind.tag, t.tagId))
-        .take(_maxPopularTags)
-        .toList();
+    final settings = SettingsService.instance.settings;
+
+    if (settings.suggestionSource == SuggestionSource.recent) {
+      final recents = [
+        for (final id in settings.recentTags)
+          if (metadata.tagName(id) != null && !_isActive(_FilterKind.tag, id))
+            (id: id, name: metadata.tagName(id)!, count: null),
+      ].take(_maxPopularTags).toList();
+      if (recents.isNotEmpty) return (recents, true);
+    }
+
+    final popular = [
+      for (final tag in _popularTags)
+        if (metadata.tagName(tag.tagId) != null && !_isActive(_FilterKind.tag, tag.tagId))
+          (id: tag.tagId, name: metadata.tagName(tag.tagId)!, count: tag.count),
+    ].take(_maxPopularTags).toList();
+    return (popular, false);
   }
 
   Widget _buildSearchField(ColorScheme colorScheme) {
@@ -421,8 +445,12 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     );
   }
 
-  Widget _buildSuggestionList(ColorScheme colorScheme, List<_Suggestion> suggestions, {bool showPopular = false}) {
-    final metadata = F95Metadata.instance;
+  Widget _buildSuggestionList(
+    ColorScheme colorScheme,
+    List<_Suggestion> suggestions, {
+    List<_EmptyTag> emptyTags = const [],
+    bool recentMode = false,
+  }) {
     return Container(
       constraints: const BoxConstraints(maxHeight: 240),
       decoration: BoxDecoration(
@@ -464,25 +492,27 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               onTap: _setCreatorFromText,
             ),
           ],
-          if (showPopular) ...[
+          if (emptyTags.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Text(
-                'Popular tags — engines, statuses & creators match here too',
+                '${recentMode ? 'Recent' : 'Popular'} tags — engines, statuses & creators match here too',
                 style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
               ),
             ),
-            for (final tag in _popularSuggestions)
+            for (final tag in emptyTags)
               ListTile(
                 dense: true,
                 visualDensity: VisualDensity.compact,
-                leading: Icon(Icons.trending_up, size: 18, color: colorScheme.onSurfaceVariant),
-                title: Text(metadata.tagName(tag.tagId)!),
-                trailing: Text(
-                  NumberFormatter.formatNumber(tag.count),
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-                ),
-                onTap: () => _addFilter(_FilterKind.tag, tag.tagId, metadata.tagName(tag.tagId)!),
+                leading: Icon(recentMode ? Icons.history : Icons.trending_up, size: 18, color: colorScheme.onSurfaceVariant),
+                title: Text(tag.name),
+                trailing: tag.count == null
+                    ? null
+                    : Text(
+                        NumberFormatter.formatNumber(tag.count!),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                      ),
+                onTap: () => _addFilter(_FilterKind.tag, tag.id, tag.name),
               ),
           ],
         ],

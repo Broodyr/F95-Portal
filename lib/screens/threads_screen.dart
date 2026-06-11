@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../models/search_query.dart';
+import '../services/settings_service.dart';
 import '../widgets/active_filters_bar.dart';
 import '../widgets/search_fab.dart';
 import '../widgets/thread_details_modal.dart';
@@ -26,12 +27,13 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
   static const double _filtersBarHeight = 56;
 
   late final ScrollController _scrollController;
-  SearchQuery _activeQuery = const SearchQuery();
+  late SearchQuery _activeQuery;
   int? _resultCount;
 
   @override
   void initState() {
     super.initState();
+    _activeQuery = SettingsService.instance.settings.defaultQuery;
     _scrollController = widget.scrollController ?? ScrollController();
     _scrollController.addListener(_scrollListener);
   }
@@ -94,6 +96,8 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
       }
       _activeQuery = query;
     });
+    // Feed the recently-used-tags suggestion source; fire and forget.
+    SettingsService.instance.recordTagUse(query.tags);
   }
 
   void _onTagSelected(ThreadTagSelection selection) {
@@ -149,6 +153,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
                     query: _activeQuery,
                     resultCount: _resultCount,
                     onQueryChanged: _onQueryChanged,
+                    onClearAll: () => _onQueryChanged(SettingsService.instance.settings.defaultQuery),
                   ),
                 ),
               ),

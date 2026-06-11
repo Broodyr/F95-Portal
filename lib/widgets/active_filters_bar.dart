@@ -23,7 +23,17 @@ class ActiveFiltersBar extends StatelessWidget {
   final int? resultCount;
   final ValueChanged<SearchQuery> onQueryChanged;
 
-  const ActiveFiltersBar({super.key, required this.query, required this.resultCount, required this.onQueryChanged});
+  /// Override for the clear-all button (e.g. reset to user defaults instead
+  /// of a blank query).
+  final VoidCallback? onClearAll;
+
+  const ActiveFiltersBar({
+    super.key,
+    required this.query,
+    required this.resultCount,
+    required this.onQueryChanged,
+    this.onClearAll,
+  });
 
   List<_BarChip> _buildChips() {
     final metadata = F95Metadata.instance;
@@ -151,7 +161,7 @@ class ActiveFiltersBar extends StatelessWidget {
                 tooltip: 'Clear all filters',
                 visualDensity: VisualDensity.compact,
                 icon: Icon(Icons.filter_alt_off_outlined, size: 18, color: Colors.grey[400]),
-                onPressed: () => onQueryChanged(SearchQuery(category: query.category)),
+                onPressed: onClearAll ?? () => onQueryChanged(SearchQuery(category: query.category)),
               ),
             ],
           ),

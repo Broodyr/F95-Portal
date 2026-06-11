@@ -146,6 +146,31 @@ void main() {
     });
   });
 
+  group('SearchQuery JSON', () {
+    test('round-trips all fields', () {
+      const query = SearchQuery(
+        category: SearchCategory.comics,
+        search: 'goblin',
+        creator: 'Dev',
+        tags: [225, 103],
+        notags: [258],
+        prefixes: [7],
+        noprefixes: [22],
+        sort: SortOrder.likes,
+        dateDays: 30,
+        anyTags: true,
+      );
+
+      expect(SearchQuery.fromJson(query.toJson()), query);
+    });
+
+    test('fromJson tolerates missing and unknown fields', () {
+      final query = SearchQuery.fromJson({'category': 'nonsense', 'sort': 'bogus', 'extra': 1});
+
+      expect(query, const SearchQuery());
+    });
+  });
+
   group('SortOrder', () {
     test('apiValue and displayLabel', () {
       expect(SortOrder.date.apiValue, 'date');

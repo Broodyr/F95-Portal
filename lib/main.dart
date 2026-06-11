@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'main_app.dart';
 import 'models/f95_metadata.dart';
 import 'services/auth_service.dart';
+import 'services/settings_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await F95Metadata.load();
   await AuthService.instance.load();
+  await SettingsService.instance.load();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

@@ -1,10 +1,12 @@
 import 'package:f95_portal/models/search_category.dart';
 import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/services/api_service.dart';
+import 'package:f95_portal/services/settings_service.dart';
 import 'package:f95_portal/widgets/search_options_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/in_memory_settings_storage.dart';
 import '../helpers/metadata_test_utils.dart';
 
 /// Pumps a host app with a button that opens the modal; returns a getter for
@@ -57,6 +59,17 @@ void main() {
 
   setUpAll(() {
     loadAndInstallMetadata();
+  });
+
+  late SettingsService previousSettings;
+
+  setUp(() {
+    previousSettings = SettingsService.instance;
+    installTestSettings();
+  });
+
+  tearDown(() {
+    SettingsService.instance = previousSettings;
   });
 
   testWidgets('typing suggests tags; tapping one adds an include filter', (tester) async {
@@ -267,6 +280,29 @@ void main() {
 
     final query = getResult();
     expect(query!.tags, [103]);
+  });
+
+  testWidgets('recent tags replace popular ones when that source is selected', (tester) async {
+    final service = SettingsService.instance;
+    await service.update(
+      service.settings.copyWith(suggestionSource: SuggestionSource.recent, recentTags: [225, 103]),
+    );
+
+    final getResult = await pumpModal(tester, popularTags: const [PopularTag(tagId: 130, count: 999)]);
+
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+
+    expect(find.text('pregnancy'), findsOneWidget);
+    expect(find.text('corruption'), findsOneWidget);
+    expect(find.text('big tits'), findsNothing);
+    expect(find.textContaining('Recent tags'), findsOneWidget);
+
+    await tester.tap(find.text('pregnancy'));
+    await tester.pumpAndSettle();
+    await submitModal(tester);
+
+    expect(getResult()!.tags, [225]);
   });
 
   testWidgets('sort selection round-trips', (tester) async {
