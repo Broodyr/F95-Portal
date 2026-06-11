@@ -65,9 +65,12 @@ class CustomBottomNavigation extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    // Browse covers games/comics/animations/assets, so a
+                    // category-neutral compass beats the old gamepad; the
+                    // search FAB keeps the magnifier.
                     _buildNavItem(
-                      icon: Icons.games_outlined,
-                      activeIcon: Icons.games,
+                      icon: Icons.explore_outlined,
+                      activeIcon: Icons.explore,
                       index: 0,
                       isActive: currentIndex == 0,
                     ),
@@ -78,22 +81,16 @@ class CustomBottomNavigation extends StatelessWidget {
                       isActive: currentIndex == 1,
                     ),
                     _buildNavItem(
-                      icon: Icons.search_outlined,
-                      activeIcon: Icons.search,
+                      icon: Icons.settings_outlined,
+                      activeIcon: Icons.settings,
                       index: 2,
                       isActive: currentIndex == 2,
                     ),
                     _buildNavItem(
-                      icon: Icons.settings_outlined,
-                      activeIcon: Icons.settings,
-                      index: 3,
-                      isActive: currentIndex == 3,
-                    ),
-                    _buildNavItem(
                       icon: Icons.person_outline,
                       activeIcon: Icons.person,
-                      index: 4,
-                      isActive: currentIndex == 4,
+                      index: 3,
+                      isActive: currentIndex == 3,
                     ),
                   ],
                 ),

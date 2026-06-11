@@ -24,8 +24,8 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _onTabTapped(int index) {
-    if (index == 0 || index == 4) {
-      // Implemented tabs: Threads and Profile
+    if (index == 0 || index == 3) {
+      // Implemented tabs: Browse and Profile
       setState(() {
         _currentIndex = index;
       });
@@ -43,14 +43,12 @@ class _MainAppState extends State<MainApp> {
   String _getTabName(int index) {
     switch (index) {
       case 0:
-        return 'Threads';
+        return 'Browse';
       case 1:
         return 'Forum';
       case 2:
-        return 'Search';
-      case 3:
         return 'Settings';
-      case 4:
+      case 3:
         return 'Profile';
       default:
         return 'Unknown';
@@ -61,7 +59,7 @@ class _MainAppState extends State<MainApp> {
     switch (_currentIndex) {
       case 0:
         return ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible);
-      case 4:
+      case 3:
         return const ProfileScreen();
       default:
         // Placeholder for other tabs

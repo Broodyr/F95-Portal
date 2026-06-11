@@ -12,7 +12,9 @@ List<String> recordHaptics(WidgetTester tester) {
   final haptics = <String>[];
   tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
     if (call.method == 'HapticFeedback.vibrate') {
-      haptics.add(call.arguments as String);
+      // HapticFeedback.vibrate() sends no arguments; the impact/selection
+      // variants send their HapticFeedbackType as a string.
+      haptics.add(call.arguments?.toString() ?? 'vibrate');
     }
     return null;
   });
@@ -109,7 +111,7 @@ void main() {
     expect(selection, isNotNull);
     expect(selection!.tagId, 107);
     expect(selection.replace, isFalse);
-    expect(haptics, ['HapticFeedbackType.lightImpact']);
+    expect(haptics, ['HapticFeedbackType.selectionClick']);
   });
 
   testWidgets('long-pressing a tag pops with a replace selection and a heavy haptic', (tester) async {
@@ -123,7 +125,7 @@ void main() {
     final selection = getSelection();
     expect(selection!.tagId, 254);
     expect(selection.replace, isTrue);
-    expect(haptics, contains('HapticFeedbackType.heavyImpact'));
+    expect(haptics, contains('vibrate'));
   });
 
   testWidgets('tapping the cover opens it fullscreen in the gallery', (tester) async {

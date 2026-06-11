@@ -307,11 +307,14 @@ class ThreadDetailsModal extends StatelessWidget {
         for (final tagId in thread.tags)
           GestureDetector(
             onTap: () {
-              HapticFeedback.lightImpact();
+              // selectionClick/vibrate are used (not light/heavyImpact)
+              // because Android maps heavyImpact to CONTEXT_CLICK, which
+              // feels weaker than lightImpact on many devices.
+              HapticFeedback.selectionClick();
               Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: false));
             },
             onLongPress: () {
-              HapticFeedback.heavyImpact();
+              HapticFeedback.vibrate();
               Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: true));
             },
             child: Container(
