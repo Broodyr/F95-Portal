@@ -33,7 +33,7 @@
 - `CustomBottomNavigation` (`lib/widgets/bottom_navigation.dart`): Glass pill nav with animated icons; vertical drags and taps pass through to the shared scroll controller for gesture continuity.
 - `SearchFab` (`lib/widgets/search_fab.dart`): Floating search button that also forwards vertical drags to scrolling; opens `SearchOptionsModal`.
 - `SearchOptionsModal` (`lib/widgets/search_options_modal.dart`): Omni-search bottom sheet — one field autocompletes tags, engines, statuses, and creators from the bundled vocabulary; selections become chips (tap toggles include/exclude, x removes), leftover text is the title search. Shows popular tags (live `cmd=tags`) while empty; pops a `SearchQuery`.
-- `ThreadDetailsModal` (`lib/widgets/thread_details_modal.dart`): Bottom sheet placeholder opened on card tap, ready for richer detail content.
+- `ThreadDetailsModal` (`lib/widgets/thread_details_modal.dart`): Draggable detail sheet opened on card tap — cover header with engine/version pills, stats row, screenshot strip (tap for the fullscreen pinch-zoom `ScreenshotGallery`), tag chips (tap adds the tag to the active search, long-press replaces it), and open-in-browser/share actions.
 - `PreRenderedNoisyBackground` (`lib/widgets/noisy_background.dart`): Utility for caching a noise texture; the call is currently commented out in `ThreadsScreen`.
 
 ## Development Notes
@@ -55,7 +55,7 @@
 
 ## Current Limitations & Next Actions
 - Threads and Profile tabs are wired up; Forum/Search/Settings still trigger snackbars and placeholder screens.
-- `ThreadDetailsModal` contains placeholder messaging.
+- Thread details show list-API data only; overview/changelog/download links need a thread-page scraper (planned phase 2, session cookies are already available).
 - Consider introducing repository-level caching once live data usage stabilizes.
 - Sign-in state shows no username/avatar yet — the latest_alpha endpoint exposes no profile info, so that needs scraping a forum page.
 - Cover image aspect ratio is still being tweaked (docs say 4:1, `CoverImage` renders 3:1); settle during final design pass.

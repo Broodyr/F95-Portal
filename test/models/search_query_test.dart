@@ -104,6 +104,38 @@ void main() {
     });
   });
 
+  group('SearchQuery tag shortcuts', () {
+    test('withTagAdded appends and un-excludes the tag', () {
+      const query = SearchQuery(tags: [107], notags: [254]);
+
+      final updated = query.withTagAdded(254);
+
+      expect(updated.tags, [107, 254]);
+      expect(updated.notags, isEmpty);
+    });
+
+    test('withTagAdded is a no-op when already included or at the cap', () {
+      const query = SearchQuery(tags: [107]);
+      expect(query.withTagAdded(107), same(query));
+
+      final full = SearchQuery(tags: List.generate(10, (i) => i + 1));
+      expect(full.withTagAdded(99), same(full));
+    });
+
+    test('replacedWithTag keeps only the category', () {
+      const query = SearchQuery(
+        category: SearchCategory.comics,
+        search: 'goblin',
+        tags: [107],
+        noprefixes: [22],
+        sort: SortOrder.likes,
+        dateDays: 30,
+      );
+
+      expect(query.replacedWithTag(254), const SearchQuery(category: SearchCategory.comics, tags: [254]));
+    });
+  });
+
   group('SearchQuery.hasActiveFilters', () {
     test('false for defaults, true with any filter', () {
       expect(const SearchQuery().hasActiveFilters, isFalse);

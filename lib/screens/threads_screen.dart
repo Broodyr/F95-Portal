@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import '../models/search_query.dart';
 import '../widgets/active_filters_bar.dart';
 import '../widgets/search_fab.dart';
+import '../widgets/thread_details_modal.dart';
 import '../widgets/search_options_modal.dart';
 import '../widgets/threads_list.dart';
 //import '../widgets/noisy_background.dart';
@@ -95,6 +96,21 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
     });
   }
 
+  void _onTagSelected(ThreadTagSelection selection) {
+    final updated = selection.replace
+        ? _activeQuery.replacedWithTag(selection.tagId)
+        : _activeQuery.withTagAdded(selection.tagId);
+
+    if (!selection.replace && !updated.tags.contains(selection.tagId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tag limit reached (${SearchQuery.maxTagsPerDirection}).')),
+      );
+      return;
+    }
+
+    _onQueryChanged(updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool showFiltersBar = _activeQuery.hasActiveFilters;
@@ -118,6 +134,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
             query: _activeQuery,
             topInset: showFiltersBar ? _filtersBarHeight : 0,
             onCountChanged: (count) => setState(() => _resultCount = count),
+            onTagSelected: _onTagSelected,
           ),
           if (showFiltersBar)
             Positioned(

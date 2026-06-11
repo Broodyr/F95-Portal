@@ -95,6 +95,20 @@ class SearchQuery {
     return params;
   }
 
+  /// Adds [tagId] as an include tag (removing it from the exclusions if
+  /// present). Returns this instance unchanged when the tag is already
+  /// included or the include list is at the API cap.
+  SearchQuery withTagAdded(int tagId) {
+    if (tags.contains(tagId) || tags.length >= maxTagsPerDirection) return this;
+    return copyWith(
+      tags: [...tags, tagId],
+      notags: [for (final t in notags) if (t != tagId) t],
+    );
+  }
+
+  /// A fresh search for [tagId] only, keeping just the category.
+  SearchQuery replacedWithTag(int tagId) => SearchQuery(category: category, tags: [tagId]);
+
   static const Object _unset = Object();
 
   SearchQuery copyWith({

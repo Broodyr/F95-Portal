@@ -17,6 +17,9 @@ class ThreadsList extends StatefulWidget {
   /// Reports the server-side total result count after each successful load.
   final ValueChanged<int>? onCountChanged;
 
+  /// Called when the user picks a tag inside the details modal.
+  final ValueChanged<ThreadTagSelection>? onTagSelected;
+
   /// Extra space reserved at the top of the list (e.g. for an overlay bar).
   final double topInset;
 
@@ -26,6 +29,7 @@ class ThreadsList extends StatefulWidget {
     this.fetchThreads = ApiService.fetchThreads,
     this.query = const SearchQuery(),
     this.onCountChanged,
+    this.onTagSelected,
     this.topInset = 0,
   });
 
@@ -135,8 +139,11 @@ class _ThreadsListState extends State<ThreadsList> {
     await _loadThreads();
   }
 
-  void _onThreadTap(ThreadSummary thread) {
-    ThreadDetailsModal.show(context, thread);
+  Future<void> _onThreadTap(ThreadSummary thread) async {
+    final selection = await ThreadDetailsModal.show(context, thread, category: widget.query.category);
+    if (selection != null) {
+      widget.onTagSelected?.call(selection);
+    }
   }
 
   @override
