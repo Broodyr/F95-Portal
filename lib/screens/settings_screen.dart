@@ -27,7 +27,7 @@ class SettingsScreen extends StatelessWidget {
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: DecoratedBox(
               decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.65)),
-              child: SearchOptionsModal(initialQuery: current.defaultQuery),
+              child: SearchOptionsModal(initialQuery: current.defaultQuery, submitLabel: 'Save'),
             ),
           ),
         );
@@ -76,8 +76,12 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    FilledButton.tonalIcon(
+                    FilledButton.icon(
                       onPressed: () => _editDefaults(context),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
                       icon: const Icon(Icons.tune, size: 18),
                       label: const Text('Edit defaults'),
                     ),
@@ -134,6 +138,10 @@ class SettingsScreen extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
                     onPressed: () => _clearImageCache(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: colorScheme.primary,
+                      side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.65)),
+                    ),
                     icon: const Icon(Icons.delete_outline, size: 18),
                     label: const Text('Clear image cache'),
                   ),
@@ -160,8 +168,8 @@ class SettingsScreen extends StatelessWidget {
     final metadata = F95Metadata.instance;
     final entries = <(IconData, String, bool)>[
       (Icons.category_outlined, query.category.displayLabel, false),
-      if (query.sort != SortOrder.date) (Icons.swap_vert, 'Sort: ${query.sort.displayLabel}', false),
-      if (query.dateDays != null) (Icons.schedule, 'Updated: ${query.dateDays}d', false),
+      (Icons.swap_vert, 'Sort: ${query.sort.displayLabel}', false),
+      (Icons.schedule, query.dateDays == null ? 'Updated: Any' : 'Updated: ${query.dateDays}d', false),
       if (query.search.trim().isNotEmpty) (Icons.search, '"${query.search.trim()}"', false),
       if (query.creator.trim().isNotEmpty) (Icons.person_outline, query.creator.trim(), false),
       for (final id in query.tags) (Icons.tag, metadata.tagName(id) ?? '#$id', false),

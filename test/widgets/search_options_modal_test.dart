@@ -54,6 +54,13 @@ Future<void> submitModal(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Scrolls the sheet body (the TextField contributes a second Scrollable,
+/// so the default single-Scrollable lookup fails).
+Future<void> scrollModalTo(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).first);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -308,6 +315,7 @@ void main() {
   testWidgets('sort selection round-trips', (tester) async {
     final getResult = await pumpModal(tester);
 
+    await scrollModalTo(tester, find.text('Rating'));
     await tester.tap(find.text('Rating'));
     await tester.pumpAndSettle();
 
@@ -315,5 +323,54 @@ void main() {
 
     final query = getResult();
     expect(query!.sort, SortOrder.rating);
+  });
+
+  testWidgets('engine pills cycle to include and the section lists the vocabulary', (tester) async {
+    final getResult = await pumpModal(tester);
+
+    await scrollModalTo(tester, find.text('Godot'));
+    // The full engine vocabulary is visible without typing anything.
+    expect(find.text('RPGM'), findsOneWidget);
+    expect(find.text('Java'), findsOneWidget);
+
+    await tester.tap(find.text('Godot'));
+    await tester.pumpAndSettle();
+    await submitModal(tester);
+
+    final query = getResult();
+    expect(query!.prefixes, [116]);
+    expect(query.noprefixes, isEmpty);
+  });
+
+  testWidgets('a second tap on a status pill turns it into an exclusion', (tester) async {
+    final getResult = await pumpModal(tester);
+
+    await scrollModalTo(tester, find.text('Abandoned'));
+    await tester.tap(find.text('Abandoned'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abandoned'));
+    await tester.pumpAndSettle();
+
+    await submitModal(tester);
+
+    final query = getResult();
+    expect(query!.noprefixes, [22]);
+    expect(query.prefixes, isEmpty);
+  });
+
+  testWidgets('a third tap clears the prefix pill', (tester) async {
+    final getResult = await pumpModal(tester);
+
+    await scrollModalTo(tester, find.text('Unity'));
+    for (int i = 0; i < 3; i++) {
+      await tester.tap(find.text('Unity'));
+      await tester.pumpAndSettle();
+    }
+
+    await submitModal(tester);
+
+    final query = getResult();
+    expect(query!.prefixes, isEmpty);
+    expect(query.noprefixes, isEmpty);
   });
 }

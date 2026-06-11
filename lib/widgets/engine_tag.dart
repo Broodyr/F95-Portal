@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import '../utils/formatters.dart';
 
@@ -24,80 +26,47 @@ class EngineTag extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (displayEngines.length == 1) {
-      // Single engine - original behavior
-      return Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          color: EngineColors.getEngineColor(displayEngines.first),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          displayEngines.first,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    } else {
-      // Multiple engines - segmented pill
-      return Container(
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+    // Glass pill: a single backdrop blur behind all segments, translucent
+    // colored fills, and saturated borders per segment.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: _buildSegmentedEngines(displayEngines),
+          children: [
+            for (int i = 0; i < displayEngines.length; i++)
+              _buildSegment(
+                displayEngines[i],
+                isFirst: i == 0,
+                isLast: i == displayEngines.length - 1,
+              ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
 
-  List<Widget> _buildSegmentedEngines(List<String> displayEngines) {
-    List<Widget> widgets = [];
+  Widget _buildSegment(String engine, {required bool isFirst, required bool isLast}) {
+    final Color color = EngineColors.getEngineColor(engine);
+    final BorderRadius borderRadius = BorderRadius.only(
+      topLeft: isFirst ? const Radius.circular(12) : Radius.zero,
+      bottomLeft: isFirst ? const Radius.circular(12) : Radius.zero,
+      topRight: isLast ? const Radius.circular(12) : Radius.zero,
+      bottomRight: isLast ? const Radius.circular(12) : Radius.zero,
+    );
 
-    for (int i = 0; i < displayEngines.length; i++) {
-      final engine = displayEngines[i];
-      final isFirst = i == 0;
-      final isLast = i == displayEngines.length - 1;
-
-      // Determine border radius based on position
-      BorderRadius borderRadius;
-      if (isFirst && isLast) {
-        borderRadius = BorderRadius.circular(12);
-      } else if (isFirst) {
-        borderRadius = const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          bottomLeft: Radius.circular(12),
-        );
-      } else if (isLast) {
-        borderRadius = const BorderRadius.only(
-          topRight: Radius.circular(12),
-          bottomRight: Radius.circular(12),
-        );
-      } else {
-        borderRadius = BorderRadius.zero;
-      }
-
-      widgets.add(
-        Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: EngineColors.getEngineColor(engine),
-            borderRadius: borderRadius,
-          ),
-          child: Text(
-            engine,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return widgets;
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.45),
+        borderRadius: borderRadius,
+        border: Border.all(color: color.withValues(alpha: 0.95)),
+      ),
+      child: Text(
+        engine,
+        style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
+      ),
+    );
   }
 }

@@ -63,8 +63,9 @@ void main() {
 
     await tester.tap(find.text('Comics'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Search'));
-    await tester.tap(find.text('Search'));
+    // In the settings context the submit button is relabeled.
+    await tester.ensureVisible(find.text('Save'));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(service.settings.defaultQuery.category, SearchCategory.comics);

@@ -1,8 +1,12 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 enum ThreadStatus { normal, completed, abandoned, onhold }
 
 class VersionPill extends StatelessWidget {
+  static const Color _versionColor = Color(0xFF404040);
+
   final String version;
   final bool isCompleted;
   final bool isAbandoned;
@@ -25,134 +29,67 @@ class VersionPill extends StatelessWidget {
     return ThreadStatus.normal;
   }
 
-  @override
-  Widget build(BuildContext context) {
+  (Color, IconData)? get _statusBadge {
     switch (_status) {
       case ThreadStatus.normal:
-        // Simple dark gray pill for normal threads
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(color: const Color(0xFF404040), borderRadius: BorderRadius.circular(12)),
-          child: Text(
-            version,
-            style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
-          ),
-        );
-
+        return null;
       case ThreadStatus.completed:
-        // Split pill for completed threads (blue with checkmark)
-        return IntrinsicHeight(
-          child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left side: Blue with checkmark
+        return (const Color(0xFF2189FF), Icons.task_alt);
+      case ThreadStatus.abandoned:
+        return (const Color(0xFF8f561a), Icons.cancel);
+      case ThreadStatus.onhold:
+        return (const Color(0xFFc255c3), Icons.pause_circle);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final badge = _statusBadge;
+
+    // Glass pill matching EngineTag: one backdrop blur, translucent fills,
+    // saturated borders.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+        child: IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (badge != null)
                 Container(
                   padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondary,
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
-                  ),
-                  child: Center(child: Icon(Icons.task_alt, color: Colors.white, size: 16)),
-                ),
-                // Right side: Version text on dark gray
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF404040),
-                    borderRadius: BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
-                  ),
-                  child: Center(
-                    child: Text(
-                      version,
-                      style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
+                    color: badge.$1.withValues(alpha: 0.45),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      bottomLeft: Radius.circular(12),
                     ),
+                    border: Border.all(color: badge.$1.withValues(alpha: 0.95)),
+                  ),
+                  child: Center(child: Icon(badge.$2, color: Colors.white, size: 16)),
+                ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _versionColor.withValues(alpha: 0.45),
+                  borderRadius: badge == null
+                      ? BorderRadius.circular(12)
+                      : const BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                ),
+                child: Center(
+                  child: Text(
+                    version,
+                    style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-
-      case ThreadStatus.abandoned:
-        // Split pill for abandoned threads (light orange with cancel icon)
-        return IntrinsicHeight(
-          child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left side: Light orange with cancel icon
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF8f561a),
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
-                  ),
-                  child: Center(
-                    child: Icon(Icons.cancel, color: Colors.white, size: fontSize),
-                  ),
-                ),
-                // Right side: Version text on dark gray
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF404040),
-                    borderRadius: BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
-                  ),
-                  child: Center(
-                    child: Text(
-                      version,
-                      style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-
-      case ThreadStatus.onhold:
-        // Split pill for onhold threads (pink with pause icon)
-        return IntrinsicHeight(
-          child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left side: Pink with pause icon
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFc255c3),
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
-                  ),
-                  child: Center(
-                    child: Icon(Icons.pause_circle, color: Colors.white, size: fontSize),
-                  ),
-                ),
-                // Right side: Version text on dark gray
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF404040),
-                    borderRadius: BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
-                  ),
-                  child: Center(
-                    child: Text(
-                      version,
-                      style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-    }
+        ),
+      ),
+    );
   }
 }

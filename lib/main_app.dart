@@ -56,33 +56,20 @@ class _MainAppState extends State<MainApp> {
     }
   }
 
-  Widget _getCurrentScreen() {
-    switch (_currentIndex) {
-      case 0:
-        return ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible);
-      case 2:
-        return const SettingsScreen();
-      case 3:
-        return const ProfileScreen();
-      default:
-        // Placeholder for other tabs
-        return Scaffold(
-          backgroundColor: const Color(0xFF0F0F0F),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.construction, size: 64, color: Colors.grey[600]),
-                const SizedBox(height: 16),
-                Text(
-                  '${_getTabName(_currentIndex)} coming soon!',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 18),
-                ),
-              ],
-            ),
-          ),
-        );
-    }
+  Widget _buildPlaceholder(String tabName) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F0F),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.construction, size: 64, color: Colors.grey[600]),
+            const SizedBox(height: 16),
+            Text('$tabName coming soon!', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -91,7 +78,17 @@ class _MainAppState extends State<MainApp> {
       backgroundColor: const Color(0xFF0F0F0F),
       body: Stack(
         children: [
-          _getCurrentScreen(),
+          // IndexedStack keeps every tab's state alive (active search,
+          // scroll position) across switches; state resets on app restart.
+          IndexedStack(
+            index: _currentIndex,
+            children: [
+              ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible),
+              _buildPlaceholder('Forum'),
+              const SettingsScreen(),
+              const ProfileScreen(),
+            ],
+          ),
           ValueListenableBuilder<bool>(
             valueListenable: _bottomNavVisible,
             builder: (context, isVisible, child) {

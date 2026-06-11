@@ -40,7 +40,15 @@ class SearchOptionsModal extends StatefulWidget {
   final SearchQuery initialQuery;
   final FetchPopularTagsCallback? fetchPopularTags;
 
-  const SearchOptionsModal({super.key, this.initialQuery = const SearchQuery(), this.fetchPopularTags});
+  /// Label of the submit button ('Search' in browse, 'Save' in settings).
+  final String submitLabel;
+
+  const SearchOptionsModal({
+    super.key,
+    this.initialQuery = const SearchQuery(),
+    this.fetchPopularTags,
+    this.submitLabel = 'Search',
+  });
 
   @override
   State<SearchOptionsModal> createState() => _SearchOptionsModalState();
@@ -315,14 +323,36 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               Text('Category', style: textTheme.titleMedium),
               const SizedBox(height: 8),
               _buildCategorySelector(colorScheme),
+              for (final group in _prefixGroups()) ...[
+                const SizedBox(height: 16),
+                Text(group.name, style: textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [for (final prefix in group.prefixes) _buildPrefixPill(colorScheme, prefix)],
+                ),
+              ],
               const SizedBox(height: 16),
               Text('Sort by', style: textTheme.titleMedium),
               const SizedBox(height: 8),
-              _buildSortSelector(colorScheme),
+              _buildSegmentedSelector<SortOrder>(
+                colorScheme,
+                values: SortOrder.values,
+                isSelected: (order) => _sort == order,
+                label: (order) => order.displayLabel,
+                onSelect: (order) => setState(() => _sort = order),
+              ),
               const SizedBox(height: 16),
               Text('Updated within', style: textTheme.titleMedium),
               const SizedBox(height: 8),
-              _buildDateLimitSelector(colorScheme),
+              _buildSegmentedSelector<MapEntry<String, int?>>(
+                colorScheme,
+                values: _dateLimits.entries.toList(),
+                isSelected: (entry) => _dateDays == entry.value,
+                label: (entry) => entry.key,
+                onSelect: (entry) => setState(() => _dateDays = entry.value),
+              ),
               const SizedBox(height: 24),
               FilledButton.icon(
                 onPressed: _onSubmit,
@@ -332,7 +362,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                   foregroundColor: colorScheme.onPrimary,
                 ),
                 icon: const Icon(Icons.search),
-                label: const Text('Search'),
+                label: Text(widget.submitLabel),
               ),
             ],
           ),
@@ -394,14 +424,17 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
       spacing: 8,
       runSpacing: 8,
       children: [
+        // Prefix filters are not chips here — they live in the always-visible
+        // Engine/Other/Status pill sections below.
         for (final filter in _filters)
-          _FilterChipPill(
-            label: filter.label,
-            exclude: filter.exclude,
-            icon: filter.kind == _FilterKind.tag ? Icons.tag : Icons.memory,
-            onTap: () => _toggleFilter(filter),
-            onRemove: () => setState(() => _filters.remove(filter)),
-          ),
+          if (filter.kind == _FilterKind.tag)
+            _FilterChipPill(
+              label: filter.label,
+              exclude: filter.exclude,
+              icon: Icons.tag,
+              onTap: () => _toggleFilter(filter),
+              onRemove: () => setState(() => _filters.remove(filter)),
+            ),
         if (_title != null)
           _FilterChipPill(
             label: 'Title: $_title',
@@ -575,35 +608,129 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     );
   }
 
-  Widget _buildSortSelector(ColorScheme colorScheme) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final order in SortOrder.values)
-          _buildChoicePill(
-            colorScheme,
-            label: order.displayLabel,
-            selected: _sort == order,
-            onTap: () => setState(() => _sort = order),
-          ),
-      ],
+  /// Single full-width pill with equal-width segments; replaces the wrapped
+  /// per-option pills that broke onto a second line on narrow screens.
+  Widget _buildSegmentedSelector<T>(
+    ColorScheme colorScheme, {
+    required List<T> values,
+    required bool Function(T) isSelected,
+    required String Function(T) label,
+    required ValueChanged<T> onSelect,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          for (final value in values)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelect(value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: isSelected(value) ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: isSelected(value) ? colorScheme.primary : Colors.transparent,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      label(value),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected(value) ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                        fontWeight: isSelected(value) ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildDateLimitSelector(ColorScheme colorScheme) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final entry in _dateLimits.entries)
-          _buildChoicePill(
-            colorScheme,
-            label: entry.key,
-            selected: _dateDays == entry.value,
-            onTap: () => setState(() => _dateDays = entry.value),
-          ),
-      ],
+  /// Prefix groups for the selected category, Engine first, Status last,
+  /// preserving the vocabulary's own group names.
+  List<({String name, List<F95Prefix> prefixes})> _prefixGroups() {
+    final grouped = <int, ({String name, List<F95Prefix> prefixes})>{};
+    for (final prefix in F95Metadata.instance.prefixesFor(_selectedCategory)) {
+      grouped.putIfAbsent(prefix.groupId, () => (name: prefix.groupName, prefixes: [])).prefixes.add(prefix);
+    }
+    final groups = grouped.values.toList();
+    groups.sort((a, b) {
+      int rank(({String name, List<F95Prefix> prefixes}) g) {
+        if (g.name == 'Engine') return 0;
+        if (g.prefixes.any((p) => p.isStatus)) return 2;
+        return 1;
+      }
+
+      return rank(a).compareTo(rank(b));
+    });
+    return groups;
+  }
+
+  _ActiveFilter? _prefixFilter(int id) {
+    for (final filter in _filters) {
+      if (filter.kind == _FilterKind.prefix && filter.id == id) return filter;
+    }
+    return null;
+  }
+
+  /// Tri-state pill: tap cycles off -> include -> exclude -> off.
+  Widget _buildPrefixPill(ColorScheme colorScheme, F95Prefix prefix) {
+    final filter = _prefixFilter(prefix.id);
+    final bool include = filter != null && !filter.exclude;
+    final bool exclude = filter != null && filter.exclude;
+    final Color accent = exclude ? colorScheme.error : colorScheme.primary;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (filter == null) {
+            _filters.add(_ActiveFilter(kind: _FilterKind.prefix, id: prefix.id, label: prefix.name));
+          } else if (!filter.exclude) {
+            filter.exclude = true;
+          } else {
+            _filters.remove(filter);
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: filter == null
+              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.25)
+              : accent.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: filter == null ? Colors.transparent : accent, width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (include) ...[const Icon(Icons.add, size: 14, color: Colors.white), const SizedBox(width: 3)],
+            if (exclude) ...[const Icon(Icons.remove, size: 14, color: Colors.white), const SizedBox(width: 3)],
+            Text(
+              prefix.name,
+              style: TextStyle(
+                fontSize: 13,
+                color: filter == null ? colorScheme.onSurfaceVariant : accent,
+                fontWeight: filter == null ? FontWeight.w400 : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
