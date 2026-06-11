@@ -144,10 +144,10 @@ class ThreadDetailsModal extends StatelessWidget {
                         IconButton.outlined(
                           onPressed: _shareThread,
                           tooltip: 'Share',
-                          // The share glyph's visual weight sits high-right; nudge
-                          // it so it reads centered in the circle.
+                          // The share glyph's visual weight sits right of
+                          // center; nudge it so it reads centered.
                           icon: Transform.translate(
-                            offset: const Offset(-1, 1),
+                            offset: const Offset(-1, 0),
                             child: const Icon(Icons.share_outlined, size: 20),
                           ),
                         ),

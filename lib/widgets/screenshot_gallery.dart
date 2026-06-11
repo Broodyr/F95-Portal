@@ -26,12 +26,22 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   final TransformationController _transformation = TransformationController();
   Offset _doubleTapPosition = Offset.zero;
   late int _index;
+  int _pointerCount = 0;
+  bool _zoomed = false;
+
+  /// PageView's horizontal drag recognizer beats the two-finger scale
+  /// recognizer in the gesture arena unless the fingers land perfectly
+  /// vertically. Stop the PageView from competing the moment a second
+  /// pointer is down, and keep it out of the way while zoomed in so a
+  /// one-finger drag pans the image instead of changing pages.
+  bool get _pageSwipingDisabled => _pointerCount >= 2 || _zoomed;
 
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
+    _transformation.addListener(_onTransformationChanged);
   }
 
   @override
@@ -39,6 +49,17 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
     _pageController.dispose();
     _transformation.dispose();
     super.dispose();
+  }
+
+  void _onTransformationChanged() {
+    final zoomed = _transformation.value.getMaxScaleOnAxis() > 1.01;
+    if (zoomed != _zoomed) {
+      setState(() => _zoomed = zoomed);
+    }
+  }
+
+  void _onPointerCountChanged(int delta) {
+    setState(() => _pointerCount = (_pointerCount + delta).clamp(0, 10));
   }
 
   /// Double tap toggles between fit and 2.5x zoom centered on the tap point.
@@ -64,32 +85,39 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
         foregroundColor: Colors.white,
         title: Text('${_index + 1} / ${widget.urls.length}', style: const TextStyle(fontSize: 16)),
       ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.urls.length,
-        onPageChanged: (index) {
-          setState(() => _index = index);
-          _transformation.value = Matrix4.identity();
-        },
-        itemBuilder: (context, index) {
-          return GestureDetector(
-            onDoubleTapDown: (details) => _doubleTapPosition = details.localPosition,
-            onDoubleTap: _handleDoubleTap,
-            child: InteractiveViewer(
-              transformationController: index == _index ? _transformation : null,
-              maxScale: 5,
-              child: Center(
-                child: CachedNetworkImage(
-                  imageUrl: widget.urls[index],
-                  fit: BoxFit.contain,
-                  placeholder: (context, url) => const Center(child: CircularProgressIndicator(color: Colors.white54)),
-                  errorWidget: (context, url, error) =>
-                      const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+      body: Listener(
+        onPointerDown: (_) => _onPointerCountChanged(1),
+        onPointerUp: (_) => _onPointerCountChanged(-1),
+        onPointerCancel: (_) => _onPointerCountChanged(-1),
+        child: PageView.builder(
+          controller: _pageController,
+          physics: _pageSwipingDisabled ? const NeverScrollableScrollPhysics() : null,
+          itemCount: widget.urls.length,
+          onPageChanged: (index) {
+            setState(() => _index = index);
+            _transformation.value = Matrix4.identity();
+          },
+          itemBuilder: (context, index) {
+            return GestureDetector(
+              onDoubleTapDown: (details) => _doubleTapPosition = details.localPosition,
+              onDoubleTap: _handleDoubleTap,
+              child: InteractiveViewer(
+                transformationController: index == _index ? _transformation : null,
+                maxScale: 5,
+                child: Center(
+                  child: CachedNetworkImage(
+                    imageUrl: widget.urls[index],
+                    fit: BoxFit.contain,
+                    placeholder: (context, url) =>
+                        const Center(child: CircularProgressIndicator(color: Colors.white54)),
+                    errorWidget: (context, url, error) =>
+                        const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
