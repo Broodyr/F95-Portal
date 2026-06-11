@@ -23,6 +23,8 @@ class ScreenshotGallery extends StatefulWidget {
 
 class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   late final PageController _pageController;
+  final TransformationController _transformation = TransformationController();
+  Offset _doubleTapPosition = Offset.zero;
   late int _index;
 
   @override
@@ -35,7 +37,22 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   @override
   void dispose() {
     _pageController.dispose();
+    _transformation.dispose();
     super.dispose();
+  }
+
+  /// Double tap toggles between fit and 2.5x zoom centered on the tap point.
+  void _handleDoubleTap() {
+    if (_transformation.value != Matrix4.identity()) {
+      _transformation.value = Matrix4.identity();
+      return;
+    }
+    const scale = 2.5;
+    final position = _doubleTapPosition;
+    _transformation.value = Matrix4.identity()
+      ..translateByDouble(position.dx, position.dy, 0, 1)
+      ..scaleByDouble(scale, scale, scale, 1)
+      ..translateByDouble(-position.dx, -position.dy, 0, 1);
   }
 
   @override
@@ -50,18 +67,25 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
       body: PageView.builder(
         controller: _pageController,
         itemCount: widget.urls.length,
-        onPageChanged: (index) => setState(() => _index = index),
+        onPageChanged: (index) {
+          setState(() => _index = index);
+          _transformation.value = Matrix4.identity();
+        },
         itemBuilder: (context, index) {
-          return InteractiveViewer(
-            maxScale: 5,
-            child: Center(
-              child: CachedNetworkImage(
-                imageUrl: widget.urls[index],
-                fit: BoxFit.contain,
-                placeholder: (context, url) =>
-                    const Center(child: CircularProgressIndicator(color: Colors.white54)),
-                errorWidget: (context, url, error) =>
-                    const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+          return GestureDetector(
+            onDoubleTapDown: (details) => _doubleTapPosition = details.localPosition,
+            onDoubleTap: _handleDoubleTap,
+            child: InteractiveViewer(
+              transformationController: index == _index ? _transformation : null,
+              maxScale: 5,
+              child: Center(
+                child: CachedNetworkImage(
+                  imageUrl: widget.urls[index],
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => const Center(child: CircularProgressIndicator(color: Colors.white54)),
+                  errorWidget: (context, url, error) =>
+                      const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+                ),
               ),
             ),
           );

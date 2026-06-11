@@ -1,5 +1,8 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
@@ -27,12 +30,7 @@ class ThreadDetailsModal extends StatelessWidget {
   final SearchCategory category;
   final UrlLauncher? urlLauncher;
 
-  const ThreadDetailsModal({
-    super.key,
-    required this.thread,
-    this.category = SearchCategory.games,
-    this.urlLauncher,
-  });
+  const ThreadDetailsModal({super.key, required this.thread, this.category = SearchCategory.games, this.urlLauncher});
 
   static Future<ThreadTagSelection?> show(
     BuildContext context,
@@ -44,6 +42,7 @@ class ThreadDetailsModal extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (BuildContext context) =>
           ThreadDetailsModal(thread: thread, category: category, urlLauncher: urlLauncher),
     );
@@ -70,134 +69,146 @@ class ThreadDetailsModal extends StatelessWidget {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: ListView(
-            controller: scrollController,
-            padding: EdgeInsets.only(bottom: 16 + MediaQuery.of(context).viewPadding.bottom),
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              _buildCoverHeader(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      thread.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+        // Same glass treatment as the search modal: blur + translucent surface.
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.65)),
+              child: ListView(
+                controller: scrollController,
+                padding: EdgeInsets.only(bottom: 16 + MediaQuery.of(context).viewPadding.bottom),
+                children: [
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)),
                     ),
-                    const SizedBox(height: 4),
-                    Text('by ${thread.creator}', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _buildStatsRow(colorScheme),
-              ),
-              if (thread.screens.isNotEmpty) ...[
-                _buildSectionLabel('Screenshots'),
-                SizedBox(
-                  height: 96,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: thread.screens.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) => _buildScreenshotThumb(context, index),
                   ),
-                ),
-              ],
-              if (thread.tags.isNotEmpty) ...[
-                _buildSectionLabel('Tags', hint: 'tap to add to search · hold to replace'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildTagChips(context, colorScheme),
-                ),
-              ],
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _openThread,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                  _buildCoverHeader(context),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          thread.title,
+                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                         ),
-                        icon: const Icon(Icons.open_in_new, size: 18),
-                        label: const Text('Open thread'),
+                        const SizedBox(height: 4),
+                        Text('by ${thread.creator}', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                  Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: _buildStatsRow(colorScheme)),
+                  if (thread.screens.isNotEmpty) ...[
+                    _buildSectionLabel('Screenshots'),
+                    SizedBox(
+                      height: 96,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: thread.screens.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) => _buildScreenshotThumb(context, index),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton.outlined(
-                      onPressed: _shareThread,
-                      tooltip: 'Share',
-                      icon: const Icon(Icons.share_outlined, size: 20),
+                  ],
+                  if (thread.tags.isNotEmpty) ...[
+                    _buildSectionLabel('Tags', hint: 'tap to add to search · hold to replace'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildTagChips(context, colorScheme),
                     ),
                   ],
-                ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _openThread,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: const Icon(Icons.open_in_new, size: 18),
+                            label: const Text('Open thread'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.outlined(
+                          onPressed: _shareThread,
+                          tooltip: 'Share',
+                          // The share glyph's visual weight sits high-right; nudge
+                          // it so it reads centered in the circle.
+                          icon: Transform.translate(
+                            offset: const Offset(-1, 1),
+                            child: const Icon(Icons.share_outlined, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildCoverHeader() {
+  Widget _buildCoverHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: AspectRatio(
-              aspectRatio: 3.0,
-              child: thread.cover.isEmpty
-                  ? Container(
-                      color: const Color(0xFF2A2A2A),
-                      child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: thread.cover,
-                      fit: BoxFit.cover,
-                      errorWidget: (context, url, error) => Container(
+      child: GestureDetector(
+        key: const Key('details-cover'),
+        behavior: HitTestBehavior.opaque,
+        // Covers are cropped to 3:1 here; tap to see the full image.
+        onTap: thread.cover.isEmpty ? null : () => ScreenshotGallery.show(context, [thread.cover]),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 3.0,
+                child: thread.cover.isEmpty
+                    ? Container(
                         color: const Color(0xFF2A2A2A),
                         child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: thread.cover,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) => Container(
+                          color: const Color(0xFF2A2A2A),
+                          child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
+                        ),
                       ),
-                    ),
+              ),
             ),
-          ),
-          Positioned(
-            top: 8,
-            left: 8,
-            child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: category)),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: VersionPill(
-              version: thread.version,
-              isCompleted: thread.isCompleted,
-              isAbandoned: thread.isAbandoned,
-              isOnhold: thread.isOnhold,
+            Positioned(
+              top: 8,
+              left: 8,
+              child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: category)),
             ),
-          ),
-        ],
+            Positioned(
+              top: 8,
+              right: 8,
+              child: VersionPill(
+                version: thread.version,
+                isCompleted: thread.isCompleted,
+                isAbandoned: thread.isAbandoned,
+                isOnhold: thread.isOnhold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -210,12 +221,16 @@ class ThreadDetailsModal extends StatelessWidget {
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.45)),
           ),
           child: Column(
             children: [
               Icon(icon, size: 16, color: Colors.grey[400]),
               const SizedBox(height: 4),
-              Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                value,
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              ),
             ],
           ),
         ),
@@ -242,11 +257,18 @@ class ThreadDetailsModal extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+          ),
           if (hint != null) ...[
             const SizedBox(width: 8),
             Expanded(
-              child: Text(hint, style: TextStyle(color: Colors.grey[500], fontSize: 11), overflow: TextOverflow.ellipsis),
+              child: Text(
+                hint,
+                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ],
@@ -284,8 +306,14 @@ class ThreadDetailsModal extends StatelessWidget {
       children: [
         for (final tagId in thread.tags)
           GestureDetector(
-            onTap: () => Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: false)),
-            onLongPress: () => Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: true)),
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: false));
+            },
+            onLongPress: () {
+              HapticFeedback.heavyImpact();
+              Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: true));
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(

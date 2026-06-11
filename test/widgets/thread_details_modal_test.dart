@@ -1,10 +1,24 @@
 import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:f95_portal/widgets/thread_details_modal.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/metadata_test_utils.dart';
 import '../helpers/test_data.dart';
+
+List<String> recordHaptics(WidgetTester tester) {
+  final haptics = <String>[];
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+    if (call.method == 'HapticFeedback.vibrate') {
+      haptics.add(call.arguments as String);
+    }
+    return null;
+  });
+  addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+  return haptics;
+}
 
 ThreadSummary detailedThread() => createThreadSummary(
   threadId: 42,
@@ -83,8 +97,9 @@ void main() {
     expect(find.text('harem'), findsOneWidget);
   });
 
-  testWidgets('tapping a tag pops with an additive selection', (tester) async {
+  testWidgets('tapping a tag pops with an additive selection and a light haptic', (tester) async {
     final (getSelection, _) = await pumpDetails(tester);
+    final haptics = recordHaptics(tester);
 
     await tester.scrollUntilVisible(find.text('3dcg'), 100);
     await tester.tap(find.text('3dcg'));
@@ -94,10 +109,12 @@ void main() {
     expect(selection, isNotNull);
     expect(selection!.tagId, 107);
     expect(selection.replace, isFalse);
+    expect(haptics, ['HapticFeedbackType.lightImpact']);
   });
 
-  testWidgets('long-pressing a tag pops with a replace selection', (tester) async {
+  testWidgets('long-pressing a tag pops with a replace selection and a heavy haptic', (tester) async {
     final (getSelection, _) = await pumpDetails(tester);
+    final haptics = recordHaptics(tester);
 
     await tester.scrollUntilVisible(find.text('harem'), 100);
     await tester.longPress(find.text('harem'));
@@ -106,6 +123,20 @@ void main() {
     final selection = getSelection();
     expect(selection!.tagId, 254);
     expect(selection.replace, isTrue);
+    expect(haptics, contains('HapticFeedbackType.heavyImpact'));
+  });
+
+  testWidgets('tapping the cover opens it fullscreen in the gallery', (tester) async {
+    await pumpDetails(tester, thread: createThreadSummary(threadId: 42, cover: 'https://example.com/cover.png'));
+
+    await tester.tap(find.byKey(const Key('details-cover')));
+    // The gallery's loading spinner animates indefinitely (the image never
+    // resolves in tests), so pump a fixed route-transition duration instead
+    // of settling.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(ScreenshotGallery), findsOneWidget);
   });
 
   testWidgets('open thread launches the canonical thread URL', (tester) async {
