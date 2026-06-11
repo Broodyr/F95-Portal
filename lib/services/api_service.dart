@@ -136,6 +136,11 @@ class ApiService {
     }
   }
 
+  /// Versioned User-Agent shared by all f95zone requests (also used by
+  /// ThreadPageService).
+  static Future<String> resolveUserAgent([PackageInfoLoader? packageInfoLoader]) =>
+      _resolveUserAgent(packageInfoLoader ?? PackageInfo.fromPlatform);
+
   static Future<String> _resolveUserAgent(PackageInfoLoader loader) async {
     if (_cachedUserAgent != null) {
       return _cachedUserAgent!;

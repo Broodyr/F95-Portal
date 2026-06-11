@@ -1,4 +1,6 @@
+import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/services/thread_page_service.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:f95_portal/widgets/thread_details_modal.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +42,7 @@ ThreadSummary detailedThread() => createThreadSummary(
 Future<(ThreadTagSelection? Function(), List<Uri>)> pumpDetails(
   WidgetTester tester, {
   ThreadSummary? thread,
+  FetchThreadPage? fetchThreadPage,
 }) async {
   ThreadTagSelection? selection;
   final launched = <Uri>[];
@@ -59,6 +62,7 @@ Future<(ThreadTagSelection? Function(), List<Uri>)> pumpDetails(
                     launched.add(uri);
                     return true;
                   },
+                  fetchThreadPage: fetchThreadPage ?? (id) async => ThreadPage(threadId: id),
                 );
               },
               child: const Text('open'),
@@ -157,5 +161,77 @@ void main() {
     await pumpDetails(tester);
 
     expect(find.text('Screenshots'), findsNothing);
+  });
+
+  testWidgets('scraped sections render: info grid, overview, downloads', (tester) async {
+    final (_, launched) = await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id),
+    );
+
+    await tester.scrollUntilVisible(find.text('MockDev'), 150);
+    expect(find.text('Developer'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Downloads'), 150);
+    expect(find.textContaining('representative mock thread page'), findsOneWidget);
+
+    // Platform switcher: Win is selected by default, its hosts shown.
+    await tester.scrollUntilVisible(find.text('PIXELDRAIN'), 150);
+    await tester.tap(find.text('PIXELDRAIN'));
+    await tester.pumpAndSettle();
+    expect(launched, [Uri.parse('https://example.com/win-pd')]);
+
+    // Switching platform swaps the host list.
+    await tester.tap(find.text('Linux'));
+    await tester.pumpAndSettle();
+    expect(find.text('PIXELDRAIN'), findsNothing);
+    await tester.tap(find.text('MEGA'));
+    await tester.pumpAndSettle();
+    expect(launched.last, Uri.parse('https://example.com/linux-mega'));
+
+    // Extras render with their host links.
+    expect(find.text('Extras'), findsOneWidget);
+    expect(find.text('Full save'), findsOneWidget);
+  });
+
+  testWidgets('spoiler cards expand and collapse', (tester) async {
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id),
+    );
+
+    await tester.scrollUntilVisible(find.text('Changelog'), 150);
+    await tester.ensureVisible(find.text('Changelog'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fixed things'), findsNothing);
+
+    await tester.tap(find.text('Changelog'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fixed things'), findsOneWidget);
+
+    await tester.tap(find.text('Changelog'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fixed things'), findsNothing);
+  });
+
+  testWidgets('page load failure shows an inline retry that recovers', (tester) async {
+    int attempts = 0;
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async {
+        attempts++;
+        if (attempts == 1) throw Exception('offline');
+        return ThreadPageService.createMockThreadPage(id);
+      },
+    );
+
+    await tester.scrollUntilVisible(find.text("Couldn't load thread details"), 150);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Couldn't load thread details"), findsNothing);
+    await tester.scrollUntilVisible(find.text('MockDev'), 150);
+    expect(attempts, 2);
   });
 }

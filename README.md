@@ -56,8 +56,8 @@
 ## Current Limitations & Next Actions
 - Browse, Settings, and Profile tabs are wired up; only Forum still shows the placeholder.
 - Settings (`lib/screens/settings_screen.dart` + `lib/services/settings_service.dart`): default search filters (edited via the same search modal, applied at startup and on filter-bar clear), popular-vs-recent empty-search suggestions, SFW cover blur (`lib/widgets/sfw_blur.dart`), and image cache clearing — persisted via shared_preferences.
-- Thread-page scraper is next: fixtures saved under `test/fixtures/*.htm` for TDD (overview/changelog/download links for details modal phase 2 and the Forum tab).
-- Thread details show list-API data only; overview/changelog/download links need a thread-page scraper (planned phase 2, session cookies are already available).
+- Forum tab is the last placeholder; the thread-page parser it needs already exists.
+- Thread details are scraped live: `lib/services/thread_page_parser.dart` parses the first post (tolerant block model — meta fields, overview, generic spoiler sections, per-platform downloads with extras) and `lib/services/thread_page_service.dart` fetches/caches it; the modal renders whatever blocks exist. Parser is TDD'd against `test/fixtures/*.htm`.
 - Consider introducing repository-level caching once live data usage stabilizes.
 - Sign-in state shows no username/avatar yet — the latest_alpha endpoint exposes no profile info, so that needs scraping a forum page.
 - Cover image aspect ratio is still being tweaked (docs say 4:1, `CoverImage` renders 3:1); settle during final design pass.

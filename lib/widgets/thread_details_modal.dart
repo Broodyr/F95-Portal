@@ -8,7 +8,9 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
+import '../models/thread_page.dart';
 import '../models/thread_summary.dart';
+import '../services/thread_page_service.dart';
 import '../utils/formatters.dart';
 import 'engine_tag.dart';
 import 'screenshot_gallery.dart';
@@ -25,35 +27,92 @@ class ThreadTagSelection {
 }
 
 typedef UrlLauncher = Future<bool> Function(Uri uri);
+typedef FetchThreadPage = Future<ThreadPage> Function(int threadId);
 
-class ThreadDetailsModal extends StatelessWidget {
+class ThreadDetailsModal extends StatefulWidget {
   final ThreadSummary thread;
   final SearchCategory category;
   final UrlLauncher? urlLauncher;
+  final FetchThreadPage? fetchThreadPage;
 
-  const ThreadDetailsModal({super.key, required this.thread, this.category = SearchCategory.games, this.urlLauncher});
+  const ThreadDetailsModal({
+    super.key,
+    required this.thread,
+    this.category = SearchCategory.games,
+    this.urlLauncher,
+    this.fetchThreadPage,
+  });
 
   static Future<ThreadTagSelection?> show(
     BuildContext context,
     ThreadSummary thread, {
     SearchCategory category = SearchCategory.games,
     UrlLauncher? urlLauncher,
+    FetchThreadPage? fetchThreadPage,
   }) {
     return showModalBottomSheet<ThreadTagSelection>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: 0.55),
-      builder: (BuildContext context) =>
-          ThreadDetailsModal(thread: thread, category: category, urlLauncher: urlLauncher),
+      builder: (BuildContext context) => ThreadDetailsModal(
+        thread: thread,
+        category: category,
+        urlLauncher: urlLauncher,
+        fetchThreadPage: fetchThreadPage,
+      ),
     );
   }
 
+  @override
+  State<ThreadDetailsModal> createState() => _ThreadDetailsModalState();
+}
+
+class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
+  ThreadPage? _page;
+  bool _loadingPage = true;
+  String? _pageError;
+  bool _overviewExpanded = false;
+  final Set<int> _expandedSpoilers = {};
+  int _platformIndex = 0;
+
+  ThreadSummary get thread => widget.thread;
+
   Uri get _threadUri => Uri.parse('https://f95zone.to/threads/${thread.threadId}/');
 
-  Future<void> _openThread() async {
-    final launch = urlLauncher ?? ((uri) => launcher.launchUrl(uri, mode: launcher.LaunchMode.externalApplication));
-    await launch(_threadUri);
+  @override
+  void initState() {
+    super.initState();
+    _loadPage();
+  }
+
+  Future<void> _loadPage() async {
+    setState(() {
+      _loadingPage = true;
+      _pageError = null;
+    });
+
+    try {
+      final fetch = widget.fetchThreadPage ?? ThreadPageService.fetch;
+      final page = await fetch(thread.threadId);
+      if (!mounted) return;
+      setState(() {
+        _page = page;
+        _loadingPage = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _pageError = e.toString();
+        _loadingPage = false;
+      });
+    }
+  }
+
+  Future<void> _launch(Uri uri) async {
+    final launch =
+        widget.urlLauncher ?? ((uri) => launcher.launchUrl(uri, mode: launcher.LaunchMode.externalApplication));
+    await launch(uri);
   }
 
   void _shareThread() {
@@ -125,13 +184,14 @@ class ThreadDetailsModal extends StatelessWidget {
                       child: _buildTagChips(context, colorScheme),
                     ),
                   ],
+                  ..._buildPageSections(colorScheme),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                     child: Row(
                       children: [
                         Expanded(
                           child: FilledButton.icon(
-                            onPressed: _openThread,
+                            onPressed: () => _launch(_threadUri),
                             style: FilledButton.styleFrom(
                               backgroundColor: colorScheme.primary,
                               foregroundColor: colorScheme.onPrimary,
@@ -163,6 +223,273 @@ class ThreadDetailsModal extends StatelessWidget {
       },
     );
   }
+
+  // --- Scraped page sections -----------------------------------------------
+
+  List<Widget> _buildPageSections(ColorScheme colorScheme) {
+    if (_loadingPage) {
+      return [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+          child: Row(
+            children: [
+              const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+              const SizedBox(width: 10),
+              Text('Loading thread details…', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    if (_pageError != null) {
+      return [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+          child: Row(
+            children: [
+              Icon(Icons.cloud_off, size: 16, color: Colors.grey[500]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "Couldn't load thread details",
+                  style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                ),
+              ),
+              TextButton(onPressed: _loadPage, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    final page = _page;
+    if (page == null) return const [];
+
+    final metaFields = [
+      for (final field in page.metaFields)
+        if (!{'genre', 'overview'}.contains(field.label.toLowerCase())) field,
+    ];
+    final spoilers = [
+      for (final spoiler in page.spoilers)
+        if (spoiler.title.toLowerCase() != 'genre') spoiler,
+    ];
+
+    return [
+      if (metaFields.isNotEmpty) ...[
+        _buildSectionLabel('Info'),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: _buildInfoGrid(metaFields)),
+      ],
+      if (page.overview.isNotEmpty) ...[
+        _buildSectionLabel('Overview'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _buildOverviewCard(colorScheme, page.overview),
+        ),
+      ],
+      if (page.downloads != null && !page.downloads!.isEmpty) ...[
+        _buildSectionLabel('Downloads'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _buildDownloadsCard(colorScheme, page.downloads!),
+        ),
+      ],
+      for (int i = 0; i < spoilers.length; i++)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: _buildSpoilerCard(colorScheme, i, spoilers[i]),
+        ),
+    ];
+  }
+
+  Widget _buildInfoGrid(List<MetaField> fields) {
+    final itemWidth = (MediaQuery.of(context).size.width - 48) / 2;
+    return Wrap(
+      spacing: 16,
+      runSpacing: 10,
+      children: [
+        for (final field in fields)
+          SizedBox(
+            width: itemWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(field.label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+                Text(field.value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildOverviewCard(ColorScheme colorScheme, String overview) {
+    return GestureDetector(
+      onTap: () => setState(() => _overviewExpanded = !_overviewExpanded),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          overview,
+          maxLines: _overviewExpanded ? null : 5,
+          overflow: _overviewExpanded ? null : TextOverflow.ellipsis,
+          style: TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDownloadsCard(ColorScheme colorScheme, DownloadsSection downloads) {
+    final platforms = downloads.platforms;
+    final selected = platforms.isEmpty ? null : platforms[_platformIndex.clamp(0, platforms.length - 1)];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (platforms.length > 1) ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (int i = 0; i < platforms.length; i++)
+                  GestureDetector(
+                    onTap: () => setState(() => _platformIndex = i),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: i == _platformIndex
+                            ? colorScheme.primary.withValues(alpha: 0.25)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: i == _platformIndex
+                              ? colorScheme.primary
+                              : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Text(
+                        platforms[i].label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: i == _platformIndex ? colorScheme.primary : Colors.grey[400],
+                          fontWeight: i == _platformIndex ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ] else if (platforms.length == 1) ...[
+            Text(platforms.single.label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+            const SizedBox(height: 6),
+          ],
+          if (selected != null) _buildHostLinks(colorScheme, selected.links),
+          if (downloads.extras.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            Text('Extras', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+            const SizedBox(height: 6),
+            for (final extra in downloads.extras) ...[
+              if (extra.label.toLowerCase() != 'extras' && extra.label.toLowerCase() != 'extra')
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(extra.label, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                ),
+              _buildHostLinks(colorScheme, extra.links),
+              const SizedBox(height: 6),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHostLinks(ColorScheme colorScheme, List<DownloadLink> links) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final link in links)
+          GestureDetector(
+            onTap: () => _launch(Uri.parse(link.url)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colorScheme.primary.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.open_in_new, size: 12, color: colorScheme.primary),
+                  const SizedBox(width: 5),
+                  Text(link.host, style: TextStyle(color: Colors.grey[200], fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSpoilerCard(ColorScheme colorScheme, int index, SpoilerSection spoiler) {
+    final bool expanded = _expandedSpoilers.contains(index);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => expanded ? _expandedSpoilers.remove(index) : _expandedSpoilers.add(index)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      spoiler.title,
+                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Icon(expanded ? Icons.expand_less : Icons.expand_more, size: 18, color: Colors.grey[500]),
+                ],
+              ),
+            ),
+          ),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Text(
+                spoiler.content,
+                style: TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // --- Phase-1 sections (unchanged) ----------------------------------------
 
   Widget _buildCoverHeader(BuildContext context) {
     return Padding(
@@ -198,7 +525,7 @@ class ThreadDetailsModal extends StatelessWidget {
             Positioned(
               top: 8,
               left: 8,
-              child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: category)),
+              child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: widget.category)),
             ),
             Positioned(
               top: 8,
