@@ -1,5 +1,6 @@
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/thread_page_service.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:f95_portal/widgets/thread_details_modal.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/in_memory_cookie_storage.dart';
 import '../helpers/metadata_test_utils.dart';
 import '../helpers/test_data.dart';
 
@@ -43,6 +45,7 @@ Future<(ThreadTagSelection? Function(), List<Uri>)> pumpDetails(
   WidgetTester tester, {
   ThreadSummary? thread,
   FetchThreadPage? fetchThreadPage,
+  ThreadActionSender? actionSender,
 }) async {
   ThreadTagSelection? selection;
   final launched = <Uri>[];
@@ -63,6 +66,7 @@ Future<(ThreadTagSelection? Function(), List<Uri>)> pumpDetails(
                     return true;
                   },
                   fetchThreadPage: fetchThreadPage ?? (id) async => ThreadPage(threadId: id),
+                  actionSender: actionSender,
                 );
               },
               child: const Text('open'),
@@ -241,6 +245,86 @@ void main() {
     await tester.tap(find.text('Changelog'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Fixed things'), findsNothing);
+  });
+
+  testWidgets('like and bookmark post the XenForo actions and toggle state', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+
+    final sent = <(String, String, Map<String, String>)>[];
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id),
+      actionSender: (url, csrf, fields) async => sent.add((url, csrf, fields)),
+    );
+
+    await tester.scrollUntilVisible(find.byTooltip('Like'), 150);
+    await tester.ensureVisible(find.byTooltip('Like'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Like'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+    expect(sent.last.$1, 'https://example.com/posts/1/react?reaction_id=1');
+    expect(sent.last.$2, 'mock-csrf');
+    expect(sent.last.$3, isEmpty);
+
+    await tester.tap(find.byTooltip('Bookmark'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.bookmark), findsOneWidget);
+    expect(sent.last.$1, 'https://example.com/threads/1/watch');
+
+    // Unbookmarking sends stop=1.
+    await tester.tap(find.byTooltip('Remove bookmark'));
+    await tester.pumpAndSettle();
+    expect(sent.last.$3, {'stop': '1'});
+    expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+  });
+
+  testWidgets('action failure reverts the optimistic state', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id),
+      actionSender: (url, csrf, fields) async => throw Exception('offline'),
+    );
+
+    await tester.scrollUntilVisible(find.byTooltip('Like'), 150);
+    await tester.ensureVisible(find.byTooltip('Like'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Like'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+  });
+
+  testWidgets('logged-out taps prompt for sign-in instead of posting', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+
+    final sent = <String>[];
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id),
+      actionSender: (url, csrf, fields) async => sent.add(url),
+    );
+
+    await tester.scrollUntilVisible(find.byTooltip('Like'), 150);
+    await tester.ensureVisible(find.byTooltip('Like'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Like'));
+    await tester.pumpAndSettle();
+
+    expect(sent, isEmpty);
+    expect(find.textContaining('Sign in from the Profile tab'), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
   });
 
   testWidgets('page load failure shows an inline retry that recovers', (tester) async {

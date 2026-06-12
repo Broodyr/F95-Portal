@@ -253,7 +253,39 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
     spoilers: spoilers,
     downloads: sets.isEmpty && extras.isEmpty ? null : DownloadsSection(sets: sets, extras: extras),
     attachments: _parseAttachments(post!),
+    actions: _parseActions(document, post),
   );
+}
+
+/// Extracts the CSRF token plus the react/watch endpoints, which XenForo
+/// only renders for logged-in sessions.
+ThreadActions? _parseActions(Document document, Element post) {
+  final csrf = document.querySelector('html')?.attributes['data-csrf'];
+  if (csrf == null || csrf.isEmpty) return null;
+
+  String? reactUrl;
+  bool liked = false;
+  for (final anchor in post.querySelectorAll('a')) {
+    final href = anchor.attributes['href'] ?? '';
+    if (href.contains('/react?reaction_id=')) {
+      reactUrl = _absoluteUrl(href);
+      liked = anchor.classes.contains('has-reaction');
+      break;
+    }
+  }
+
+  String? watchUrl;
+  bool watched = false;
+  for (final anchor in document.querySelectorAll('a')) {
+    if (anchor.attributes.containsKey('data-sk-watch')) {
+      watchUrl = _absoluteUrl(anchor.attributes['href'] ?? '');
+      watched = _collapse(anchor.text).toLowerCase() == 'unwatch';
+      break;
+    }
+  }
+
+  if (reactUrl == null && watchUrl == null) return null;
+  return ThreadActions(csrfToken: csrf, reactUrl: reactUrl, liked: liked, watchUrl: watchUrl, watched: watched);
 }
 
 List<DownloadLink> _parseAttachments(Element post) {

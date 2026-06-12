@@ -113,6 +113,15 @@ void main() {
       final notes = page.spoilers.firstWhere((s) => s.title == 'Developer Notes');
       expect(notes.rich.any((p) => p.imageUrl != null), isTrue);
     });
+
+    test('extracts the logged-in like/watch endpoints and state', () {
+      final actions = page.actions!;
+      expect(actions.csrfToken, isNotEmpty);
+      expect(actions.reactUrl, contains('/posts/13719651/react?reaction_id=1'));
+      expect(actions.liked, isFalse);
+      expect(actions.watchUrl, endsWith('/watch'));
+      expect(actions.watched, isFalse);
+    });
   });
 
   group('parseThreadPage on Elasid (animation collection, non-bold labels)', () {

@@ -10,6 +10,7 @@ import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/thread_page.dart';
 import '../models/thread_summary.dart';
+import '../services/auth_service.dart';
 import '../services/thread_page_service.dart';
 import '../utils/formatters.dart';
 import 'engine_tag.dart';
@@ -29,12 +30,14 @@ class ThreadTagSelection {
 
 typedef UrlLauncher = Future<bool> Function(Uri uri);
 typedef FetchThreadPage = Future<ThreadPage> Function(int threadId);
+typedef ThreadActionSender = Future<void> Function(String url, String csrfToken, Map<String, String> fields);
 
 class ThreadDetailsModal extends StatefulWidget {
   final ThreadSummary thread;
   final SearchCategory category;
   final UrlLauncher? urlLauncher;
   final FetchThreadPage? fetchThreadPage;
+  final ThreadActionSender? actionSender;
 
   const ThreadDetailsModal({
     super.key,
@@ -42,6 +45,7 @@ class ThreadDetailsModal extends StatefulWidget {
     this.category = SearchCategory.games,
     this.urlLauncher,
     this.fetchThreadPage,
+    this.actionSender,
   });
 
   static Future<ThreadTagSelection?> show(
@@ -50,6 +54,7 @@ class ThreadDetailsModal extends StatefulWidget {
     SearchCategory category = SearchCategory.games,
     UrlLauncher? urlLauncher,
     FetchThreadPage? fetchThreadPage,
+    ThreadActionSender? actionSender,
   }) {
     return showModalBottomSheet<ThreadTagSelection>(
       context: context,
@@ -61,6 +66,7 @@ class ThreadDetailsModal extends StatefulWidget {
         category: category,
         urlLauncher: urlLauncher,
         fetchThreadPage: fetchThreadPage,
+        actionSender: actionSender,
       ),
     );
   }
@@ -73,6 +79,8 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   ThreadPage? _page;
   bool _loadingPage = true;
   String? _pageError;
+  bool _liked = false;
+  bool _watched = false;
   bool _overviewExpanded = false;
   final Set<int> _expandedSpoilers = {};
 
@@ -101,6 +109,8 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
       if (!mounted) return;
       setState(() {
         _page = page;
+        _liked = page.actions?.liked ?? false;
+        _watched = page.actions?.watched ?? false;
         _loadingPage = false;
       });
     } catch (e) {
@@ -121,6 +131,37 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   void _shareThread() {
     // Link only; receivers' rich link previews supply the title/art.
     SharePlus.instance.share(ShareParams(text: '$_threadUri'));
+  }
+
+  /// Optimistically toggles like/watch, reverting on failure. The page cache
+  /// is invalidated so a reopened modal refetches the real state.
+  Future<void> _toggleAction({required bool isLike}) async {
+    final actions = _page?.actions;
+    final url = isLike ? actions?.reactUrl : actions?.watchUrl;
+    if (actions == null || url == null) return;
+
+    if (!AuthService.instance.isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in from the Profile tab to like and bookmark threads.')),
+      );
+      return;
+    }
+
+    HapticFeedback.selectionClick();
+    final bool wasActive = isLike ? _liked : _watched;
+    setState(() => isLike ? _liked = !wasActive : _watched = !wasActive);
+
+    try {
+      final send = widget.actionSender ??
+          (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
+      // React toggles on its own; watch needs stop=1 to unwatch.
+      await send(url, actions.csrfToken, !isLike && wasActive ? const {'stop': '1'} : const {});
+      ThreadPageService.invalidate(thread.threadId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLike ? _liked = wasActive : _watched = wasActive);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   @override
@@ -205,6 +246,30 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                             label: const Text('Open thread'),
                           ),
                         ),
+                        if (_page?.actions?.reactUrl != null) ...[
+                          const SizedBox(width: 8),
+                          IconButton.outlined(
+                            onPressed: () => _toggleAction(isLike: true),
+                            tooltip: _liked ? 'Unlike' : 'Like',
+                            icon: Icon(
+                              _liked ? Icons.favorite : Icons.favorite_border,
+                              size: 20,
+                              color: _liked ? colorScheme.primary : null,
+                            ),
+                          ),
+                        ],
+                        if (_page?.actions?.watchUrl != null) ...[
+                          const SizedBox(width: 8),
+                          IconButton.outlined(
+                            onPressed: () => _toggleAction(isLike: false),
+                            tooltip: _watched ? 'Remove bookmark' : 'Bookmark',
+                            icon: Icon(
+                              _watched ? Icons.bookmark : Icons.bookmark_border,
+                              size: 20,
+                              color: _watched ? colorScheme.primary : null,
+                            ),
+                          ),
+                        ],
                         const SizedBox(width: 8),
                         IconButton.outlined(
                           onPressed: _shareThread,

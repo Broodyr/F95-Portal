@@ -22,6 +22,10 @@ class ThreadPage {
   /// XenForo attachments on the first post (torrents, archives, …).
   final List<DownloadLink> attachments;
 
+  /// Like/watch endpoints and current state; null when the page was fetched
+  /// without a logged-in session (the links only render for members).
+  final ThreadActions? actions;
+
   const ThreadPage({
     required this.threadId,
     this.metaFields = const [],
@@ -29,6 +33,7 @@ class ThreadPage {
     this.spoilers = const [],
     this.downloads,
     this.attachments = const [],
+    this.actions,
   });
 
   String? metaValue(String label) {
@@ -37,6 +42,25 @@ class ThreadPage {
     }
     return null;
   }
+}
+
+/// XenForo CSRF token plus the first post's react endpoint and the thread's
+/// watch endpoint, with the states the page reported.
+@immutable
+class ThreadActions {
+  final String csrfToken;
+  final String? reactUrl;
+  final bool liked;
+  final String? watchUrl;
+  final bool watched;
+
+  const ThreadActions({
+    required this.csrfToken,
+    this.reactUrl,
+    this.liked = false,
+    this.watchUrl,
+    this.watched = false,
+  });
 }
 
 @immutable

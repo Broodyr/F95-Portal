@@ -56,8 +56,49 @@ class ThreadPageService {
     _cache[threadId] = page;
   }
 
+  /// Drops a cached page (e.g. after a like/watch toggle changed its state).
+  static void invalidate(int threadId) => _cache.remove(threadId);
+
   @visibleForTesting
   static void clearCache() => _cache.clear();
+
+  /// POSTs a XenForo action (react, watch) with the session cookies and the
+  /// page's CSRF token. XenForo reports errors inside 200 responses too.
+  static Future<void> postAction(
+    String url,
+    String csrfToken, {
+    Map<String, String> fields = const {},
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    final http.Client httpClient = client ?? http.Client();
+    final bool shouldCloseClient = client == null;
+
+    try {
+      final headers = {
+        'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader),
+        'Accept': 'application/json',
+      };
+      final cookies = AuthService.instance.cookieHeader;
+      if (cookies != null) headers['Cookie'] = cookies;
+
+      final response = await httpClient.post(
+        Uri.parse(url),
+        headers: headers,
+        body: {'_xfToken': csrfToken, '_xfResponseType': 'json', ...fields},
+      );
+
+      if (response.statusCode != 200 || response.body.contains('"status":"error"') || response.body.contains('"errors"')) {
+        throw ApiException('Action failed (HTTP ${response.statusCode})');
+      }
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException('Action failed: $e');
+    } finally {
+      if (shouldCloseClient) httpClient.close();
+    }
+  }
 
   /// Representative page for the web build and tests.
   static ThreadPage createMockThreadPage(int threadId) {
@@ -132,6 +173,11 @@ class ThreadPageService {
         ],
       ),
       attachments: const [DownloadLink(host: 'mock-2026.torrent', url: 'https://attachments.f95zone.to/mock.torrent')],
+      actions: const ThreadActions(
+        csrfToken: 'mock-csrf',
+        reactUrl: 'https://example.com/posts/1/react?reaction_id=1',
+        watchUrl: 'https://example.com/threads/1/watch',
+      ),
     );
   }
 }
