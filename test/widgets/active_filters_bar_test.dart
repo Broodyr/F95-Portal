@@ -24,10 +24,7 @@ void main() {
   );
 
   testWidgets('renders a chip for every active filter plus the result count', (tester) async {
-    await pumpTestApp(
-      tester,
-      ActiveFiltersBar(query: query, resultCount: 1247, onQueryChanged: (_) {}),
-    );
+    await pumpTestApp(tester, ActiveFiltersBar(query: query, resultCount: 1247, onQueryChanged: (_) {}));
 
     expect(find.text('"goblin"'), findsOneWidget);
     expect(find.text('SomeDev'), findsOneWidget);
@@ -40,10 +37,7 @@ void main() {
 
   testWidgets('removing a single chip updates only that filter', (tester) async {
     SearchQuery? updated;
-    await pumpTestApp(
-      tester,
-      ActiveFiltersBar(query: query, resultCount: null, onQueryChanged: (q) => updated = q),
-    );
+    await pumpTestApp(tester, ActiveFiltersBar(query: query, resultCount: null, onQueryChanged: (q) => updated = q));
 
     await tester.tap(find.text('pregnancy'));
     await tester.pumpAndSettle();
@@ -58,10 +52,7 @@ void main() {
   testWidgets('removing the sort chip resets sort to date', (tester) async {
     SearchQuery? updated;
     const sortOnly = SearchQuery(tags: [225], sort: SortOrder.likes);
-    await pumpTestApp(
-      tester,
-      ActiveFiltersBar(query: sortOnly, resultCount: null, onQueryChanged: (q) => updated = q),
-    );
+    await pumpTestApp(tester, ActiveFiltersBar(query: sortOnly, resultCount: null, onQueryChanged: (q) => updated = q));
 
     await tester.tap(find.text('Sort: Likes'));
     await tester.pumpAndSettle();
@@ -73,10 +64,7 @@ void main() {
   testWidgets('match-any mode renders as a chip and removal restores all-match', (tester) async {
     SearchQuery? updated;
     const anyQuery = SearchQuery(tags: [225, 103], anyTags: true);
-    await pumpTestApp(
-      tester,
-      ActiveFiltersBar(query: anyQuery, resultCount: null, onQueryChanged: (q) => updated = q),
-    );
+    await pumpTestApp(tester, ActiveFiltersBar(query: anyQuery, resultCount: null, onQueryChanged: (q) => updated = q));
 
     await tester.tap(find.text('Match: any'));
     await tester.pumpAndSettle();
@@ -88,10 +76,7 @@ void main() {
   testWidgets('date limit renders as a chip and removal clears it', (tester) async {
     SearchQuery? updated;
     const dated = SearchQuery(dateDays: 30);
-    await pumpTestApp(
-      tester,
-      ActiveFiltersBar(query: dated, resultCount: null, onQueryChanged: (q) => updated = q),
-    );
+    await pumpTestApp(tester, ActiveFiltersBar(query: dated, resultCount: null, onQueryChanged: (q) => updated = q));
 
     await tester.tap(find.text('Updated: 30d'));
     await tester.pumpAndSettle();
@@ -102,10 +87,7 @@ void main() {
   testWidgets('clear all resets everything except the category', (tester) async {
     SearchQuery? updated;
     const comicsQuery = SearchQuery(category: SearchCategory.comics, tags: [225], search: 'x');
-    await pumpTestApp(
-      tester,
-      ActiveFiltersBar(query: comicsQuery, resultCount: 5, onQueryChanged: (q) => updated = q),
-    );
+    await pumpTestApp(tester, ActiveFiltersBar(query: comicsQuery, resultCount: 5, onQueryChanged: (q) => updated = q));
 
     await tester.tap(find.byTooltip('Clear all filters'));
     await tester.pumpAndSettle();

@@ -12,11 +12,7 @@ class ThreadPageService {
   static const int _cacheLimit = 20;
   static final Map<int, ThreadPage> _cache = {};
 
-  static Future<ThreadPage> fetch(
-    int threadId, {
-    http.Client? client,
-    PackageInfoLoader? packageInfoLoader,
-  }) async {
+  static Future<ThreadPage> fetch(int threadId, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     final cached = _cache[threadId];
     if (cached != null) return cached;
 
@@ -30,10 +26,7 @@ class ThreadPageService {
     final bool shouldCloseClient = client == null;
 
     try {
-      final headers = {
-        'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader),
-        'Accept': 'text/html',
-      };
+      final headers = {'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader), 'Accept': 'text/html'};
       final cookies = AuthService.instance.cookieHeader;
       if (cookies != null) headers['Cookie'] = cookies;
 
@@ -77,24 +70,58 @@ class ThreadPageService {
         MetaField(label: 'Censored', value: 'No'),
         MetaField(label: 'Language', value: 'English'),
       ],
-      overview: 'A representative mock thread page used on the web build, '
+      overview:
+          'A representative mock thread page used on the web build, '
           'where CORS blocks fetching the real forum page.',
       spoilers: const [
-        SpoilerSection(title: 'Changelog', content: 'v0.9.1\n- Fixed things\n- Added other things'),
-        SpoilerSection(title: 'Developer Notes', content: 'Thanks for playing!'),
+        SpoilerSection(
+          title: 'Changelog',
+          content: 'v0.9.1\n- Fixed things\n- Added other things',
+          rich: [
+            RichPiece.text('v0.9.1', bold: true),
+            RichPiece.newline(),
+            RichPiece.text('- Fixed things'),
+            RichPiece.newline(),
+            RichPiece.text('- Added other things'),
+          ],
+        ),
+        SpoilerSection(
+          title: 'Developer Notes',
+          content: 'Thanks for playing! Join the discord',
+          rich: [
+            RichPiece.text('Thanks for '),
+            RichPiece.text('playing!', italic: true),
+            RichPiece.text(' Join the '),
+            RichPiece.text('discord', url: 'https://example.com/discord'),
+          ],
+        ),
       ],
       downloads: const DownloadsSection(
-        platforms: [
-          DownloadGroup(
-            label: 'Win',
-            links: [
-              DownloadLink(host: 'MEGA', url: 'https://example.com/win-mega'),
-              DownloadLink(host: 'PIXELDRAIN', url: 'https://example.com/win-pd'),
+        sets: [
+          DownloadSet(
+            title: null,
+            groups: [
+              DownloadGroup(
+                label: 'Win',
+                links: [
+                  DownloadLink(host: 'MEGA', url: 'https://example.com/win-mega'),
+                  DownloadLink(host: 'PIXELDRAIN', url: 'https://example.com/win-pd'),
+                ],
+              ),
+              DownloadGroup(
+                label: 'Linux',
+                links: [DownloadLink(host: 'MEGA', url: 'https://example.com/linux-mega')],
+              ),
             ],
           ),
-          DownloadGroup(
-            label: 'Linux',
-            links: [DownloadLink(host: 'MEGA', url: 'https://example.com/linux-mega')],
+          DownloadSet(
+            title: 'Alternate Version (v0.8)',
+            groups: [
+              DownloadGroup(
+                label: 'Win',
+                links: [DownloadLink(host: 'GOFILE', url: 'https://example.com/alt-win')],
+              ),
+            ],
           ),
         ],
         extras: [
@@ -104,6 +131,7 @@ class ThreadPageService {
           ),
         ],
       ),
+      attachments: const [DownloadLink(host: 'mock-2026.torrent', url: 'https://attachments.f95zone.to/mock.torrent')],
     );
   }
 }

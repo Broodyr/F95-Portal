@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../services/settings_service.dart';
+
 enum ThreadStatus { normal, completed, abandoned, onhold }
 
 class VersionPill extends StatelessWidget {
@@ -47,12 +49,15 @@ class VersionPill extends StatelessWidget {
     final badge = _statusBadge;
 
     // Glass pill matching EngineTag: one backdrop blur, translucent fills,
-    // saturated borders.
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-        child: IntrinsicHeight(
+    // saturated borders. With glass effects disabled, solid fills skip the
+    // costly blur.
+    return ListenableBuilder(
+      listenable: SettingsService.instance,
+      builder: (context, _) {
+        final bool glass = SettingsService.instance.settings.glassEffects;
+        final double fillAlpha = glass ? 0.45 : 0.92;
+
+        final row = IntrinsicHeight(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,7 +66,7 @@ class VersionPill extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
                   decoration: BoxDecoration(
-                    color: badge.$1.withValues(alpha: 0.45),
+                    color: badge.$1.withValues(alpha: fillAlpha),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       bottomLeft: Radius.circular(12),
@@ -73,7 +78,7 @@ class VersionPill extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _versionColor.withValues(alpha: 0.45),
+                  color: _versionColor.withValues(alpha: glass ? 0.45 : 1.0),
                   borderRadius: badge == null
                       ? BorderRadius.circular(12)
                       : const BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
@@ -88,8 +93,14 @@ class VersionPill extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
+        );
+
+        if (!glass) return row;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6), child: row),
+        );
+      },
     );
   }
 }

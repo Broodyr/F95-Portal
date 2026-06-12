@@ -6,14 +6,7 @@ import '../helpers/widget_test_utils.dart';
 
 void main() {
   testWidgets('displays formatted metadata values', (tester) async {
-    await pumpTestApp(
-      tester,
-      const MetadataRow(
-        timeUpdated: '3 days',
-        likes: 1520,
-        views: 2700000,
-      ),
-    );
+    await pumpTestApp(tester, const MetadataRow(timeUpdated: '3 days', likes: 1520, views: 2700000));
 
     await tester.pump();
 

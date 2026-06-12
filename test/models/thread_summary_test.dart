@@ -71,12 +71,7 @@ void main() {
     test('fromJson tolerates string fields arriving as numbers', () {
       // Live counterexample: thread 200660 "Brothel of Darkness" ships
       // "version": 1.3 as a raw JSON number.
-      final json = {
-        'thread_id': 200660,
-        'title': 'Brothel of Darkness',
-        'version': 1.3,
-        'date': 2,
-      };
+      final json = {'thread_id': 200660, 'title': 'Brothel of Darkness', 'version': 1.3, 'date': 2};
 
       final thread = ThreadSummary.fromJson(json);
 

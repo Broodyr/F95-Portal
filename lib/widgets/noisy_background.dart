@@ -17,12 +17,10 @@ class PreRenderedNoisyBackground extends StatefulWidget {
   });
 
   @override
-  State<PreRenderedNoisyBackground> createState() =>
-      _PreRenderedNoisyBackgroundState();
+  State<PreRenderedNoisyBackground> createState() => _PreRenderedNoisyBackgroundState();
 }
 
-class _PreRenderedNoisyBackgroundState
-    extends State<PreRenderedNoisyBackground> {
+class _PreRenderedNoisyBackgroundState extends State<PreRenderedNoisyBackground> {
   ui.Image? _noiseImage;
 
   @override

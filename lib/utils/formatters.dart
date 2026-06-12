@@ -69,10 +69,7 @@ class ThreadUtils {
   /// bundled vocabulary (assets/f95_metadata.json). Tags are content/genre
   /// descriptors and carry no engine information, so they play no part here.
   /// Unknown prefix IDs render as `#<id>` rather than crashing.
-  static List<String> getEnginesFromThread(
-    List<int> prefixes, {
-    SearchCategory category = SearchCategory.games,
-  }) {
+  static List<String> getEnginesFromThread(List<int> prefixes, {SearchCategory category = SearchCategory.games}) {
     final metadata = F95Metadata.instance;
     final engines = <String>[];
 

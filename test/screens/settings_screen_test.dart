@@ -38,10 +38,22 @@ void main() {
 
     expect(service.settings.sfwBlur, isFalse);
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.widgetWithText(SwitchListTile, 'SFW mode'));
     await tester.pumpAndSettle();
 
     expect(service.settings.sfwBlur, isTrue);
+  });
+
+  testWidgets('glass effects switch round-trips to the service', (tester) async {
+    await pumpSettings(tester);
+
+    expect(service.settings.glassEffects, isTrue);
+
+    await tester.ensureVisible(find.widgetWithText(SwitchListTile, 'Glass effects'));
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Glass effects'));
+    await tester.pumpAndSettle();
+
+    expect(service.settings.glassEffects, isFalse);
   });
 
   testWidgets('suggestion source pills update the service', (tester) async {
@@ -73,7 +85,9 @@ void main() {
 
   testWidgets('defaults summary shows tag names and reset restores blank', (tester) async {
     await service.update(
-      service.settings.copyWith(defaultQuery: const SearchQuery(notags: [258], category: SearchCategory.games)),
+      service.settings.copyWith(
+        defaultQuery: const SearchQuery(notags: [258], category: SearchCategory.games),
+      ),
     );
     await pumpSettings(tester);
 

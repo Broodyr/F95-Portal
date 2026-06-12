@@ -43,11 +43,16 @@ class SearchOptionsModal extends StatefulWidget {
   /// Label of the submit button ('Search' in browse, 'Save' in settings).
   final String submitLabel;
 
+  /// The settings instance is not swipe-dismissed the same way, so it hides
+  /// the decorative drag handle.
+  final bool showDragHandle;
+
   const SearchOptionsModal({
     super.key,
     this.initialQuery = const SearchQuery(),
     this.fetchPopularTags,
     this.submitLabel = 'Search',
+    this.showDragHandle = true,
   });
 
   @override
@@ -60,14 +65,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   static const int _maxPopularTags = 8;
 
   /// Day counts offered by the "Updated within" row; null = anytime.
-  static const Map<String, int?> _dateLimits = {
-    'Any': null,
-    '24h': 1,
-    '7d': 7,
-    '30d': 30,
-    '90d': 90,
-    '1y': 365,
-  };
+  static const Map<String, int?> _dateLimits = {'Any': null, '24h': 1, '7d': 7, '30d': 30, '90d': 90, '1y': 365};
 
   final FocusNode _searchFocus = FocusNode();
   late final TextEditingController _searchController;
@@ -223,7 +221,8 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   }
 
   void _toggleFilter(_ActiveFilter filter) {
-    if (filter.kind == _FilterKind.tag && _tagFilterCount(exclude: !filter.exclude) >= SearchQuery.maxTagsPerDirection) {
+    if (filter.kind == _FilterKind.tag &&
+        _tagFilterCount(exclude: !filter.exclude) >= SearchQuery.maxTagsPerDirection) {
       _showTagLimitNotice();
       return;
     }
@@ -263,10 +262,22 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
         category: _selectedCategory,
         search: _title ?? leftoverText,
         creator: _creator ?? '',
-        tags: [for (final f in _filters) if (f.kind == _FilterKind.tag && !f.exclude) f.id],
-        notags: [for (final f in _filters) if (f.kind == _FilterKind.tag && f.exclude) f.id],
-        prefixes: [for (final f in _filters) if (f.kind == _FilterKind.prefix && !f.exclude) f.id],
-        noprefixes: [for (final f in _filters) if (f.kind == _FilterKind.prefix && f.exclude) f.id],
+        tags: [
+          for (final f in _filters)
+            if (f.kind == _FilterKind.tag && !f.exclude) f.id,
+        ],
+        notags: [
+          for (final f in _filters)
+            if (f.kind == _FilterKind.tag && f.exclude) f.id,
+        ],
+        prefixes: [
+          for (final f in _filters)
+            if (f.kind == _FilterKind.prefix && !f.exclude) f.id,
+        ],
+        noprefixes: [
+          for (final f in _filters)
+            if (f.kind == _FilterKind.prefix && f.exclude) f.id,
+        ],
         sort: _sort,
         dateDays: _dateDays,
         anyTags: _anyTags,
@@ -294,17 +305,18 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
+              if (widget.showDragHandle)
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
               if (_filters.isNotEmpty || _creator != null || _title != null) ...[
                 _buildActiveFilters(colorScheme),
                 const SizedBox(height: 12),
@@ -503,10 +515,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               title: Text(suggestion.label),
               trailing: suggestion.trailing == null
                   ? null
-                  : Text(
-                      suggestion.trailing!,
-                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-                    ),
+                  : Text(suggestion.trailing!, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
               onTap: () => _addFilter(suggestion.kind, suggestion.id, suggestion.label),
             ),
           if (_hasCreatorSuggestion) ...[
@@ -537,7 +546,11 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
               ListTile(
                 dense: true,
                 visualDensity: VisualDensity.compact,
-                leading: Icon(recentMode ? Icons.history : Icons.trending_up, size: 18, color: colorScheme.onSurfaceVariant),
+                leading: Icon(
+                  recentMode ? Icons.history : Icons.trending_up,
+                  size: 18,
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 title: Text(tag.name),
                 trailing: tag.count == null
                     ? null
@@ -567,9 +580,9 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected
-              ? colorScheme.primary.withValues(alpha: 0.18)
-              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+          // Idle pills get a solid dark fill so they read as buttons against
+          // the blurred glass background rather than floating words.
+          color: selected ? colorScheme.primary.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: selected ? colorScheme.primary : Colors.transparent, width: 1.5),
         ),
@@ -618,11 +631,9 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     required ValueChanged<T> onSelect,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-      ),
+      // Borderless dark track: the selected segment carries the only border,
+      // so it does not clash with an outer outline.
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(999)),
       child: Row(
         children: [
           for (final value in values)
@@ -636,10 +647,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                   decoration: BoxDecoration(
                     color: isSelected(value) ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: isSelected(value) ? colorScheme.primary : Colors.transparent,
-                      width: 1.5,
-                    ),
+                    border: Border.all(color: isSelected(value) ? colorScheme.primary : Colors.transparent, width: 1.5),
                   ),
                   child: Center(
                     child: Text(
@@ -709,9 +717,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: filter == null
-              ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.25)
-              : accent.withValues(alpha: 0.18),
+          color: filter == null ? Colors.black.withValues(alpha: 0.35) : accent.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: filter == null ? Colors.transparent : accent, width: 1.5),
         ),
@@ -774,7 +780,10 @@ class _FilterChipPill extends StatelessWidget {
             const SizedBox(width: 3),
             Icon(icon, size: 14, color: accent),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 13, color: accent, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: TextStyle(fontSize: 13, color: accent, fontWeight: FontWeight.w500),
+            ),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onRemove,

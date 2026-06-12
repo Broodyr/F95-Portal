@@ -38,28 +38,14 @@ class CustomBottomNavigation extends StatelessWidget {
               },
               child: Container(
                 height: 56,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1C1C1E).withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    width: 0.5,
-                  ),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
                   boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 32,
-                      offset: const Offset(0, 8),
-                    ),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 32, offset: const Offset(0, 8)),
                   ],
                 ),
                 child: Row(
@@ -138,8 +124,7 @@ class _PassThroughNavItem extends StatefulWidget {
   State<_PassThroughNavItem> createState() => _PassThroughNavItemState();
 }
 
-class _PassThroughNavItemState extends State<_PassThroughNavItem>
-    with TickerProviderStateMixin {
+class _PassThroughNavItemState extends State<_PassThroughNavItem> with TickerProviderStateMixin {
   late AnimationController _scaleController;
   late AnimationController _pulseController;
   late Animation<double> _scaleAnimation;
@@ -150,22 +135,18 @@ class _PassThroughNavItemState extends State<_PassThroughNavItem>
   @override
   void initState() {
     super.initState();
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
+    _scaleController = AnimationController(duration: const Duration(milliseconds: 150), vsync: this);
+    _pulseController = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this);
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.9,
+    ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut));
 
-    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    _pulseAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
 
     if (widget.isActive) {
       _pulseController.repeat(reverse: true);
@@ -230,9 +211,7 @@ class _PassThroughNavItemState extends State<_PassThroughNavItem>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.isActive
-                    ? Theme.of(context).colorScheme.primary.withValues(
-                        alpha: 0.2 + (_pulseAnimation.value * 0.1),
-                      )
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2 + (_pulseAnimation.value * 0.1))
                     : Colors.transparent,
               ),
               child: AnimatedSwitcher(
@@ -240,9 +219,7 @@ class _PassThroughNavItemState extends State<_PassThroughNavItem>
                 child: Icon(
                   widget.isActive ? widget.activeIcon : widget.icon,
                   key: ValueKey(widget.isActive),
-                  color: widget.isActive
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey[500],
+                  color: widget.isActive ? Theme.of(context).colorScheme.primary : Colors.grey[500],
                   size: 22,
                 ),
               ),

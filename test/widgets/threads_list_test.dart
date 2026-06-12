@@ -14,8 +14,7 @@ import '../helpers/widget_test_utils.dart';
 
 /// Builds a page of [count] distinct threads, titled "P(page) #(n)".
 List<ThreadSummary> pageOf(int page, int count, {int idOffset = 0}) => [
-  for (int i = 0; i < count; i++)
-    createThreadSummary(threadId: page * 1000 + idOffset + i, title: 'P$page #$i'),
+  for (int i = 0; i < count; i++) createThreadSummary(threadId: page * 1000 + idOffset + i, title: 'P$page #$i'),
 ];
 
 void main() {
@@ -98,8 +97,11 @@ void main() {
       return createApiResponse();
     }
 
-    Widget buildList(SearchQuery query) =>
-        MaterialApp(home: Scaffold(body: ThreadsList(fetchThreads: recordingFetch, query: query)));
+    Widget buildList(SearchQuery query) => MaterialApp(
+      home: Scaffold(
+        body: ThreadsList(fetchThreads: recordingFetch, query: query),
+      ),
+    );
 
     await tester.pumpWidget(buildList(const SearchQuery()));
     await tester.pumpAndSettle();
@@ -124,10 +126,7 @@ void main() {
       return createApiResponse(count: 321);
     }
 
-    await pumpTestApp(
-      tester,
-      ThreadsList(fetchThreads: countFetch, onCountChanged: (count) => reportedCount = count),
-    );
+    await pumpTestApp(tester, ThreadsList(fetchThreads: countFetch, onCountChanged: (count) => reportedCount = count));
     await tester.pumpAndSettle();
 
     expect(reportedCount, 321);
@@ -223,8 +222,11 @@ void main() {
       return createApiResponse(threads: pageOf(page, 8), page: page, total: 3, count: 24);
     }
 
-    Widget buildList(SearchQuery query) =>
-        MaterialApp(home: Scaffold(body: ThreadsList(fetchThreads: recordingFetch, query: query)));
+    Widget buildList(SearchQuery query) => MaterialApp(
+      home: Scaffold(
+        body: ThreadsList(fetchThreads: recordingFetch, query: query),
+      ),
+    );
 
     await tester.pumpWidget(buildList(const SearchQuery()));
     await tester.pumpAndSettle();
@@ -252,8 +254,14 @@ void main() {
       return createApiResponse();
     }
 
-    Widget buildList() =>
-        MaterialApp(home: Scaffold(body: ThreadsList(fetchThreads: countingFetch, query: const SearchQuery(search: 'same'))));
+    Widget buildList() => MaterialApp(
+      home: Scaffold(
+        body: ThreadsList(
+          fetchThreads: countingFetch,
+          query: const SearchQuery(search: 'same'),
+        ),
+      ),
+    );
 
     await tester.pumpWidget(buildList());
     await tester.pumpAndSettle();

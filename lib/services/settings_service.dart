@@ -17,6 +17,12 @@ class AppSettings {
   /// Blur all covers/screenshots (privacy mode).
   final bool sfwBlur;
 
+  /// Backdrop blur behind pills/sheets; disable on low-end phones.
+  final bool glassEffects;
+
+  /// Flutter's performance overlay (only effective in debug/profile builds).
+  final bool showPerfOverlay;
+
   final SuggestionSource suggestionSource;
 
   /// Most-recently-used include tags, newest first.
@@ -27,6 +33,8 @@ class AppSettings {
   const AppSettings({
     this.defaultQuery = const SearchQuery(),
     this.sfwBlur = false,
+    this.glassEffects = true,
+    this.showPerfOverlay = false,
     this.suggestionSource = SuggestionSource.popular,
     this.recentTags = const [],
   });
@@ -34,12 +42,16 @@ class AppSettings {
   AppSettings copyWith({
     SearchQuery? defaultQuery,
     bool? sfwBlur,
+    bool? glassEffects,
+    bool? showPerfOverlay,
     SuggestionSource? suggestionSource,
     List<int>? recentTags,
   }) {
     return AppSettings(
       defaultQuery: defaultQuery ?? this.defaultQuery,
       sfwBlur: sfwBlur ?? this.sfwBlur,
+      glassEffects: glassEffects ?? this.glassEffects,
+      showPerfOverlay: showPerfOverlay ?? this.showPerfOverlay,
       suggestionSource: suggestionSource ?? this.suggestionSource,
       recentTags: recentTags ?? this.recentTags,
     );
@@ -48,6 +60,8 @@ class AppSettings {
   Map<String, dynamic> toJson() => {
     'defaultQuery': defaultQuery.toJson(),
     'sfwBlur': sfwBlur,
+    'glassEffects': glassEffects,
+    'showPerfOverlay': showPerfOverlay,
     'suggestionSource': suggestionSource.name,
     'recentTags': recentTags,
   };
@@ -58,6 +72,8 @@ class AppSettings {
           ? SearchQuery.fromJson(json['defaultQuery'])
           : const SearchQuery(),
       sfwBlur: json['sfwBlur'] ?? false,
+      glassEffects: json['glassEffects'] ?? true,
+      showPerfOverlay: json['showPerfOverlay'] ?? false,
       suggestionSource: SuggestionSource.values.asNameMap()[json['suggestionSource']] ?? SuggestionSource.popular,
       recentTags: [
         for (final tag in json['recentTags'] as List? ?? const [])

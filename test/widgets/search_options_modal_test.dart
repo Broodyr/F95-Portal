@@ -291,9 +291,7 @@ void main() {
 
   testWidgets('recent tags replace popular ones when that source is selected', (tester) async {
     final service = SettingsService.instance;
-    await service.update(
-      service.settings.copyWith(suggestionSource: SuggestionSource.recent, recentTags: [225, 103]),
-    );
+    await service.update(service.settings.copyWith(suggestionSource: SuggestionSource.recent, recentTags: [225, 103]));
 
     final getResult = await pumpModal(tester, popularTags: const [PopularTag(tagId: 130, count: 999)]);
 

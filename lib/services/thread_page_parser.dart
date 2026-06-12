@@ -53,7 +53,7 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
         newline();
         return;
       }
-      if (tag == 'script' || tag == 'style') return;
+      if (tag == 'script' || tag == 'style' || tag == 'noscript') return;
       if (tag == 'a') {
         final text = _collapse(node.text);
         // Lightbox/gallery anchors carry no usable label (or escaped markup
@@ -83,14 +83,36 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
   // --- Pass 2: interpret the lines. ----------------------------------------
   final metaFields = <MetaField>[];
   final spoilers = <SpoilerSection>[];
-  final platforms = <DownloadGroup>[];
   final extras = <DownloadGroup>[];
+  final torrentLinks = <DownloadLink>[];
   final overviewBuffer = StringBuffer();
+
+  final sets = <DownloadSet>[];
+  var currentGroups = <DownloadGroup>[];
+  String? currentSetTitle;
+
+  void commitSet() {
+    if (currentGroups.isNotEmpty) {
+      sets.add(DownloadSet(title: currentSetTitle, groups: currentGroups));
+      currentGroups = [];
+    }
+    currentSetTitle = null;
+  }
 
   bool collectingOverview = false;
   bool inDownloads = false;
   bool inExtras = false;
   String? pendingLabel;
+
+  void addGroup(String label, List<DownloadLink> links) {
+    final group = DownloadGroup(label: label, links: links);
+    if (inExtras || label.toLowerCase().startsWith('extra')) {
+      extras.add(group);
+    } else {
+      currentGroups.add(group);
+    }
+    pendingLabel = null;
+  }
 
   for (final line in lines) {
     // A line that is just a spoiler placeholder.
@@ -104,21 +126,32 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
     if (spoilerItem != null) {
       collectingOverview = false;
       final element = spoilerElements[spoilerItem.spoilerIndex!];
-      final title = _spoilerTitle(element) ?? _usableLabel(pendingLabel) ?? 'Spoiler';
-      spoilers.add(SpoilerSection(title: title, content: _spoilerContent(element)));
+      // A bold header that gathered no download groups was actually this
+      // spoiler's label ("Old Builds:" followed by a spoiler), not a set.
+      String? consumedSetTitle;
+      if (currentGroups.isEmpty && currentSetTitle != null) {
+        consumedSetTitle = currentSetTitle;
+        currentSetTitle = null;
+      }
+      final title = _spoilerTitle(element) ?? _usableLabel(pendingLabel) ?? _usableLabel(consumedSetTitle) ?? 'Spoiler';
+      final rich = _spoilerRich(element);
+      spoilers.add(SpoilerSection(title: title, content: _plainFromRich(rich), rich: rich));
       pendingLabel = null;
       continue;
     }
 
     final (label, hadColon, rest) = _splitLeadingBold(line);
-    final links = [for (final item in rest) if (item.href != null) DownloadLink(host: item.text, url: item.href!)];
+    final links = [
+      for (final item in rest)
+        if (item.href != null) DownloadLink(host: item.text, url: item.href!),
+    ];
 
     if (label.isNotEmpty) {
       if (label.toUpperCase().startsWith('DOWNLOAD')) {
         collectingOverview = false;
         inDownloads = true;
         pendingLabel = null;
-        if (links.isNotEmpty) platforms.add(DownloadGroup(label: 'Links', links: links));
+        if (links.isNotEmpty) addGroup('Links', links);
         continue;
       }
 
@@ -129,11 +162,17 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
           continue;
         }
         if (links.isNotEmpty) {
-          final group = DownloadGroup(label: label, links: links);
-          (!inExtras && _isPlatform(label) ? platforms : extras).add(group);
-          pendingLabel = null;
-        } else {
+          addGroup(label, links);
+        } else if (_isPlatform(label)) {
+          // Platform label whose links continue on the next line.
           pendingLabel = label;
+        } else {
+          // A bold non-platform header inside downloads starts an alternate
+          // set ("Incest Version (v0.15)").
+          commitSet();
+          currentSetTitle = _collapse('$label ${_plainText(rest)}');
+          inExtras = false;
+          pendingLabel = null;
         }
         continue;
       }
@@ -169,13 +208,42 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
     if (collectingOverview) {
       final text = _plainText(line);
       if (text.isNotEmpty) overviewBuffer.writeln(text);
-    } else if (inDownloads && links.isNotEmpty && pendingLabel != null) {
-      // Anchors-only lines attach to the preceding bold label; unlabeled
-      // link lines are credits/prose, not downloads.
-      final group = DownloadGroup(label: pendingLabel, links: links);
-      (!inExtras && _isPlatform(group.label) ? platforms : extras).add(group);
-      pendingLabel = null;
+      continue;
     }
+
+    if (links.isEmpty) continue;
+
+    if (inDownloads) {
+      // Non-bold "Label:" prefixes also mark groups (animation/comic posts).
+      final prefix = _textBeforeFirstLink(line);
+      if (prefix.endsWith(':') && prefix.length <= 35) {
+        addGroup(prefix.substring(0, prefix.length - 1).trim(), links);
+      } else if (_isOnlySeparators(_nonLinkText(line))) {
+        // A bare row of host links (asset posts have no platform labels).
+        addGroup(pendingLabel ?? 'Links', links);
+      }
+      // Lines with prose around the links are credits, not downloads.
+      continue;
+    }
+
+    // Outside the downloads section: torrents/magnets stand alone.
+    for (final link in links) {
+      if (link.host.toLowerCase() == 'torrent' ||
+          link.url.toLowerCase().contains('.torrent') ||
+          link.url.startsWith('magnet:')) {
+        torrentLinks.add(link);
+      }
+    }
+  }
+
+  commitSet();
+  if (torrentLinks.isNotEmpty) {
+    sets.add(
+      DownloadSet(
+        title: null,
+        groups: [DownloadGroup(label: 'Torrent', links: torrentLinks)],
+      ),
+    );
   }
 
   return ThreadPage(
@@ -183,8 +251,23 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
     metaFields: metaFields,
     overview: overviewBuffer.toString().trim(),
     spoilers: spoilers,
-    downloads: platforms.isEmpty && extras.isEmpty ? null : DownloadsSection(platforms: platforms, extras: extras),
+    downloads: sets.isEmpty && extras.isEmpty ? null : DownloadsSection(sets: sets, extras: extras),
+    attachments: _parseAttachments(post!),
   );
+}
+
+List<DownloadLink> _parseAttachments(Element post) {
+  return [
+    for (final anchor in post.querySelectorAll('.message-attachments .attachment-name a'))
+      if (_collapse(anchor.text).isNotEmpty)
+        DownloadLink(host: _collapse(anchor.text), url: _absoluteUrl(anchor.attributes['href'] ?? '')),
+  ];
+}
+
+String _absoluteUrl(String url) {
+  if (url.startsWith('//')) return 'https:$url';
+  if (url.startsWith('/')) return 'https://f95zone.to$url';
+  return url;
 }
 
 String _collapse(String text) => text.replaceAll('​', '').replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -209,7 +292,8 @@ String _collapse(String text) => text.replaceAll('​', '').replaceAll(RegExp(r'
   return (label, hadColon, line.sublist(index));
 }
 
-/// Meta values prefer plain text; falls back to link labels ("Other Games: Link").
+/// Meta values prefer plain text; falls back to the first link's label
+/// ("Other Games: Link", "Developer: Bubbles and Sisters [- Subscribestar…]").
 String _metaValue(List<_Item> rest) {
   final words = _plainText(rest.where((i) => i.href == null).toList())
       .split(' ')
@@ -219,7 +303,10 @@ String _metaValue(List<_Item> rest) {
       .toList();
   final text = words.join(' ').trim();
   if (text.isNotEmpty) return text;
-  return _collapse(rest.where((i) => i.href != null).map((i) => i.text).join(', '));
+  for (final item in rest) {
+    if (item.href != null) return item.text;
+  }
+  return '';
 }
 
 String _plainText(List<_Item> items) {
@@ -230,6 +317,19 @@ String _plainText(List<_Item> items) {
   }
   return text;
 }
+
+String _textBeforeFirstLink(List<_Item> line) {
+  final buffer = StringBuffer();
+  for (final item in line) {
+    if (item.href != null) break;
+    buffer.write('${item.text} ');
+  }
+  return _collapse(buffer.toString());
+}
+
+String _nonLinkText(List<_Item> line) => _collapse(line.where((i) => i.href == null).map((i) => i.text).join(' '));
+
+bool _isOnlySeparators(String text) => RegExp(r'^[\s\-–|/,·:]*$').hasMatch(text);
 
 /// Labels usable as spoiler titles / download groups: short phrases, not the
 /// bold sentences some posts use for emphasis.
@@ -256,33 +356,118 @@ String? _spoilerTitle(Element spoiler) {
   return title.isEmpty ? null : title;
 }
 
-String _spoilerContent(Element spoiler) {
-  final content = spoiler.querySelector('.bbCodeSpoiler-content') ?? spoiler;
-  final buffer = StringBuffer();
+// --- Rich spoiler content ----------------------------------------------------
 
-  void visit(Node node) {
+const int _spoilerTextCap = 8000;
+const int _spoilerImageCap = 30;
+
+List<RichPiece> _spoilerRich(Element spoiler) {
+  final content = spoiler.querySelector('.bbCodeSpoiler-content') ?? spoiler;
+  final pieces = <RichPiece>[];
+  int textLength = 0;
+  int imageCount = 0;
+  bool capped = false;
+
+  void addNewline() {
+    if (pieces.isNotEmpty && !pieces.last.newline) pieces.add(const RichPiece.newline());
+  }
+
+  void visit(
+    Node node, {
+    bool bold = false,
+    bool italic = false,
+    bool underline = false,
+    bool strike = false,
+    String? link,
+  }) {
+    if (capped) return;
+
     if (node is Element) {
-      if (node.localName == 'br') {
-        buffer.write('\n');
+      final tag = node.localName;
+      if (node.classes.contains('bbCodeSpoiler-button')) return;
+      if (tag == 'script' || tag == 'style' || tag == 'noscript') return;
+      if (tag == 'br') {
+        addNewline();
         return;
       }
-      if (node.classes.contains('bbCodeSpoiler-button')) return;
-      final bool isBlock = node.localName == 'div' || node.localName == 'p' || node.localName == 'li';
-      if (isBlock && buffer.isNotEmpty) buffer.write('\n');
-      node.nodes.forEach(visit);
+      if (tag == 'img') {
+        if (node.classes.contains('smilie')) return;
+        final src = node.attributes['data-src'] ?? node.attributes['src'] ?? '';
+        if (src.startsWith('http') && imageCount < _spoilerImageCap) {
+          imageCount++;
+          pieces.add(RichPiece.image(src));
+        }
+        return;
+      }
+
+      final childLink = tag == 'a' ? (node.attributes['href'] ?? link) : link;
+      final childBold = bold || tag == 'b' || tag == 'strong';
+      final childItalic = italic || tag == 'i' || tag == 'em';
+      final childUnderline = underline || tag == 'u';
+      final childStrike = strike || tag == 's' || tag == 'strike' || tag == 'del';
+
+      final bool isBlock = tag == 'div' || tag == 'p' || tag == 'li' || tag == 'ul' || tag == 'ol';
+      if (isBlock) addNewline();
+      if (tag == 'li') {
+        pieces.add(const RichPiece.text('• '));
+        textLength += 2;
+      }
+      for (final child in node.nodes) {
+        visit(
+          child,
+          bold: childBold,
+          italic: childItalic,
+          underline: childUnderline,
+          strike: childStrike,
+          link: childLink,
+        );
+      }
+      if (isBlock) addNewline();
       return;
     }
-    if (node is Text) buffer.write(node.text);
+
+    if (node is Text) {
+      final raw = node.text.replaceAll('​', '');
+      if (raw.trim().isEmpty) return;
+      var text = raw.replaceAll(RegExp(r'\s+'), ' ');
+      if (textLength + text.length > _spoilerTextCap) {
+        text = '${text.substring(0, (_spoilerTextCap - textLength).clamp(0, text.length))}…';
+        capped = true;
+      }
+      textLength += text.length;
+      pieces.add(
+        RichPiece.text(
+          text,
+          bold: bold,
+          italic: italic,
+          underline: underline,
+          strike: strike,
+          url: link == null ? null : _absoluteUrl(link),
+        ),
+      );
+    }
   }
 
   visit(content);
 
+  while (pieces.isNotEmpty && pieces.last.newline) {
+    pieces.removeLast();
+  }
+  return pieces;
+}
+
+String _plainFromRich(List<RichPiece> pieces) {
+  final buffer = StringBuffer();
+  for (final piece in pieces) {
+    if (piece.newline) {
+      buffer.write('\n');
+    } else if (piece.imageUrl == null) {
+      buffer.write(piece.text);
+    }
+  }
   final cleanedLines = [
     for (final line in buffer.toString().split('\n'))
       if (_collapse(line).isNotEmpty) _collapse(line),
   ];
-  final text = cleanedLines.join('\n');
-  // Changelogs can run to tens of thousands of characters; cap what the
-  // modal will ever need to render.
-  return text.length <= 8000 ? text : '${text.substring(0, 8000)}…';
+  return cleanedLines.join('\n');
 }

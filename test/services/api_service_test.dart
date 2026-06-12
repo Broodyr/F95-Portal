@@ -253,9 +253,7 @@ void main() {
 
       expect(
         () => ApiService.fetchThreads(client: client, packageInfoLoader: () async => _packageInfo()),
-        throwsA(
-          isA<ApiException>().having((e) => e.message, 'message', contains('Anonymous users')),
-        ),
+        throwsA(isA<ApiException>().having((e) => e.message, 'message', contains('Anonymous users'))),
       );
     });
 

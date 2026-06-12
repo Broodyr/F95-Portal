@@ -15,10 +15,7 @@ class CoverImage extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(color: const Color(0xFF2A2A2A)),
         child: ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(8),
-            topRight: Radius.circular(8),
-          ),
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
           child: imageUrl != null && imageUrl!.isNotEmpty
               ? SfwBlur(
                   child: CachedNetworkImage(
@@ -37,9 +34,7 @@ class CoverImage extends StatelessWidget {
   Widget _buildPlaceholder() {
     return Container(
       color: const Color(0xFF3A3A3A),
-      child: const Center(
-        child: Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
-      ),
+      child: const Center(child: Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48)),
     );
   }
 }

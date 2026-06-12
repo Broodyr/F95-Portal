@@ -48,18 +48,9 @@ void main() {
     });
 
     test('anyTags emits tagtype=or only when include tags exist', () {
-      expect(
-        const SearchQuery(anyTags: true, tags: [107, 130]).toQueryParameters(page: 1, rows: 90)['tagtype'],
-        'or',
-      );
-      expect(
-        const SearchQuery(anyTags: true).toQueryParameters(page: 1, rows: 90).containsKey('tagtype'),
-        isFalse,
-      );
-      expect(
-        const SearchQuery(tags: [107, 130]).toQueryParameters(page: 1, rows: 90).containsKey('tagtype'),
-        isFalse,
-      );
+      expect(const SearchQuery(anyTags: true, tags: [107, 130]).toQueryParameters(page: 1, rows: 90)['tagtype'], 'or');
+      expect(const SearchQuery(anyTags: true).toQueryParameters(page: 1, rows: 90).containsKey('tagtype'), isFalse);
+      expect(const SearchQuery(tags: [107, 130]).toQueryParameters(page: 1, rows: 90).containsKey('tagtype'), isFalse);
     });
 
     test('date limit maps to the date parameter in days', () {

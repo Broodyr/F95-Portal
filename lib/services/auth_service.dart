@@ -41,8 +41,7 @@ class AuthService extends ChangeNotifier {
 
   bool get isLoggedIn => _cookies.containsKey('xf_user');
 
-  String? get cookieHeader =>
-      _cookies.isEmpty ? null : _cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
+  String? get cookieHeader => _cookies.isEmpty ? null : _cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
 
   Future<void> load() async {
     try {

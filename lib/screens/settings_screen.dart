@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
@@ -27,7 +28,7 @@ class SettingsScreen extends StatelessWidget {
             filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: DecoratedBox(
               decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.65)),
-              child: SearchOptionsModal(initialQuery: current.defaultQuery, submitLabel: 'Save'),
+              child: SearchOptionsModal(initialQuery: current.defaultQuery, submitLabel: 'Save', showDragHandle: false),
             ),
           ),
         );
@@ -65,7 +66,10 @@ class SettingsScreen extends StatelessWidget {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
               children: [
-                const Text('Settings', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Settings',
+                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
                 _sectionHeader('Search defaults'),
                 Text(
                   'Every new search starts from these. Clearing the filter bar returns to them.',
@@ -115,9 +119,8 @@ class SettingsScreen extends StatelessWidget {
                       colorScheme,
                       label: 'Recent tags',
                       selected: settings.suggestionSource == SuggestionSource.recent,
-                      onTap: () => SettingsService.instance.update(
-                        settings.copyWith(suggestionSource: SuggestionSource.recent),
-                      ),
+                      onTap: () =>
+                          SettingsService.instance.update(settings.copyWith(suggestionSource: SuggestionSource.recent)),
                     ),
                   ],
                 ),
@@ -133,6 +136,30 @@ class SettingsScreen extends StatelessWidget {
                   value: settings.sfwBlur,
                   onChanged: (value) => SettingsService.instance.update(settings.copyWith(sfwBlur: value)),
                 ),
+                _sectionHeader('Performance'),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Glass effects', style: TextStyle(color: Colors.white, fontSize: 15)),
+                  subtitle: Text(
+                    'Backdrop blur on card pills — disable if scrolling lags',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+                  activeTrackColor: colorScheme.primary,
+                  value: settings.glassEffects,
+                  onChanged: (value) => SettingsService.instance.update(settings.copyWith(glassEffects: value)),
+                ),
+                if (!kReleaseMode)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Performance overlay', style: TextStyle(color: Colors.white, fontSize: 15)),
+                    subtitle: Text(
+                      'Flutter frame-time graphs (debug/profile builds only)',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                    activeTrackColor: colorScheme.primary,
+                    value: settings.showPerfOverlay,
+                    onChanged: (value) => SettingsService.instance.update(settings.copyWith(showPerfOverlay: value)),
+                  ),
                 _sectionHeader('Storage'),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -189,7 +216,9 @@ class SettingsScreen extends StatelessWidget {
               color: (exclude ? colorScheme.error : colorScheme.surfaceContainerHighest).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: exclude ? colorScheme.error.withValues(alpha: 0.6) : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                color: exclude
+                    ? colorScheme.error.withValues(alpha: 0.6)
+                    : colorScheme.outlineVariant.withValues(alpha: 0.4),
               ),
             ),
             child: Row(

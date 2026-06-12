@@ -72,12 +72,18 @@ class ApiService {
       return _mockPopularTags();
     }
 
-    return _getJson({'cmd': 'tags', 'cat': category.apiValue}, parse: (jsonData) {
-      final items = (jsonData['msg']?['data'] as List? ?? const []);
-      final tags = items.map((item) => PopularTag.fromJson(item as Map<String, dynamic>)).toList();
-      tags.sort((a, b) => b.count.compareTo(a.count));
-      return tags;
-    }, onError: null, client: client, packageInfoLoader: packageInfoLoader);
+    return _getJson(
+      {'cmd': 'tags', 'cat': category.apiValue},
+      parse: (jsonData) {
+        final items = (jsonData['msg']?['data'] as List? ?? const []);
+        final tags = items.map((item) => PopularTag.fromJson(item as Map<String, dynamic>)).toList();
+        tags.sort((a, b) => b.count.compareTo(a.count));
+        return tags;
+      },
+      onError: null,
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
   }
 
   static Future<T> _getJson<T>(
@@ -199,11 +205,7 @@ class ApiService {
 
     return ApiResponse(
       status: response.status,
-      data: ApiResponseData(
-        threads: threads,
-        pagination: Pagination(page: 1, total: 1),
-        count: threads.length,
-      ),
+      data: ApiResponseData(threads: threads, pagination: Pagination(page: 1, total: 1), count: threads.length),
     );
   }
 

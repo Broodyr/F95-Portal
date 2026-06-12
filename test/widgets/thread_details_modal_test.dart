@@ -177,28 +177,57 @@ void main() {
 
     // Platform switcher: Win is selected by default, its hosts shown.
     await tester.scrollUntilVisible(find.text('PIXELDRAIN'), 150);
+    await tester.ensureVisible(find.text('PIXELDRAIN'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('PIXELDRAIN'));
     await tester.pumpAndSettle();
     expect(launched, [Uri.parse('https://example.com/win-pd')]);
 
     // Switching platform swaps the host list.
+    await tester.ensureVisible(find.text('Linux'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Linux'));
     await tester.pumpAndSettle();
     expect(find.text('PIXELDRAIN'), findsNothing);
-    await tester.tap(find.text('MEGA'));
+    await tester.ensureVisible(find.text('MEGA').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('MEGA').first);
     await tester.pumpAndSettle();
     expect(launched.last, Uri.parse('https://example.com/linux-mega'));
 
-    // Extras render with their host links.
+    // The alternate set renders with its own title and groups.
+    await tester.scrollUntilVisible(find.text('Alternate Version (v0.8)'), 150);
+    expect(find.text('GOFILE'), findsOneWidget);
+
+    // Extras and attachments render with their host links.
+    await tester.scrollUntilVisible(find.text('Full save'), 150);
     expect(find.text('Extras'), findsOneWidget);
-    expect(find.text('Full save'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Attachments'), 150);
+    expect(find.text('mock-2026.torrent'), findsOneWidget);
   });
 
-  testWidgets('spoiler cards expand and collapse', (tester) async {
-    await pumpDetails(
+  testWidgets('rich spoiler content renders links that launch', (tester) async {
+    final (_, launched) = await pumpDetails(
       tester,
       fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id),
     );
+
+    await tester.scrollUntilVisible(find.text('Developer Notes'), 150);
+    await tester.ensureVisible(find.text('Developer Notes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Developer Notes'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Thanks for'), findsOneWidget);
+
+    // Tap the link inside the rich text.
+    await tester.tapOnText(find.textRange.ofSubstring('discord'));
+    await tester.pumpAndSettle();
+    expect(launched, [Uri.parse('https://example.com/discord')]);
+  });
+
+  testWidgets('spoiler cards expand and collapse', (tester) async {
+    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id));
 
     await tester.scrollUntilVisible(find.text('Changelog'), 150);
     await tester.ensureVisible(find.text('Changelog'));

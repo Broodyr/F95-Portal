@@ -41,27 +41,42 @@ class ActiveFiltersBar extends StatelessWidget {
 
     if (query.search.trim().isNotEmpty) {
       chips.add(
-        _BarChip(icon: Icons.search, label: '"${query.search.trim()}"', remove: () => query.copyWith(search: '')),
+        _BarChip(
+          icon: Icons.search,
+          label: '"${query.search.trim()}"',
+          remove: () => query.copyWith(search: ''),
+        ),
       );
     }
     if (query.creator.trim().isNotEmpty) {
       chips.add(
-        _BarChip(icon: Icons.person_outline, label: query.creator.trim(), remove: () => query.copyWith(creator: '')),
+        _BarChip(
+          icon: Icons.person_outline,
+          label: query.creator.trim(),
+          remove: () => query.copyWith(creator: ''),
+        ),
       );
     }
 
     void addIdChips(List<int> ids, {required bool isTag, required bool exclude}) {
       for (final id in ids) {
-        final label = isTag ? (metadata.tagName(id) ?? '#$id') : (metadata.prefixById(query.category, id)?.name ?? '#$id');
+        final label = isTag
+            ? (metadata.tagName(id) ?? '#$id')
+            : (metadata.prefixById(query.category, id)?.name ?? '#$id');
         chips.add(
           _BarChip(
             icon: isTag ? Icons.tag : Icons.memory,
             label: label,
             exclude: exclude,
             remove: () {
-              List<int> without(List<int> list) => [for (final v in list) if (v != id) v];
+              List<int> without(List<int> list) => [
+                for (final v in list)
+                  if (v != id) v,
+              ];
               if (isTag) {
-                return exclude ? query.copyWith(notags: without(query.notags)) : query.copyWith(tags: without(query.tags));
+                return exclude
+                    ? query.copyWith(notags: without(query.notags))
+                    : query.copyWith(tags: without(query.tags));
               }
               return exclude
                   ? query.copyWith(noprefixes: without(query.noprefixes))
@@ -88,9 +103,7 @@ class ActiveFiltersBar extends StatelessWidget {
     }
 
     if (query.anyTags && query.tags.length >= 2) {
-      chips.add(
-        _BarChip(icon: Icons.join_full, label: 'Match: any', remove: () => query.copyWith(anyTags: false)),
-      );
+      chips.add(_BarChip(icon: Icons.join_full, label: 'Match: any', remove: () => query.copyWith(anyTags: false)));
     }
 
     final dateDays = query.dateDays;
@@ -149,10 +162,7 @@ class ActiveFiltersBar extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      for (final chip in chips) ...[
-                        _buildChip(colorScheme, chip),
-                        const SizedBox(width: 6),
-                      ],
+                      for (final chip in chips) ...[_buildChip(colorScheme, chip), const SizedBox(width: 6)],
                     ],
                   ),
                 ),

@@ -112,10 +112,7 @@ class _ThreadsListState extends State<ThreadsList> {
         // New threads posted between requests shift pages, so the next page
         // can re-serve threads we already have.
         final knownIds = {for (final t in _threads) t.threadId};
-        _threads = [
-          ..._threads,
-          ...apiResponse.data.threads.where((t) => !knownIds.contains(t.threadId)),
-        ];
+        _threads = [..._threads, ...apiResponse.data.threads.where((t) => !knownIds.contains(t.threadId))];
         _page = nextPage;
         _totalPages = apiResponse.data.pagination.total;
         _isLoadingMore = false;
@@ -214,11 +211,7 @@ class _ThreadsListState extends State<ThreadsList> {
           }
 
           final thread = _threads[index];
-          return ThreadCard(
-            thread: thread,
-            category: widget.query.category,
-            onTap: () => _onThreadTap(thread),
-          );
+          return ThreadCard(thread: thread, category: widget.query.category, onTap: () => _onThreadTap(thread));
         },
       ),
     );

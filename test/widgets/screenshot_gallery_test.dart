@@ -8,9 +8,7 @@ void main() {
 
   Future<void> pumpGallery(WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ScreenshotGallery(urls: ['https://example.com/a.png', 'https://example.com/b.png']),
-      ),
+      const MaterialApp(home: ScreenshotGallery(urls: ['https://example.com/a.png', 'https://example.com/b.png'])),
     );
     await tester.pump();
   }

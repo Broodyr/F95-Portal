@@ -106,9 +106,9 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
         : _activeQuery.withTagAdded(selection.tagId);
 
     if (!selection.replace && !updated.tags.contains(selection.tagId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tag limit reached (${SearchQuery.maxTagsPerDirection}).')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Tag limit reached (${SearchQuery.maxTagsPerDirection}).')));
       return;
     }
 

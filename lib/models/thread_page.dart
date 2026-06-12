@@ -19,12 +19,16 @@ class ThreadPage {
 
   final DownloadsSection? downloads;
 
+  /// XenForo attachments on the first post (torrents, archives, …).
+  final List<DownloadLink> attachments;
+
   const ThreadPage({
     required this.threadId,
     this.metaFields = const [],
     this.overview = '',
     this.spoilers = const [],
     this.downloads,
+    this.attachments = const [],
   });
 
   String? metaValue(String label) {
@@ -46,27 +50,91 @@ class MetaField {
   String toString() => '$label: $value';
 }
 
+/// One inline piece of rich spoiler content.
+@immutable
+class RichPiece {
+  final String text;
+  final bool bold;
+  final bool italic;
+  final bool underline;
+  final bool strike;
+
+  /// Set when the piece is a link.
+  final String? url;
+
+  /// Set when the piece is an inline image (text/styles unused).
+  final String? imageUrl;
+
+  /// True for explicit line breaks (text/styles unused).
+  final bool newline;
+
+  const RichPiece.text(
+    this.text, {
+    this.bold = false,
+    this.italic = false,
+    this.underline = false,
+    this.strike = false,
+    this.url,
+  }) : imageUrl = null,
+       newline = false;
+
+  const RichPiece.image(this.imageUrl)
+    : text = '',
+      bold = false,
+      italic = false,
+      underline = false,
+      strike = false,
+      url = null,
+      newline = false;
+
+  const RichPiece.newline()
+    : text = '',
+      bold = false,
+      italic = false,
+      underline = false,
+      strike = false,
+      url = null,
+      imageUrl = null,
+      newline = true;
+}
+
 @immutable
 class SpoilerSection {
   final String title;
+
+  /// Plain-text rendition of the content.
   final String content;
 
-  const SpoilerSection({required this.title, required this.content});
+  /// Rich rendition: formatting, links, and inline images.
+  final List<RichPiece> rich;
+
+  const SpoilerSection({required this.title, required this.content, this.rich = const []});
 }
 
 @immutable
 class DownloadsSection {
-  /// One group per platform line (WIN, MAC, LINUX, ANDROID, …).
-  final List<DownloadGroup> platforms;
+  /// Download sets in post order. Most threads have one untitled set; some
+  /// carry alternates ("Incest Version (v0.15)") as additional titled sets.
+  final List<DownloadSet> sets;
 
-  /// Labeled non-platform downloads (cheats, saves, patches, …).
+  /// Labeled extras (cheats, saves, patches, …).
   final List<DownloadGroup> extras;
 
-  const DownloadsSection({this.platforms = const [], this.extras = const []});
+  const DownloadsSection({this.sets = const [], this.extras = const []});
 
-  bool get isEmpty => platforms.isEmpty && extras.isEmpty;
+  bool get isEmpty => sets.every((s) => s.groups.isEmpty) && extras.isEmpty;
 }
 
+@immutable
+class DownloadSet {
+  /// Null for the main/untitled set.
+  final String? title;
+  final List<DownloadGroup> groups;
+
+  const DownloadSet({this.title, required this.groups});
+}
+
+/// One labeled line of download links (a platform, "Collection:", …).
 @immutable
 class DownloadGroup {
   final String label;

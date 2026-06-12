@@ -135,7 +135,10 @@ class SearchQuery {
     if (tags.contains(tagId) || tags.length >= maxTagsPerDirection) return this;
     return copyWith(
       tags: [...tags, tagId],
-      notags: [for (final t in notags) if (t != tagId) t],
+      notags: [
+        for (final t in notags)
+          if (t != tagId) t,
+      ],
     );
   }
 

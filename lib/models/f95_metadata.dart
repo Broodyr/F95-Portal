@@ -28,8 +28,7 @@ class F95Metadata {
   final Map<int, String> tagNames;
   Map<String, int>? _tagIdsByName;
 
-  F95Metadata({required Map<SearchCategory, List<F95Prefix>> prefixes, required this.tagNames})
-    : _prefixes = prefixes;
+  F95Metadata({required Map<SearchCategory, List<F95Prefix>> prefixes, required this.tagNames}) : _prefixes = prefixes;
 
   static F95Metadata? _instance;
 

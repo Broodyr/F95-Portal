@@ -13,6 +13,7 @@ import '../models/thread_summary.dart';
 import '../services/thread_page_service.dart';
 import '../utils/formatters.dart';
 import 'engine_tag.dart';
+import 'rich_spoiler_text.dart';
 import 'screenshot_gallery.dart';
 import 'sfw_blur.dart';
 import 'version_pill.dart';
@@ -74,7 +75,9 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   String? _pageError;
   bool _overviewExpanded = false;
   final Set<int> _expandedSpoilers = {};
-  int _platformIndex = 0;
+
+  /// Selected group per download set (sets are independent switchers).
+  final Map<int, int> _setGroupIndex = {};
 
   ThreadSummary get thread => widget.thread;
 
@@ -116,7 +119,8 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   }
 
   void _shareThread() {
-    SharePlus.instance.share(ShareParams(text: '${thread.title} — $_threadUri'));
+    // Link only; receivers' rich link previews supply the title/art.
+    SharePlus.instance.share(ShareParams(text: '$_threadUri'));
   }
 
   @override
@@ -251,10 +255,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
               Icon(Icons.cloud_off, size: 16, color: Colors.grey[500]),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  "Couldn't load thread details",
-                  style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                ),
+                child: Text("Couldn't load thread details", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
               ),
               TextButton(onPressed: _loadPage, child: const Text('Retry')),
             ],
@@ -292,6 +293,21 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: _buildDownloadsCard(colorScheme, page.downloads!),
+        ),
+      ],
+      if (page.attachments.isNotEmpty) ...[
+        _buildSectionLabel('Attachments'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: _buildHostLinks(colorScheme, page.attachments),
+          ),
         ),
       ],
       for (int i = 0; i < spoilers.length; i++)
@@ -344,9 +360,6 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   }
 
   Widget _buildDownloadsCard(ColorScheme colorScheme, DownloadsSection downloads) {
-    final platforms = downloads.platforms;
-    final selected = platforms.isEmpty ? null : platforms[_platformIndex.clamp(0, platforms.length - 1)];
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -357,45 +370,14 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (platforms.length > 1) ...[
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (int i = 0; i < platforms.length; i++)
-                  GestureDetector(
-                    onTap: () => setState(() => _platformIndex = i),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: i == _platformIndex
-                            ? colorScheme.primary.withValues(alpha: 0.25)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: i == _platformIndex
-                              ? colorScheme.primary
-                              : colorScheme.outlineVariant.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      child: Text(
-                        platforms[i].label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: i == _platformIndex ? colorScheme.primary : Colors.grey[400],
-                          fontWeight: i == _platformIndex ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-          ] else if (platforms.length == 1) ...[
-            Text(platforms.single.label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
-            const SizedBox(height: 6),
+          for (int setIndex = 0; setIndex < downloads.sets.length; setIndex++) ...[
+            if (setIndex > 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+              ),
+            _buildDownloadSet(colorScheme, setIndex, downloads.sets[setIndex]),
           ],
-          if (selected != null) _buildHostLinks(colorScheme, selected.links),
           if (downloads.extras.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -415,6 +397,79 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
           ],
         ],
       ),
+    );
+  }
+
+  /// One download set: optional title (alternate versions), a group switcher
+  /// when there are multiple groups, and the selected group's host links.
+  Widget _buildDownloadSet(ColorScheme colorScheme, int setIndex, DownloadSet set) {
+    final groups = set.groups;
+    final int selectedIndex = (_setGroupIndex[setIndex] ?? 0).clamp(0, groups.isEmpty ? 0 : groups.length - 1);
+
+    // Long group lists (animation collections) read better as labeled rows
+    // than as a 10-way switcher.
+    final bool asRows = groups.length > 6;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (set.title != null) ...[
+          Text(
+            set.title!,
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (asRows) ...[
+          for (final group in groups) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(group.label, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+            ),
+            _buildHostLinks(colorScheme, group.links),
+            const SizedBox(height: 8),
+          ],
+        ] else if (groups.length > 1) ...[
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (int i = 0; i < groups.length; i++)
+                GestureDetector(
+                  onTap: () => setState(() => _setGroupIndex[setIndex] = i),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: i == selectedIndex ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: i == selectedIndex
+                            ? colorScheme.primary
+                            : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Text(
+                      groups[i].label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: i == selectedIndex ? colorScheme.primary : Colors.grey[400],
+                        fontWeight: i == selectedIndex ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _buildHostLinks(colorScheme, groups[selectedIndex].links),
+        ] else if (groups.length == 1) ...[
+          if (groups.single.label != 'Links') ...[
+            Text(groups.single.label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+            const SizedBox(height: 6),
+          ],
+          _buildHostLinks(colorScheme, groups.single.links),
+        ],
+      ],
     );
   }
 
@@ -479,9 +534,9 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
           if (expanded)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Text(
-                spoiler.content,
-                style: TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45),
+              child: RichSpoilerText(
+                pieces: spoiler.rich.isEmpty ? [RichPiece.text(spoiler.content)] : spoiler.rich,
+                onOpenLink: _launch,
               ),
             ),
         ],

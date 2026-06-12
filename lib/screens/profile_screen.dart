@@ -10,20 +10,18 @@ class ProfileScreen extends StatelessWidget {
 
   Future<void> _signIn(BuildContext context) async {
     if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign-in is not available in the web build.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Sign-in is not available in the web build.')));
       return;
     }
 
-    final success = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    final success = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen()));
 
     if (success == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signed in — API requests now use your account.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Signed in — API requests now use your account.')));
     }
   }
 
