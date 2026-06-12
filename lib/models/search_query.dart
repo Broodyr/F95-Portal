@@ -74,7 +74,7 @@ class SearchQuery {
       'rows': rows.toString(),
     };
 
-    final trimmedSearch = search.trim();
+    final trimmedSearch = _stripStopwords(search.trim());
     if (trimmedSearch.isNotEmpty) params['search'] = trimmedSearch;
     final trimmedCreator = creator.trim();
     if (trimmedCreator.isNotEmpty) params['creator'] = trimmedCreator;
@@ -144,6 +144,26 @@ class SearchQuery {
 
   /// A fresh search for [tagId] only, keeping just the category.
   SearchQuery replacedWithTag(int tagId) => SearchQuery(category: category, tags: [tagId]);
+
+  /// Known server fulltext stopwords (MySQL defaults plus 'and', verified
+  /// live). The server requires every search token to match, and stopword
+  /// tokens match nothing, so "bubbles and babes" returns zero results
+  /// while "bubbles babes" matches. The server also has custom stopwords
+  /// we cannot enumerate ('sex' is confirmed); ApiService retries
+  /// zero-result searches with tokens dropped to cover those.
+  static const Set<String> _fulltextStopwords = {
+    'a', 'about', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'com', 'de', 'en', 'for', 'from', 'how', 'i', //
+    'in', 'is', 'it', 'la', 'of', 'on', 'or', 'that', 'the', 'this', 'to', 'was', 'what', 'when', 'where',
+    'who', 'will', 'with', 'und', 'www',
+  };
+
+  static String _stripStopwords(String text) {
+    final kept = [
+      for (final word in text.split(RegExp(r'\s+')))
+        if (!_fulltextStopwords.contains(word.toLowerCase())) word,
+    ];
+    return kept.isEmpty ? text : kept.join(' ');
+  }
 
   static const Object _unset = Object();
 

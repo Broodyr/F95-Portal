@@ -1,11 +1,14 @@
 import 'dart:io';
 
 import 'package:f95_portal/services/api_service.dart';
+import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/thread_page_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
+import '../helpers/in_memory_cookie_storage.dart';
 
 PackageInfo _packageInfo() =>
     PackageInfo(appName: 'F95 Portal', packageName: 'com.example.f95portal', version: '1.0.0', buildNumber: '42');
@@ -30,6 +33,29 @@ void main() {
     final again = await ThreadPageService.fetch(12345, client: client, packageInfoLoader: () async => _packageInfo());
     expect(identical(page, again), isTrue);
     expect(requests, 1);
+  });
+
+  test('signing in clears guest-cached pages', () async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+    ThreadPageService.bindToAuthChanges();
+
+    final fixture = File('test/fixtures/thread_unity_in_heat.htm').readAsStringSync();
+    int requests = 0;
+    final client = MockClient((_) async {
+      requests++;
+      return http.Response.bytes(fixture.codeUnits, 200);
+    });
+
+    await ThreadPageService.fetch(1, client: client, packageInfoLoader: () async => _packageInfo());
+    await ThreadPageService.fetch(1, client: client, packageInfoLoader: () async => _packageInfo());
+    expect(requests, 1);
+
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+
+    await ThreadPageService.fetch(1, client: client, packageInfoLoader: () async => _packageInfo());
+    expect(requests, 2);
   });
 
   test('non-200 responses surface as ApiException', () async {

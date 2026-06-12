@@ -1,8 +1,4 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-
-import '../services/settings_service.dart';
 
 enum ThreadStatus { normal, completed, abandoned, onhold }
 
@@ -48,59 +44,41 @@ class VersionPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final badge = _statusBadge;
 
-    // Glass pill matching EngineTag: one backdrop blur, translucent fills,
-    // saturated borders. With glass effects disabled, solid fills skip the
-    // costly blur.
-    return ListenableBuilder(
-      listenable: SettingsService.instance,
-      builder: (context, _) {
-        final bool glass = SettingsService.instance.settings.glassEffects;
-        final double fillAlpha = glass ? 0.45 : 0.92;
-
-        final row = IntrinsicHeight(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (badge != null)
-                Container(
-                  padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
-                  decoration: BoxDecoration(
-                    color: badge.$1.withValues(alpha: fillAlpha),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      bottomLeft: Radius.circular(12),
-                    ),
-                    border: Border.all(color: badge.$1.withValues(alpha: 0.95)),
-                  ),
-                  child: Center(child: Icon(badge.$2, color: Colors.white, size: 16)),
-                ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _versionColor.withValues(alpha: glass ? 0.45 : 1.0),
-                  borderRadius: badge == null
-                      ? BorderRadius.circular(12)
-                      : const BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-                ),
-                child: Center(
-                  child: Text(
-                    version,
-                    style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
-                  ),
-                ),
+    // Solid pills with a hint of transparency: per-pill backdrop blur was a
+    // measured frame-time killer (re-blurs every frame over animated covers).
+    return IntrinsicHeight(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (badge != null)
+            Container(
+              padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
+              decoration: BoxDecoration(
+                color: badge.$1.withValues(alpha: 0.9),
+                borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+                border: Border.all(color: badge.$1.withValues(alpha: 0.95)),
               ),
-            ],
+              child: Center(child: Icon(badge.$2, color: Colors.white, size: 16)),
+            ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _versionColor.withValues(alpha: 0.9),
+              borderRadius: badge == null
+                  ? BorderRadius.circular(12)
+                  : const BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            ),
+            child: Center(
+              child: Text(
+                version,
+                style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
+              ),
+            ),
           ),
-        );
-
-        if (!glass) return row;
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6), child: row),
-        );
-      },
+        ],
+      ),
     );
   }
 }

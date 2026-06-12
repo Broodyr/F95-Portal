@@ -326,6 +326,11 @@ void main() {
   testWidgets('engine pills cycle to include and the section lists the vocabulary', (tester) async {
     final getResult = await pumpModal(tester);
 
+    // Sections start collapsed; expand Engine first.
+    await scrollModalTo(tester, find.text('Engine'));
+    await tester.tap(find.text('Engine'));
+    await tester.pumpAndSettle();
+
     await scrollModalTo(tester, find.text('Godot'));
     // The full engine vocabulary is visible without typing anything.
     expect(find.text('RPGM'), findsOneWidget);
@@ -343,6 +348,10 @@ void main() {
   testWidgets('a second tap on a status pill turns it into an exclusion', (tester) async {
     final getResult = await pumpModal(tester);
 
+    await scrollModalTo(tester, find.text('Status'));
+    await tester.tap(find.text('Status'));
+    await tester.pumpAndSettle();
+
     await scrollModalTo(tester, find.text('Abandoned'));
     await tester.tap(find.text('Abandoned'));
     await tester.pumpAndSettle();
@@ -358,6 +367,10 @@ void main() {
 
   testWidgets('a third tap clears the prefix pill', (tester) async {
     final getResult = await pumpModal(tester);
+
+    await scrollModalTo(tester, find.text('Engine'));
+    await tester.tap(find.text('Engine'));
+    await tester.pumpAndSettle();
 
     await scrollModalTo(tester, find.text('Unity'));
     for (int i = 0; i < 3; i++) {

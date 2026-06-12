@@ -58,6 +58,22 @@ void main() {
       expect(const SearchQuery().toQueryParameters(page: 1, rows: 90).containsKey('date'), isFalse);
     });
 
+    test('strips fulltext stopwords from the title search', () {
+      // The server's fulltext search requires every token, and stopwords
+      // ("and", "the") match nothing — verified live: "bubbles and babes"
+      // returns 0 results while "bubbles babes" returns 1.
+      expect(
+        const SearchQuery(search: 'bubbles and babes').toQueryParameters(page: 1, rows: 90)['search'],
+        'bubbles babes',
+      );
+      expect(
+        const SearchQuery(search: 'summertime the saga').toQueryParameters(page: 1, rows: 90)['search'],
+        'summertime saga',
+      );
+      // All-stopword searches fall back to the raw text.
+      expect(const SearchQuery(search: 'the and').toQueryParameters(page: 1, rows: 90)['search'], 'the and');
+    });
+
     test('trims and omits whitespace-only search terms', () {
       final params = const SearchQuery(search: '   ', creator: ' dev ').toQueryParameters(page: 1, rows: 90);
 

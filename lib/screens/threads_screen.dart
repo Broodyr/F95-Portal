@@ -69,15 +69,14 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
       barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (BuildContext context) {
         final colorScheme = Theme.of(context).colorScheme;
+        final bool glass = SettingsService.instance.settings.glassEffects;
+        final content = DecoratedBox(
+          decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: glass ? 0.65 : 0.97)),
+          child: SearchOptionsModal(initialQuery: _activeQuery),
+        );
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: DecoratedBox(
-              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.65)),
-              child: SearchOptionsModal(initialQuery: _activeQuery),
-            ),
-          ),
+          child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: content) : content,
         );
       },
     );

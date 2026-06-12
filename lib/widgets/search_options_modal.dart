@@ -43,16 +43,17 @@ class SearchOptionsModal extends StatefulWidget {
   /// Label of the submit button ('Search' in browse, 'Save' in settings).
   final String submitLabel;
 
-  /// The settings instance is not swipe-dismissed the same way, so it hides
-  /// the decorative drag handle.
-  final bool showDragHandle;
+  /// Called with the current query when the sheet is dismissed without an
+  /// explicit submit (swipe-down, barrier tap); lets the settings instance
+  /// save either way.
+  final ValueChanged<SearchQuery>? onDismissSave;
 
   const SearchOptionsModal({
     super.key,
     this.initialQuery = const SearchQuery(),
     this.fetchPopularTags,
     this.submitLabel = 'Search',
-    this.showDragHandle = true,
+    this.onDismissSave,
   });
 
   @override
@@ -73,7 +74,9 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   late SortOrder _sort;
   int? _dateDays;
   bool _anyTags = false;
+  bool _submitted = false;
   final List<_ActiveFilter> _filters = [];
+  final Set<String> _expandedSections = {};
   String? _creator;
   String? _title;
   List<PopularTag> _popularTags = const [];
@@ -99,11 +102,26 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     _searchFocus.addListener(_onTextChanged);
     _creator = query.creator.trim().isEmpty ? null : query.creator.trim();
     _restoreFilters(query);
+    // Sections start collapsed, except those carrying restored filters.
+    final metadata = F95Metadata.instance;
+    for (final filter in _filters) {
+      if (filter.kind == _FilterKind.prefix) {
+        final group = metadata.prefixById(_selectedCategory, filter.id)?.groupName;
+        if (group != null) _expandedSections.add(group);
+      }
+    }
     _loadPopularTags();
   }
 
   @override
   void dispose() {
+    final dismissSave = widget.onDismissSave;
+    if (!_submitted && dismissSave != null) {
+      // Deferred: the save notifies listeners, which is not allowed while
+      // the tree is being torn down.
+      final query = _buildQuery();
+      Future.microtask(() => dismissSave(query));
+    }
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -255,34 +273,41 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     _loadPopularTags();
   }
 
-  void _onSubmit() {
+  SearchQuery _buildQuery() {
     final leftoverText = _searchController.text.trim();
-    Navigator.of(context).pop(
-      SearchQuery(
-        category: _selectedCategory,
-        search: _title ?? leftoverText,
-        creator: _creator ?? '',
-        tags: [
-          for (final f in _filters)
-            if (f.kind == _FilterKind.tag && !f.exclude) f.id,
-        ],
-        notags: [
-          for (final f in _filters)
-            if (f.kind == _FilterKind.tag && f.exclude) f.id,
-        ],
-        prefixes: [
-          for (final f in _filters)
-            if (f.kind == _FilterKind.prefix && !f.exclude) f.id,
-        ],
-        noprefixes: [
-          for (final f in _filters)
-            if (f.kind == _FilterKind.prefix && f.exclude) f.id,
-        ],
-        sort: _sort,
-        dateDays: _dateDays,
-        anyTags: _anyTags,
-      ),
+    return SearchQuery(
+      category: _selectedCategory,
+      search: _title ?? leftoverText,
+      creator: _creator ?? '',
+      tags: [
+        for (final f in _filters)
+          if (f.kind == _FilterKind.tag && !f.exclude) f.id,
+      ],
+      notags: [
+        for (final f in _filters)
+          if (f.kind == _FilterKind.tag && f.exclude) f.id,
+      ],
+      prefixes: [
+        for (final f in _filters)
+          if (f.kind == _FilterKind.prefix && !f.exclude) f.id,
+      ],
+      noprefixes: [
+        for (final f in _filters)
+          if (f.kind == _FilterKind.prefix && f.exclude) f.id,
+      ],
+      sort: _sort,
+      dateDays: _dateDays,
+      anyTags: _anyTags,
     );
+  }
+
+  void _onSubmit() {
+    _submitted = true;
+    Navigator.of(context).pop(_buildQuery());
+  }
+
+  void _toggleSection(String name) {
+    setState(() => _expandedSections.contains(name) ? _expandedSections.remove(name) : _expandedSections.add(name));
   }
 
   @override
@@ -299,88 +324,144 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
       child: AnimatedPadding(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomPadding + keyboardInset),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.showDragHandle)
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+        padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + bottomPadding + keyboardInset),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Plain (non-scrollable) grab zone: the sheet's own drag
+            // recognizer owns it even when the content below scrolls, so the
+            // modal stays easy to pull down from the top.
+            SizedBox(
+              key: const Key('modal-drag-band'),
+              height: 44,
+              child: Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              if (_filters.isNotEmpty || _creator != null || _title != null) ...[
-                _buildActiveFilters(colorScheme),
-                const SizedBox(height: 12),
-              ],
-              _buildSearchField(colorScheme),
-              if (suggestions.isNotEmpty || _hasCreatorSuggestion || showEmptyTags) ...[
-                const SizedBox(height: 8),
-                _buildSuggestionList(
-                  colorScheme,
-                  suggestions,
-                  emptyTags: showEmptyTags ? emptyTags : const [],
-                  recentMode: recentMode,
-                ),
-              ],
-              const SizedBox(height: 24),
-              Text('Category', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
-              _buildCategorySelector(colorScheme),
-              for (final group in _prefixGroups()) ...[
-                const SizedBox(height: 16),
-                Text(group.name, style: textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [for (final prefix in group.prefixes) _buildPrefixPill(colorScheme, prefix)],
-                ),
-              ],
-              const SizedBox(height: 16),
-              Text('Sort by', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
-              _buildSegmentedSelector<SortOrder>(
-                colorScheme,
-                values: SortOrder.values,
-                isSelected: (order) => _sort == order,
-                label: (order) => order.displayLabel,
-                onSelect: (order) => setState(() => _sort = order),
               ),
-              const SizedBox(height: 16),
-              Text('Updated within', style: textTheme.titleMedium),
-              const SizedBox(height: 8),
-              _buildSegmentedSelector<MapEntry<String, int?>>(
-                colorScheme,
-                values: _dateLimits.entries.toList(),
-                isSelected: (entry) => _dateDays == entry.value,
-                label: (entry) => entry.key,
-                onSelect: (entry) => setState(() => _dateDays = entry.value),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _onSubmit,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: colorScheme.onPrimary,
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_filters.isNotEmpty || _creator != null || _title != null) ...[
+                      _buildActiveFilters(colorScheme),
+                      const SizedBox(height: 12),
+                    ],
+                    _buildSearchField(colorScheme),
+                    if (suggestions.isNotEmpty || _hasCreatorSuggestion || showEmptyTags) ...[
+                      const SizedBox(height: 8),
+                      _buildSuggestionList(
+                        colorScheme,
+                        suggestions,
+                        emptyTags: showEmptyTags ? emptyTags : const [],
+                        recentMode: recentMode,
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    _buildSectionHeader(
+                      colorScheme,
+                      textTheme,
+                      title: 'Category',
+                      summary: _selectedCategory.displayLabel,
+                    ),
+                    if (_expandedSections.contains('Category')) ...[
+                      const SizedBox(height: 4),
+                      _buildCategorySelector(colorScheme),
+                    ],
+                    for (final group in _prefixGroups()) ...[
+                      const SizedBox(height: 8),
+                      _buildSectionHeader(colorScheme, textTheme, title: group.name, summary: _groupSummary(group)),
+                      if (_expandedSections.contains(group.name)) ...[
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [for (final prefix in group.prefixes) _buildPrefixPill(colorScheme, prefix)],
+                        ),
+                      ],
+                    ],
+                    const SizedBox(height: 16),
+                    Text('Sort by', style: textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _buildSegmentedSelector<SortOrder>(
+                      colorScheme,
+                      values: SortOrder.values,
+                      isSelected: (order) => _sort == order,
+                      label: (order) => order.displayLabel,
+                      onSelect: (order) => setState(() => _sort = order),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Updated within', style: textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _buildSegmentedSelector<MapEntry<String, int?>>(
+                      colorScheme,
+                      values: _dateLimits.entries.toList(),
+                      isSelected: (entry) => _dateDays == entry.value,
+                      label: (entry) => entry.key,
+                      onSelect: (entry) => setState(() => _dateDays = entry.value),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: _onSubmit,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                      ),
+                      icon: const Icon(Icons.search),
+                      label: Text(widget.submitLabel),
+                    ),
+                  ],
                 ),
-                icon: const Icon(Icons.search),
-                label: Text(widget.submitLabel),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// Collapsible section header: title left, current-value summary and a
+  /// chevron right. Sections start collapsed to keep the sheet compact.
+  Widget _buildSectionHeader(
+    ColorScheme colorScheme,
+    TextTheme textTheme, {
+    required String title,
+    required String summary,
+  }) {
+    final bool expanded = _expandedSections.contains(title);
+    return InkWell(
+      onTap: () => _toggleSection(title),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Text(title, style: textTheme.titleMedium),
+            const Spacer(),
+            if (summary.isNotEmpty) Text(summary, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            const SizedBox(width: 4),
+            Icon(expanded ? Icons.expand_less : Icons.expand_more, size: 20, color: colorScheme.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Active-filter summary for a collapsed prefix group ("2 active").
+  String _groupSummary(({String name, List<F95Prefix> prefixes}) group) {
+    final ids = {for (final prefix in group.prefixes) prefix.id};
+    final count = _filters.where((f) => f.kind == _FilterKind.prefix && ids.contains(f.id)).length;
+    return count == 0 ? '' : '$count active';
   }
 
   bool get _hasCreatorSuggestion => _searchController.text.trim().isNotEmpty;

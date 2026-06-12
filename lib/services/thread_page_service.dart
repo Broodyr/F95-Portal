@@ -59,8 +59,14 @@ class ThreadPageService {
   /// Drops a cached page (e.g. after a like/watch toggle changed its state).
   static void invalidate(int threadId) => _cache.remove(threadId);
 
-  @visibleForTesting
   static void clearCache() => _cache.clear();
+
+  /// Pages fetched while logged out cache the guest rendition (spoilers
+  /// locked, download links hidden); drop everything when the session
+  /// changes so the next open refetches member content.
+  static void bindToAuthChanges() {
+    AuthService.instance.addListener(clearCache);
+  }
 
   /// POSTs a XenForo action (react, watch) with the session cookies and the
   /// page's CSRF token. XenForo reports errors inside 200 responses too.
@@ -88,7 +94,9 @@ class ThreadPageService {
         body: {'_xfToken': csrfToken, '_xfResponseType': 'json', ...fields},
       );
 
-      if (response.statusCode != 200 || response.body.contains('"status":"error"') || response.body.contains('"errors"')) {
+      if (response.statusCode != 200 ||
+          response.body.contains('"status":"error"') ||
+          response.body.contains('"errors"')) {
         throw ApiException('Action failed (HTTP ${response.statusCode})');
       }
     } on ApiException {

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_query.dart';
 import '../utils/formatters.dart';
+import 'glass_aware.dart';
 
 class _BarChip {
   final IconData icon;
@@ -136,48 +137,55 @@ class ActiveFiltersBar extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final chips = _buildChips();
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          height: 44,
-          padding: const EdgeInsets.only(left: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1C1C1E).withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
-          ),
-          child: Row(
-            children: [
-              if (resultCount != null) ...[
-                Text(
-                  '${NumberFormatter.formatNumber(resultCount!)} results',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      for (final chip in chips) ...[_buildChip(colorScheme, chip), const SizedBox(width: 6)],
-                    ],
+    return GlassAware(
+      builder: (context, glass) => ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: _maybeBlur(
+          glass,
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.only(left: 12),
+            decoration: BoxDecoration(
+              color: Color(0xFF1C1C1E).withValues(alpha: glass ? 0.4 : 0.92),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
+            ),
+            child: Row(
+              children: [
+                if (resultCount != null) ...[
+                  Text(
+                    '${NumberFormatter.formatNumber(resultCount!)} results',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final chip in chips) ...[_buildChip(colorScheme, chip), const SizedBox(width: 6)],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Clear all filters',
-                visualDensity: VisualDensity.compact,
-                icon: Icon(Icons.filter_alt_off_outlined, size: 18, color: Colors.grey[400]),
-                onPressed: onClearAll ?? () => onQueryChanged(SearchQuery(category: query.category)),
-              ),
-            ],
+                IconButton(
+                  tooltip: 'Clear all filters',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(Icons.filter_alt_off_outlined, size: 18, color: Colors.grey[400]),
+                  onPressed: onClearAll ?? () => onQueryChanged(SearchQuery(category: query.category)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _maybeBlur(bool glass, {required Widget child}) {
+    if (!glass) return child;
+    return BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: child);
   }
 
   Widget _buildChip(ColorScheme colorScheme, _BarChip chip) {

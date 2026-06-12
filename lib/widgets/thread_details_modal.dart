@@ -10,7 +10,9 @@ import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/thread_page.dart';
 import '../models/thread_summary.dart';
+import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
+import '../services/settings_service.dart';
 import '../services/thread_page_service.dart';
 import '../utils/formatters.dart';
 import 'engine_tag.dart';
@@ -76,6 +78,7 @@ class ThreadDetailsModal extends StatefulWidget {
 }
 
 class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
+  final DraggableScrollableController _sheetController = DraggableScrollableController();
   ThreadPage? _page;
   bool _loadingPage = true;
   String? _pageError;
@@ -95,6 +98,27 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   void initState() {
     super.initState();
     _loadPage();
+  }
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  /// The top grab band resizes the sheet directly, so the modal can always
+  /// be pulled down even when the inner list is scrolled deep into content.
+  void _onBandDragUpdate(DragUpdateDetails details) {
+    final height = MediaQuery.of(context).size.height;
+    if (height <= 0 || !_sheetController.isAttached) return;
+    _sheetController.jumpTo((_sheetController.size - details.delta.dy / height).clamp(0.4, 0.95));
+  }
+
+  void _onBandDragEnd(DragEndDetails details) {
+    if (!_sheetController.isAttached) return;
+    if (_sheetController.size <= 0.41 || details.velocity.pixelsPerSecond.dy > 700) {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _loadPage() async {
@@ -123,6 +147,17 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   }
 
   Future<void> _launch(Uri uri) async {
+    // Guest-rendered pages link spoilers to the login page; route those to
+    // the in-app sign-in (which captures the session) and refresh after.
+    if (uri.host.endsWith('f95zone.to') && (uri.path.startsWith('/login') || uri.path.startsWith('/register'))) {
+      final success = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen()));
+      if (success == true && mounted) {
+        ThreadPageService.invalidate(thread.threadId);
+        await _loadPage();
+      }
+      return;
+    }
+
     final launch =
         widget.urlLauncher ?? ((uri) => launcher.launchUrl(uri, mode: launcher.LaunchMode.externalApplication));
     await launch(uri);
@@ -141,9 +176,9 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
     if (actions == null || url == null) return;
 
     if (!AuthService.instance.isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign in from the Profile tab to like and bookmark threads.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Sign in from the Profile tab to like and bookmark threads.')));
       return;
     }
 
@@ -152,8 +187,8 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
     setState(() => isLike ? _liked = !wasActive : _watched = !wasActive);
 
     try {
-      final send = widget.actionSender ??
-          (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
+      final send =
+          widget.actionSender ?? (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
       // React toggles on its own; watch needs stop=1 to unwatch.
       await send(url, actions.csrfToken, !isLike && wasActive ? const {'stop': '1'} : const {});
       ThreadPageService.invalidate(thread.threadId);
@@ -169,116 +204,134 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return DraggableScrollableSheet(
+      controller: _sheetController,
       initialChildSize: 0.65,
       minChildSize: 0.4,
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        // Same glass treatment as the search modal: blur + translucent surface.
+        // Same glass treatment as the search modal: blur + translucent
+        // surface, or a near-opaque solid when glass effects are disabled.
+        final bool glass = SettingsService.instance.settings.glassEffects;
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: _maybeBlur(
+            glass,
             child: Container(
-              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.65)),
-              child: ListView(
-                controller: scrollController,
-                padding: EdgeInsets.only(bottom: 16 + MediaQuery.of(context).viewPadding.bottom),
+              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: glass ? 0.65 : 0.97)),
+              child: Column(
                 children: [
-                  Center(
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 12, bottom: 8),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  _buildCoverHeader(context),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          thread.title,
-                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  GestureDetector(
+                    key: const Key('modal-drag-band'),
+                    behavior: HitTestBehavior.opaque,
+                    onVerticalDragUpdate: _onBandDragUpdate,
+                    onVerticalDragEnd: _onBandDragEnd,
+                    child: SizedBox(
+                      height: 36,
+                      width: double.infinity,
+                      child: Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)),
                         ),
-                        const SizedBox(height: 4),
-                        Text('by ${thread.creator}', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                  Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: _buildStatsRow(colorScheme)),
-                  if (thread.screens.isNotEmpty) ...[
-                    _buildSectionLabel('Screenshots'),
-                    SizedBox(
-                      height: 96,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: thread.screens.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) => _buildScreenshotThumb(context, index),
                       ),
                     ),
-                  ],
-                  if (thread.tags.isNotEmpty) ...[
-                    _buildSectionLabel('Tags', hint: 'tap to add to search · hold to replace'),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildTagChips(context, colorScheme),
-                    ),
-                  ],
-                  ..._buildPageSections(colorScheme),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                    child: Row(
+                  ),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: EdgeInsets.only(bottom: 16 + MediaQuery.of(context).viewPadding.bottom),
                       children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () => _launch(_threadUri),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: colorScheme.primary,
-                              foregroundColor: colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            icon: const Icon(Icons.open_in_new, size: 18),
-                            label: const Text('Open thread'),
+                        _buildCoverHeader(context),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                thread.title,
+                                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text('by ${thread.creator}', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+                            ],
                           ),
                         ),
-                        if (_page?.actions?.reactUrl != null) ...[
-                          const SizedBox(width: 8),
-                          IconButton.outlined(
-                            onPressed: () => _toggleAction(isLike: true),
-                            tooltip: _liked ? 'Unlike' : 'Like',
-                            icon: Icon(
-                              _liked ? Icons.favorite : Icons.favorite_border,
-                              size: 20,
-                              color: _liked ? colorScheme.primary : null,
+                        Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: _buildStatsRow(colorScheme)),
+                        if (thread.screens.isNotEmpty) ...[
+                          _buildSectionLabel('Screenshots'),
+                          SizedBox(
+                            height: 96,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: thread.screens.length,
+                              separatorBuilder: (_, _) => const SizedBox(width: 8),
+                              itemBuilder: (context, index) => _buildScreenshotThumb(context, index),
                             ),
                           ),
                         ],
-                        if (_page?.actions?.watchUrl != null) ...[
-                          const SizedBox(width: 8),
-                          IconButton.outlined(
-                            onPressed: () => _toggleAction(isLike: false),
-                            tooltip: _watched ? 'Remove bookmark' : 'Bookmark',
-                            icon: Icon(
-                              _watched ? Icons.bookmark : Icons.bookmark_border,
-                              size: 20,
-                              color: _watched ? colorScheme.primary : null,
-                            ),
+                        if (thread.tags.isNotEmpty) ...[
+                          _buildSectionLabel('Tags', hint: 'tap to add to search · hold to replace'),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _buildTagChips(context, colorScheme),
                           ),
                         ],
-                        const SizedBox(width: 8),
-                        IconButton.outlined(
-                          onPressed: _shareThread,
-                          tooltip: 'Share',
-                          // The share glyph's visual weight sits right of
-                          // center; nudge it so it reads centered.
-                          icon: Transform.translate(
-                            offset: const Offset(-1, 0),
-                            child: const Icon(Icons.share_outlined, size: 20),
+                        ..._buildPageSections(colorScheme),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: () => _launch(_threadUri),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: colorScheme.primary,
+                                    foregroundColor: colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                  icon: const Icon(Icons.open_in_new, size: 18),
+                                  label: const Text('Open thread'),
+                                ),
+                              ),
+                              if (_page?.actions?.reactUrl != null) ...[
+                                const SizedBox(width: 8),
+                                IconButton.outlined(
+                                  onPressed: () => _toggleAction(isLike: true),
+                                  tooltip: _liked ? 'Unlike' : 'Like',
+                                  icon: Icon(
+                                    _liked ? Icons.favorite : Icons.favorite_border,
+                                    size: 20,
+                                    color: _liked ? colorScheme.primary : null,
+                                  ),
+                                ),
+                              ],
+                              if (_page?.actions?.watchUrl != null) ...[
+                                const SizedBox(width: 8),
+                                IconButton.outlined(
+                                  onPressed: () => _toggleAction(isLike: false),
+                                  tooltip: _watched ? 'Remove bookmark' : 'Bookmark',
+                                  icon: Icon(
+                                    _watched ? Icons.bookmark : Icons.bookmark_border,
+                                    size: 20,
+                                    color: _watched ? colorScheme.primary : null,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(width: 8),
+                              IconButton.outlined(
+                                onPressed: _shareThread,
+                                tooltip: 'Share',
+                                // The share glyph's visual weight sits right of
+                                // center; nudge it so it reads centered.
+                                icon: Transform.translate(
+                                  offset: const Offset(-1, 0),
+                                  child: const Icon(Icons.share_outlined, size: 20),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -291,6 +344,11 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
         );
       },
     );
+  }
+
+  Widget _maybeBlur(bool glass, {required Widget child}) {
+    if (!glass) return child;
+    return BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: child);
   }
 
   // --- Scraped page sections -----------------------------------------------

@@ -164,6 +164,67 @@ void main() {
       expect(requested.queryParameters.containsKey('search'), isFalse);
     });
 
+    test('zero-result multi-word searches retry with tokens dropped', () async {
+      final searches = <String?>[];
+      final client = MockClient((request) async {
+        final search = request.url.queryParameters['search'];
+        searches.add(search);
+        final found = search == 'note';
+        return http.Response(
+          jsonEncode({
+            'status': 'ok',
+            'msg': {
+              'data': found
+                  ? [
+                      {'thread_id': 1, 'title': 'Sex Note'},
+                    ]
+                  : [],
+              'pagination': {'page': 1, 'total': found ? 1 : 0},
+              'count': found ? 1 : 0,
+            },
+          }),
+          200,
+        );
+      });
+
+      final response = await ApiService.fetchThreads(
+        query: const SearchQuery(search: 'sex note'),
+        client: client,
+        packageInfoLoader: () async => _packageInfo(),
+      );
+
+      // 'sex' is the shortest token, so it gets dropped first.
+      expect(searches, ['sex note', 'note']);
+      expect(response.data.threads.single.title, 'Sex Note');
+    });
+
+    test('zero-result searches without a match settle for the empty response', () async {
+      int requests = 0;
+      final client = MockClient((request) async {
+        requests++;
+        return http.Response(
+          jsonEncode({
+            'status': 'ok',
+            'msg': {
+              'data': [],
+              'pagination': {'page': 1, 'total': 0},
+              'count': 0,
+            },
+          }),
+          200,
+        );
+      });
+
+      final response = await ApiService.fetchThreads(
+        query: const SearchQuery(search: 'zz yy'),
+        client: client,
+        packageInfoLoader: () async => _packageInfo(),
+      );
+
+      expect(response.data.count, 0);
+      expect(requests, 3);
+    });
+
     test('sets versioned user agent and caches it', () async {
       int loaderCalls = 0;
       loader() async {

@@ -51,13 +51,45 @@ class ApiService {
       '_': DateTime.now().millisecondsSinceEpoch.toString(),
     };
 
-    return _getJson(
+    final response = await _getJson(
       queryParams,
       parse: ApiResponse.fromJson,
       onError: fallbackToMockOnError ? () => filterMockData(createMockData(), query) : null,
       client: client,
       packageInfoLoader: packageInfoLoader,
     );
+
+    if (response.data.count > 0) return response;
+
+    // The server has custom fulltext stopwords we cannot enumerate ('sex'
+    // is confirmed): any such token zeroes out a multi-word title search.
+    // Retry with one token dropped at a time, shortest first.
+    final searchTerm = queryParams['search'];
+    final tokens = searchTerm?.split(' ').where((t) => t.isNotEmpty).toList() ?? const [];
+    if (tokens.length >= 2 && tokens.length <= 4) {
+      final dropOrder = List<int>.generate(tokens.length, (i) => i)
+        ..sort((a, b) => tokens[a].length.compareTo(tokens[b].length));
+      for (final dropIndex in dropOrder) {
+        final reduced = [
+          for (int i = 0; i < tokens.length; i++)
+            if (i != dropIndex) tokens[i],
+        ].join(' ');
+        try {
+          final retry = await _getJson(
+            {...queryParams, 'search': reduced},
+            parse: ApiResponse.fromJson,
+            onError: null,
+            client: client,
+            packageInfoLoader: packageInfoLoader,
+          );
+          if (retry.data.count > 0) return retry;
+        } on ApiException {
+          break; // Network trouble; settle for the zero-result response.
+        }
+      }
+    }
+
+    return response;
   }
 
   /// Fetches the most-used tags for a category (`cmd=tags`), used to seed

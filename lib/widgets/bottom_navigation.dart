@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:ui';
 
+import 'glass_aware.dart';
+
 class CustomBottomNavigation extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -16,69 +18,71 @@ class CustomBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(32, 0, 32, 8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              // Handle vertical scrolling on the nav bar background
-              onVerticalDragUpdate: (details) {
-                if (scrollController.hasClients) {
-                  double newOffset = scrollController.offset - details.delta.dy;
-                  newOffset = newOffset.clamp(
-                    scrollController.position.minScrollExtent,
-                    scrollController.position.maxScrollExtent,
-                  );
-                  scrollController.jumpTo(newOffset);
-                }
-              },
-              child: Container(
-                height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C1E).withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 32, offset: const Offset(0, 8)),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Browse covers games/comics/animations/assets, so a
-                    // category-neutral compass beats the old gamepad; the
-                    // search FAB keeps the magnifier.
-                    _buildNavItem(
-                      icon: Icons.explore_outlined,
-                      activeIcon: Icons.explore,
-                      index: 0,
-                      isActive: currentIndex == 0,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.forum_outlined,
-                      activeIcon: Icons.forum,
-                      index: 1,
-                      isActive: currentIndex == 1,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.settings_outlined,
-                      activeIcon: Icons.settings,
-                      index: 2,
-                      isActive: currentIndex == 2,
-                    ),
-                    _buildNavItem(
-                      icon: Icons.person_outline,
-                      activeIcon: Icons.person,
-                      index: 3,
-                      isActive: currentIndex == 3,
-                    ),
-                  ],
+    return GlassAware(
+      builder: (context, glass) => SafeArea(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(32, 0, 32, 8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: _maybeBlur(
+              glass,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                // Handle vertical scrolling on the nav bar background
+                onVerticalDragUpdate: (details) {
+                  if (scrollController.hasClients) {
+                    double newOffset = scrollController.offset - details.delta.dy;
+                    newOffset = newOffset.clamp(
+                      scrollController.position.minScrollExtent,
+                      scrollController.position.maxScrollExtent,
+                    );
+                    scrollController.jumpTo(newOffset);
+                  }
+                },
+                child: Container(
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF1C1C1E).withValues(alpha: glass ? 0.4 : 0.92),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 4)),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 32, offset: const Offset(0, 8)),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      // Browse covers games/comics/animations/assets, so a
+                      // category-neutral compass beats the old gamepad; the
+                      // search FAB keeps the magnifier.
+                      _buildNavItem(
+                        icon: Icons.explore_outlined,
+                        activeIcon: Icons.explore,
+                        index: 0,
+                        isActive: currentIndex == 0,
+                      ),
+                      _buildNavItem(
+                        icon: Icons.forum_outlined,
+                        activeIcon: Icons.forum,
+                        index: 1,
+                        isActive: currentIndex == 1,
+                      ),
+                      _buildNavItem(
+                        icon: Icons.settings_outlined,
+                        activeIcon: Icons.settings,
+                        index: 2,
+                        isActive: currentIndex == 2,
+                      ),
+                      _buildNavItem(
+                        icon: Icons.person_outline,
+                        activeIcon: Icons.person,
+                        index: 3,
+                        isActive: currentIndex == 3,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -86,6 +90,12 @@ class CustomBottomNavigation extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Wraps [child] in a backdrop blur only when glass effects are enabled.
+  Widget _maybeBlur(bool glass, {required Widget child}) {
+    if (!glass) return child;
+    return BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: child);
   }
 
   Widget _buildNavItem({

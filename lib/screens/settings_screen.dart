@@ -22,15 +22,21 @@ class SettingsScreen extends StatelessWidget {
       barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (BuildContext context) {
         final colorScheme = Theme.of(context).colorScheme;
+        final bool glass = SettingsService.instance.settings.glassEffects;
+        final content = DecoratedBox(
+          decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: glass ? 0.65 : 0.97)),
+          child: SearchOptionsModal(
+            initialQuery: current.defaultQuery,
+            submitLabel: 'Save',
+            // Swipe-dismiss also saves: the modal reports its state when
+            // popped without an explicit submit.
+            onDismissSave: (query) =>
+                SettingsService.instance.update(SettingsService.instance.settings.copyWith(defaultQuery: query)),
+          ),
+        );
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: DecoratedBox(
-              decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: 0.65)),
-              child: SearchOptionsModal(initialQuery: current.defaultQuery, submitLabel: 'Save', showDragHandle: false),
-            ),
-          ),
+          child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: content) : content,
         );
       },
     );
@@ -141,7 +147,7 @@ class SettingsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Glass effects', style: TextStyle(color: Colors.white, fontSize: 15)),
                   subtitle: Text(
-                    'Backdrop blur on card pills — disable if scrolling lags',
+                    'Backdrop blur on sheets, nav bar, and overlays — disable if animations lag',
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                   activeTrackColor: colorScheme.primary,
