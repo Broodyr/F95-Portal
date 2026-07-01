@@ -323,6 +323,78 @@ void main() {
     expect(query!.sort, SortOrder.rating);
   });
 
+  testWidgets('segmented rows slide a single highlight pill to the tapped segment', (tester) async {
+    await pumpModal(tester);
+
+    await scrollModalTo(tester, find.text('Rating'));
+
+    // One sliding highlight per segmented row: Sort by and Updated within.
+    final highlights = find.byKey(const Key('segment-highlight'));
+    expect(highlights, findsNWidgets(2));
+
+    // Default sort is Date — the first segment, so the pill sits hard left.
+    AnimatedAlign sortHighlight() => tester.widget<AnimatedAlign>(highlights.first);
+    expect(sortHighlight().alignment, const Alignment(-1, 0));
+
+    await tester.tap(find.text('Rating'));
+    await tester.pump();
+
+    // Rating is the last of five segments; the same pill now targets the
+    // far right and animates over a nonzero duration.
+    expect(sortHighlight().alignment, const Alignment(1, 0));
+    expect(sortHighlight().duration, greaterThan(Duration.zero));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('the suggestion dropdown slides open and closed', (tester) async {
+    await pumpModal(tester, popularTags: const [PopularTag(tagId: 103, count: 999)]);
+
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    // The list mounts immediately and slides open over a nonzero duration.
+    AnimatedAlign dropdown() => tester.widget<AnimatedAlign>(find.byKey(const Key('suggestion-dropdown')));
+    expect(dropdown().heightFactor, 1);
+    expect(dropdown().duration, greaterThan(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.text('corruption'), findsOneWidget);
+
+    // Unfocusing keeps the list mounted while it slides shut, then drops it.
+    // (Focus changes apply after the frame, so pump twice to rebuild.)
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.pump();
+    expect(dropdown().heightFactor, 0);
+    expect(find.text('corruption'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('corruption'), findsNothing);
+  });
+
+  testWidgets('section bodies slide open and closed instead of popping', (tester) async {
+    await pumpModal(tester);
+
+    await scrollModalTo(tester, find.text('Engine'));
+    expect(find.text('Godot'), findsNothing);
+
+    await tester.tap(find.text('Engine'));
+    await tester.pump();
+
+    // The body mounts immediately and slides open over a nonzero duration.
+    final align = tester.widget<AnimatedAlign>(find.byKey(const Key('section-body-Engine')));
+    expect(align.heightFactor, 1);
+    expect(align.duration, greaterThan(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.text('Godot'), findsOneWidget);
+
+    // Collapsing keeps the content mounted while it slides shut, then
+    // drops it so hidden pills don't linger in the tree.
+    await tester.tap(find.text('Engine'));
+    await tester.pump();
+    expect(find.text('Godot'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Godot'), findsNothing);
+  });
+
   testWidgets('engine pills cycle to include and the section lists the vocabulary', (tester) async {
     final getResult = await pumpModal(tester);
 

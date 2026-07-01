@@ -87,6 +87,10 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   bool _overviewExpanded = false;
   final Set<int> _expandedSpoilers = {};
 
+  /// Spoilers animating shut: their content stays mounted until the slide
+  /// completes, then is dropped from the tree.
+  final Set<int> _settlingSpoilers = {};
+
   /// Selected group per download set (sets are independent switchers).
   final Map<int, int> _setGroupIndex = {};
 
@@ -417,6 +421,14 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: _buildDownloadsCard(colorScheme, page.downloads!),
         ),
+      ] else if (!AuthService.instance.isLoggedIn) ...[
+        // Guest-rendered pages hide download links, so an absent section
+        // almost always means "not signed in" rather than "no downloads".
+        _buildSectionLabel('Downloads'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _buildDownloadsLoginPrompt(colorScheme),
+        ),
       ],
       if (page.attachments.isNotEmpty) ...[
         _buildSectionLabel('Attachments'),
@@ -472,11 +484,51 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
           color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(
-          overview,
-          maxLines: _overviewExpanded ? null : 5,
-          overflow: _overviewExpanded ? null : TextOverflow.ellipsis,
-          style: TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45),
+        // The card glides between the 5-line clamp and the full text. The
+        // SizedBox pins the width so only the height animates.
+        child: AnimatedSize(
+          key: const Key('overview-size'),
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: double.infinity,
+            child: Text(
+              overview,
+              maxLines: _overviewExpanded ? null : 5,
+              overflow: _overviewExpanded ? null : TextOverflow.ellipsis,
+              style: TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDownloadsLoginPrompt(ColorScheme colorScheme) {
+    return GestureDetector(
+      // Routed through _launch so the f95 login path triggers the in-app
+      // sign-in and the page refetch that reveals the real download links.
+      onTap: () => _launch(Uri.parse('https://f95zone.to/login/')),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.lock_outline, size: 16, color: Colors.grey[500]),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Sign in to see download links',
+                style: TextStyle(color: Colors.grey[300], fontSize: 13),
+              ),
+            ),
+            Text('Sign in', style: TextStyle(color: colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+          ],
         ),
       ),
     );
@@ -638,7 +690,14 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
         children: [
           InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => setState(() => expanded ? _expandedSpoilers.remove(index) : _expandedSpoilers.add(index)),
+            onTap: () => setState(() {
+              if (expanded) {
+                _expandedSpoilers.remove(index);
+                _settlingSpoilers.add(index);
+              } else {
+                _expandedSpoilers.add(index);
+              }
+            }),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               child: Row(
@@ -649,19 +708,38 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                       style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                   ),
-                  Icon(expanded ? Icons.expand_less : Icons.expand_more, size: 18, color: Colors.grey[500]),
+                  AnimatedRotation(
+                    turns: expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    child: Icon(Icons.expand_more, size: 18, color: Colors.grey[500]),
+                  ),
                 ],
               ),
             ),
           ),
-          if (expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: RichSpoilerText(
-                pieces: spoiler.rich.isEmpty ? [RichPiece.text(spoiler.content)] : spoiler.rich,
-                onOpenLink: _launch,
-              ),
+          // Slides open/closed like the search modal's sections; collapsed
+          // content is unmounted once the slide-shut finishes so hidden
+          // spoilers can't be found or hit.
+          ClipRect(
+            child: AnimatedAlign(
+              key: Key('spoiler-body-${spoiler.title}'),
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topLeft,
+              heightFactor: expanded ? 1 : 0,
+              onEnd: () => setState(() => _settlingSpoilers.remove(index)),
+              child: expanded || _settlingSpoilers.contains(index)
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: RichSpoilerText(
+                        pieces: spoiler.rich.isEmpty ? [RichPiece.text(spoiler.content)] : spoiler.rich,
+                        onOpenLink: _launch,
+                      ),
+                    )
+                  : null,
             ),
+          ),
         ],
       ),
     );

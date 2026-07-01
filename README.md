@@ -5,7 +5,7 @@ A Flutter mobile frontend for f95zone.to (adult game forum). Dark, glassmorphic 
 ## Project Snapshot
 - Four tabs: **Browse** (fully featured feed/search), **Forum** (the only remaining placeholder), **Settings**, **Profile** (sign-in/out; activity feed planned).
 - Browse: infinite-scroll thread list, omni-search modal (tags/engines/statuses/creators/title), active-filters bar with live result count, rich thread-details modal with live-scraped content, like/bookmark actions.
-- All state services are singletons with injectable storage/clients for tests; 160 tests, `flutter analyze` clean.
+- All state services are singletons with injectable storage/clients for tests; 170 tests, `flutter analyze` clean.
 
 ## Architecture
 
@@ -34,7 +34,7 @@ A Flutter mobile frontend for f95zone.to (adult game forum). Dark, glassmorphic 
 `docs/api_mappings.md` is the authoritative reference (endpoint surface, params incl. `tagtype=or`/`date`/search+creator, prefix/tag ID tables, quirks: lax field typing, 10-tag limit, anonymous rate limit, no ascending sorts, fulltext stopword behavior partially — see SearchQuery comments). `docs/samples/` holds a live list response.
 
 ## Development
-- `flutter pub get && flutter run`; `flutter test` (160 tests); `flutter analyze`. Helper scripts in `tool/`.
+- `flutter pub get && flutter run`; `flutter test` (170 tests); `flutter analyze`. Helper scripts in `tool/`.
 - TDD: tests first, mirroring lib structure. Helpers: `test/helpers/` (metadata loader, in-memory cookie/settings storages, fixtures in `test/fixtures/`). Services take injectable `client`/`packageInfoLoader`; widgets take injectable fetch/launch/action callbacks.
 - **After adding native plugins: verify `flutter build apk --release`** (AGP/AndroidX metadata checks are stricter than debug; AGP currently 8.9.1).
 - Widget-test gotchas seen repeatedly: `scrollUntilVisible` needs `scrollable: find.byType(Scrollable).first` when a TextField is present; follow with `ensureVisible` before tapping; cached_network_image leaves pending timers (end tests with `tester.pump(Duration(minutes: 1))`) and its spinners never settle (use fixed pumps).

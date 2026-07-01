@@ -77,6 +77,16 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   bool _submitted = false;
   final List<_ActiveFilter> _filters = [];
   final Set<String> _expandedSections = {};
+
+  /// Sections animating shut: their bodies stay mounted until the slide
+  /// completes, then are dropped from the tree.
+  final Set<String> _settlingSections = {};
+
+  /// Last-built suggestion list, kept mounted while the dropdown slides
+  /// shut (its visibility is derived from focus/text, so there is no
+  /// toggle moment to capture the outgoing child at).
+  Widget? _lastSuggestionList;
+  bool _dropdownVisible = false;
   String? _creator;
   String? _title;
   List<PopularTag> _popularTags = const [];
@@ -307,7 +317,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   }
 
   void _toggleSection(String name) {
-    setState(() => _expandedSections.contains(name) ? _expandedSections.remove(name) : _expandedSections.add(name));
+    setState(() {
+      if (_expandedSections.contains(name)) {
+        _expandedSections.remove(name);
+        _settlingSections.add(name);
+      } else {
+        _expandedSections.add(name);
+      }
+    });
   }
 
   @override
@@ -357,15 +374,16 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                       const SizedBox(height: 12),
                     ],
                     _buildSearchField(colorScheme),
-                    if (suggestions.isNotEmpty || _hasCreatorSuggestion || showEmptyTags) ...[
-                      const SizedBox(height: 8),
-                      _buildSuggestionList(
-                        colorScheme,
-                        suggestions,
-                        emptyTags: showEmptyTags ? emptyTags : const [],
-                        recentMode: recentMode,
-                      ),
-                    ],
+                    _buildSuggestionDropdown(
+                      suggestions.isNotEmpty || _hasCreatorSuggestion || showEmptyTags
+                          ? _buildSuggestionList(
+                              colorScheme,
+                              suggestions,
+                              emptyTags: showEmptyTags ? emptyTags : const [],
+                              recentMode: recentMode,
+                            )
+                          : null,
+                    ),
                     const SizedBox(height: 16),
                     _buildSectionHeader(
                       colorScheme,
@@ -373,21 +391,18 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                       title: 'Category',
                       summary: _selectedCategory.displayLabel,
                     ),
-                    if (_expandedSections.contains('Category')) ...[
-                      const SizedBox(height: 4),
-                      _buildCategorySelector(colorScheme),
-                    ],
+                    _buildSectionBody('Category', _buildCategorySelector(colorScheme)),
                     for (final group in _prefixGroups()) ...[
                       const SizedBox(height: 8),
                       _buildSectionHeader(colorScheme, textTheme, title: group.name, summary: _groupSummary(group)),
-                      if (_expandedSections.contains(group.name)) ...[
-                        const SizedBox(height: 4),
+                      _buildSectionBody(
+                        group.name,
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [for (final prefix in group.prefixes) _buildPrefixPill(colorScheme, prefix)],
                         ),
-                      ],
+                      ),
                     ],
                     const SizedBox(height: 16),
                     Text('Sort by', style: textTheme.titleMedium),
@@ -450,9 +465,58 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             const Spacer(),
             if (summary.isNotEmpty) Text(summary, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
             const SizedBox(width: 4),
-            Icon(expanded ? Icons.expand_less : Icons.expand_more, size: 20, color: colorScheme.onSurfaceVariant),
+            AnimatedRotation(
+              turns: expanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: Icon(Icons.expand_more, size: 20, color: colorScheme.onSurfaceVariant),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Suggestion dropdown that slides open/closed under the search field.
+  /// [list] is null when nothing should show; the previous list is cached
+  /// so it can stay mounted through the slide-shut, then dropped.
+  Widget _buildSuggestionDropdown(Widget? list) {
+    _dropdownVisible = list != null;
+    if (list != null) _lastSuggestionList = Padding(padding: const EdgeInsets.only(top: 8), child: list);
+    return ClipRect(
+      child: AnimatedAlign(
+        key: const Key('suggestion-dropdown'),
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topLeft,
+        heightFactor: _dropdownVisible ? 1 : 0,
+        // Drop the cached list only after a completed slide-shut (the
+        // dropdown may have been re-opened mid-animation).
+        onEnd: () {
+          if (!_dropdownVisible) setState(() => _lastSuggestionList = null);
+        },
+        child: _lastSuggestionList,
+      ),
+    );
+  }
+
+  /// Section body that slides open/closed under a clip, matching the
+  /// segmented selectors' feel. Collapsed bodies are unmounted (not just
+  /// zero-height) so hidden pills can't be found or hit; [_settlingSections]
+  /// keeps a body mounted just long enough to slide shut.
+  Widget _buildSectionBody(String name, Widget child) {
+    final bool expanded = _expandedSections.contains(name);
+    return ClipRect(
+      child: AnimatedAlign(
+        key: Key('section-body-$name'),
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topLeft,
+        heightFactor: expanded ? 1 : 0,
+        onEnd: () => setState(() => _settlingSections.remove(name)),
+        child: expanded || _settlingSections.contains(name)
+            ? Padding(padding: const EdgeInsets.only(top: 4), child: child)
+            : null,
       ),
     );
   }
@@ -619,7 +683,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               child: Text(
-                '${recentMode ? 'Recent' : 'Popular'} tags — engines, statuses & creators match here too',
+                '${recentMode ? 'Recent' : 'Popular'} tags — engines & statuses match here too',
                 style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
               ),
             ),
@@ -711,38 +775,61 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     required String Function(T) label,
     required ValueChanged<T> onSelect,
   }) {
+    final int selectedIndex = values.indexWhere(isSelected);
+
     return Container(
       // Borderless dark track: the selected segment carries the only border,
       // so it does not clash with an outer outline.
       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(999)),
-      child: Row(
+      child: Stack(
         children: [
-          for (final value in values)
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onSelect(value),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                  decoration: BoxDecoration(
-                    color: isSelected(value) ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: isSelected(value) ? colorScheme.primary : Colors.transparent, width: 1.5),
-                  ),
-                  child: Center(
-                    child: Text(
-                      label(value),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected(value) ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                        fontWeight: isSelected(value) ? FontWeight.w600 : FontWeight.w400,
-                      ),
+          // One shared highlight pill that slides between segments rather
+          // than each segment cross-fading its own background.
+          if (selectedIndex >= 0)
+            Positioned.fill(
+              child: AnimatedAlign(
+                key: const Key('segment-highlight'),
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment(values.length == 1 ? 0 : -1 + 2 * selectedIndex / (values.length - 1), 0),
+                child: FractionallySizedBox(
+                  widthFactor: 1 / values.length,
+                  heightFactor: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: colorScheme.primary, width: 1.5),
                     ),
                   ),
                 ),
               ),
             ),
+          Row(
+            children: [
+              for (final value in values)
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onSelect(value),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      child: Center(
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 180),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected(value) ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                            fontWeight: isSelected(value) ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                          child: Text(label(value)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

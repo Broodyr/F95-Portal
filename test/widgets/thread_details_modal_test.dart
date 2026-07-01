@@ -230,6 +230,56 @@ void main() {
     expect(launched, [Uri.parse('https://example.com/discord')]);
   });
 
+  testWidgets('overview expands and collapses with an animated size change', (tester) async {
+    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id));
+
+    final overviewText = find.textContaining('representative mock thread page');
+    await tester.scrollUntilVisible(overviewText, 150);
+    await tester.ensureVisible(overviewText);
+    await tester.pumpAndSettle();
+
+    // The card resizes through an AnimatedSize with a nonzero duration.
+    final animated = tester.widget<AnimatedSize>(find.byKey(const Key('overview-size')));
+    expect(animated.duration, greaterThan(Duration.zero));
+
+    Text overview() => tester.widget<Text>(overviewText);
+    expect(overview().maxLines, 5);
+
+    await tester.tap(overviewText);
+    await tester.pumpAndSettle();
+    expect(overview().maxLines, isNull);
+
+    await tester.tap(overviewText);
+    await tester.pumpAndSettle();
+    expect(overview().maxLines, 5);
+  });
+
+  testWidgets('spoiler content slides open and closed instead of popping', (tester) async {
+    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id));
+
+    await tester.scrollUntilVisible(find.text('Changelog'), 150);
+    await tester.ensureVisible(find.text('Changelog'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Changelog'));
+    await tester.pump();
+
+    // The body mounts immediately and slides open over a nonzero duration.
+    AnimatedAlign body() => tester.widget<AnimatedAlign>(find.byKey(const Key('spoiler-body-Changelog')));
+    expect(body().heightFactor, 1);
+    expect(body().duration, greaterThan(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fixed things'), findsOneWidget);
+
+    // Collapsing keeps the content mounted while it slides shut.
+    await tester.tap(find.text('Changelog'));
+    await tester.pump();
+    expect(body().heightFactor, 0);
+    expect(find.textContaining('Fixed things'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Fixed things'), findsNothing);
+  });
+
   testWidgets('spoiler cards expand and collapse', (tester) async {
     await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id));
 
@@ -325,6 +375,47 @@ void main() {
     expect(sent, isEmpty);
     expect(find.textContaining('Sign in from the Profile tab'), findsOneWidget);
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+  });
+
+  testWidgets('logged out with no downloads shows a sign-in notice under Downloads', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: 'A guest-rendered page.'),
+    );
+
+    await tester.scrollUntilVisible(find.textContaining('Sign in to see download links'), 150);
+    expect(find.text('Downloads'), findsOneWidget);
+  });
+
+  testWidgets('logged in with no downloads omits the Downloads section', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: 'A page without downloads.'),
+    );
+
+    await tester.scrollUntilVisible(find.text('Open thread'), 150);
+    expect(find.text('Downloads'), findsNothing);
+    expect(find.textContaining('Sign in to see download links'), findsNothing);
+  });
+
+  testWidgets('logged out with parsed downloads shows them, not the notice', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+
+    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id));
+
+    await tester.scrollUntilVisible(find.text('Downloads'), 150);
+    expect(find.textContaining('Sign in to see download links'), findsNothing);
   });
 
   testWidgets('page load failure shows an inline retry that recovers', (tester) async {

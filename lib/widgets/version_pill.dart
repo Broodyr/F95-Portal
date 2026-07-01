@@ -68,7 +68,7 @@ class VersionPill extends StatelessWidget {
               borderRadius: badge == null
                   ? BorderRadius.circular(12)
                   : const BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+              border: Border.all(color: _versionColor.withValues(alpha: 0.9)),
             ),
             child: Center(
               child: Text(
