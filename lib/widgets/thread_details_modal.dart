@@ -19,6 +19,7 @@ import 'engine_tag.dart';
 import 'rich_spoiler_text.dart';
 import 'screenshot_gallery.dart';
 import 'sfw_blur.dart';
+import 'sliding_reveal.dart';
 import 'version_pill.dart';
 
 /// Popped by the modal when the user picks a tag: tap adds it to the active
@@ -86,10 +87,6 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   bool _watched = false;
   bool _overviewExpanded = false;
   final Set<int> _expandedSpoilers = {};
-
-  /// Spoilers animating shut: their content stays mounted until the slide
-  /// completes, then is dropped from the tree.
-  final Set<int> _settlingSpoilers = {};
 
   /// Selected group per download set (sets are independent switchers).
   final Map<int, int> _setGroupIndex = {};
@@ -475,33 +472,68 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   }
 
   Widget _buildOverviewCard(ColorScheme colorScheme, String overview) {
-    return GestureDetector(
-      onTap: () => setState(() => _overviewExpanded = !_overviewExpanded),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        // The card glides between the 5-line clamp and the full text. The
-        // SizedBox pins the width so only the height animates.
-        child: AnimatedSize(
-          key: const Key('overview-size'),
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: SizedBox(
+    final style = TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Overviews that fit the 5-line clamp get no expand affordance and
+        // ignore taps; measured at this width so the answer tracks layout.
+        final painter = TextPainter(
+          text: TextSpan(text: overview, style: style),
+          maxLines: 5,
+          textDirection: TextDirection.ltr,
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: constraints.maxWidth - 24);
+        final bool overflows = painter.didExceedMaxLines;
+        painter.dispose();
+
+        return GestureDetector(
+          onTap: overflows ? () => setState(() => _overviewExpanded = !_overviewExpanded) : null,
+          child: Container(
             width: double.infinity,
-            child: Text(
-              overview,
-              maxLines: _overviewExpanded ? null : 5,
-              overflow: _overviewExpanded ? null : TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            // The card glides between the 5-line clamp and the full text.
+            // The SizedBox pins the width so only the height animates.
+            child: AnimatedSize(
+              key: const Key('overview-size'),
+              duration: Motion.duration,
+              curve: Motion.curve,
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      overview,
+                      maxLines: _overviewExpanded ? null : 5,
+                      overflow: _overviewExpanded ? null : TextOverflow.ellipsis,
+                      style: style,
+                    ),
+                    if (overflows)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Center(
+                          child: AnimatedRotation(
+                            key: const Key('overview-chevron'),
+                            turns: _overviewExpanded ? 0.5 : 0,
+                            duration: Motion.duration,
+                            curve: Motion.curve,
+                            child: Icon(Icons.expand_more, size: 16, color: Colors.grey[500]),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -690,14 +722,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
         children: [
           InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => setState(() {
-              if (expanded) {
-                _expandedSpoilers.remove(index);
-                _settlingSpoilers.add(index);
-              } else {
-                _expandedSpoilers.add(index);
-              }
-            }),
+            onTap: () => setState(() => expanded ? _expandedSpoilers.remove(index) : _expandedSpoilers.add(index)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               child: Row(
@@ -710,34 +735,23 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                   ),
                   AnimatedRotation(
                     turns: expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    curve: Curves.easeOutCubic,
+                    duration: Motion.duration,
+                    curve: Motion.curve,
                     child: Icon(Icons.expand_more, size: 18, color: Colors.grey[500]),
                   ),
                 ],
               ),
             ),
           ),
-          // Slides open/closed like the search modal's sections; collapsed
-          // content is unmounted once the slide-shut finishes so hidden
-          // spoilers can't be found or hit.
-          ClipRect(
-            child: AnimatedAlign(
-              key: Key('spoiler-body-${spoiler.title}'),
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              alignment: Alignment.topLeft,
-              heightFactor: expanded ? 1 : 0,
-              onEnd: () => setState(() => _settlingSpoilers.remove(index)),
-              child: expanded || _settlingSpoilers.contains(index)
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: RichSpoilerText(
-                        pieces: spoiler.rich.isEmpty ? [RichPiece.text(spoiler.content)] : spoiler.rich,
-                        onOpenLink: _launch,
-                      ),
-                    )
-                  : null,
+          SlidingReveal(
+            key: Key('spoiler-body-${spoiler.title}'),
+            visible: expanded,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: RichSpoilerText(
+                pieces: spoiler.rich.isEmpty ? [RichPiece.text(spoiler.content)] : spoiler.rich,
+                onOpenLink: _launch,
+              ),
             ),
           ),
         ],

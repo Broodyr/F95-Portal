@@ -3,6 +3,7 @@ import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/settings_service.dart';
 import 'package:f95_portal/widgets/search_options_modal.dart';
+import 'package:f95_portal/widgets/sliding_reveal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -352,10 +353,9 @@ void main() {
     await tester.tap(find.byType(TextField));
     await tester.pump();
 
-    // The list mounts immediately and slides open over a nonzero duration.
-    AnimatedAlign dropdown() => tester.widget<AnimatedAlign>(find.byKey(const Key('suggestion-dropdown')));
-    expect(dropdown().heightFactor, 1);
-    expect(dropdown().duration, greaterThan(Duration.zero));
+    // The list mounts immediately and slides open.
+    SlidingReveal dropdown() => tester.widget<SlidingReveal>(find.byKey(const Key('suggestion-dropdown')));
+    expect(dropdown().visible, isTrue);
     await tester.pumpAndSettle();
     expect(find.text('corruption'), findsOneWidget);
 
@@ -364,7 +364,7 @@ void main() {
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pump();
     await tester.pump();
-    expect(dropdown().heightFactor, 0);
+    expect(dropdown().visible, isFalse);
     expect(find.text('corruption'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.text('corruption'), findsNothing);
@@ -379,10 +379,9 @@ void main() {
     await tester.tap(find.text('Engine'));
     await tester.pump();
 
-    // The body mounts immediately and slides open over a nonzero duration.
-    final align = tester.widget<AnimatedAlign>(find.byKey(const Key('section-body-Engine')));
-    expect(align.heightFactor, 1);
-    expect(align.duration, greaterThan(Duration.zero));
+    // The body mounts immediately and slides open.
+    final reveal = tester.widget<SlidingReveal>(find.byKey(const Key('section-body-Engine')));
+    expect(reveal.visible, isTrue);
     await tester.pumpAndSettle();
     expect(find.text('Godot'), findsOneWidget);
 

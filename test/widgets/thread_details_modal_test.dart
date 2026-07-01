@@ -3,6 +3,7 @@ import 'package:f95_portal/models/thread_summary.dart';
 import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/thread_page_service.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
+import 'package:f95_portal/widgets/sliding_reveal.dart';
 import 'package:f95_portal/widgets/thread_details_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -230,17 +231,20 @@ void main() {
     expect(launched, [Uri.parse('https://example.com/discord')]);
   });
 
-  testWidgets('overview expands and collapses with an animated size change', (tester) async {
-    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id));
+  testWidgets('overflowing overview shows a chevron and expands with an animated size change', (tester) async {
+    final longOverview = List.filled(60, 'lorem ipsum dolor sit amet consectetur').join(' ');
+    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: longOverview));
 
-    final overviewText = find.textContaining('representative mock thread page');
+    final overviewText = find.textContaining('lorem ipsum');
     await tester.scrollUntilVisible(overviewText, 150);
     await tester.ensureVisible(overviewText);
     await tester.pumpAndSettle();
 
-    // The card resizes through an AnimatedSize with a nonzero duration.
+    // The card resizes through an AnimatedSize with a nonzero duration,
+    // and the overflow affordance is present.
     final animated = tester.widget<AnimatedSize>(find.byKey(const Key('overview-size')));
     expect(animated.duration, greaterThan(Duration.zero));
+    expect(find.byKey(const Key('overview-chevron')), findsOneWidget);
 
     Text overview() => tester.widget<Text>(overviewText);
     expect(overview().maxLines, 5);
@@ -249,9 +253,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(overview().maxLines, isNull);
 
-    await tester.tap(overviewText);
+    await tester.ensureVisible(find.byKey(const Key('overview-chevron')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('overview-chevron')));
     await tester.pumpAndSettle();
     expect(overview().maxLines, 5);
+  });
+
+  testWidgets('short overview has no chevron and ignores taps', (tester) async {
+    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: 'Short and sweet.'));
+
+    await tester.scrollUntilVisible(find.text('Short and sweet.'), 150);
+    expect(find.byKey(const Key('overview-chevron')), findsNothing);
+
+    await tester.tap(find.text('Short and sweet.'));
+    await tester.pump();
+    expect(tester.widget<Text>(find.text('Short and sweet.')).maxLines, 5);
   });
 
   testWidgets('spoiler content slides open and closed instead of popping', (tester) async {
@@ -264,17 +281,16 @@ void main() {
     await tester.tap(find.text('Changelog'));
     await tester.pump();
 
-    // The body mounts immediately and slides open over a nonzero duration.
-    AnimatedAlign body() => tester.widget<AnimatedAlign>(find.byKey(const Key('spoiler-body-Changelog')));
-    expect(body().heightFactor, 1);
-    expect(body().duration, greaterThan(Duration.zero));
+    // The body mounts immediately and slides open.
+    SlidingReveal body() => tester.widget<SlidingReveal>(find.byKey(const Key('spoiler-body-Changelog')));
+    expect(body().visible, isTrue);
     await tester.pumpAndSettle();
     expect(find.textContaining('Fixed things'), findsOneWidget);
 
     // Collapsing keeps the content mounted while it slides shut.
     await tester.tap(find.text('Changelog'));
     await tester.pump();
-    expect(body().heightFactor, 0);
+    expect(body().visible, isFalse);
     expect(find.textContaining('Fixed things'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.textContaining('Fixed things'), findsNothing);

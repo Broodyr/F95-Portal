@@ -6,6 +6,7 @@ import '../models/search_query.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../utils/formatters.dart';
+import 'sliding_reveal.dart';
 
 typedef _EmptyTag = ({int id, String name, int? count});
 
@@ -77,16 +78,6 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   bool _submitted = false;
   final List<_ActiveFilter> _filters = [];
   final Set<String> _expandedSections = {};
-
-  /// Sections animating shut: their bodies stay mounted until the slide
-  /// completes, then are dropped from the tree.
-  final Set<String> _settlingSections = {};
-
-  /// Last-built suggestion list, kept mounted while the dropdown slides
-  /// shut (its visibility is derived from focus/text, so there is no
-  /// toggle moment to capture the outgoing child at).
-  Widget? _lastSuggestionList;
-  bool _dropdownVisible = false;
   String? _creator;
   String? _title;
   List<PopularTag> _popularTags = const [];
@@ -317,14 +308,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   }
 
   void _toggleSection(String name) {
-    setState(() {
-      if (_expandedSections.contains(name)) {
-        _expandedSections.remove(name);
-        _settlingSections.add(name);
-      } else {
-        _expandedSections.add(name);
-      }
-    });
+    setState(() => _expandedSections.contains(name) ? _expandedSections.remove(name) : _expandedSections.add(name));
   }
 
   @override
@@ -467,8 +451,8 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             const SizedBox(width: 4),
             AnimatedRotation(
               turns: expanded ? 0.5 : 0,
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
+              duration: Motion.duration,
+              curve: Motion.curve,
               child: Icon(Icons.expand_more, size: 20, color: colorScheme.onSurfaceVariant),
             ),
           ],
@@ -478,46 +462,24 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   }
 
   /// Suggestion dropdown that slides open/closed under the search field.
-  /// [list] is null when nothing should show; the previous list is cached
-  /// so it can stay mounted through the slide-shut, then dropped.
+  /// [list] is null when nothing should show; [SlidingReveal] retains the
+  /// outgoing list through the slide-shut.
   Widget _buildSuggestionDropdown(Widget? list) {
-    _dropdownVisible = list != null;
-    if (list != null) _lastSuggestionList = Padding(padding: const EdgeInsets.only(top: 8), child: list);
-    return ClipRect(
-      child: AnimatedAlign(
-        key: const Key('suggestion-dropdown'),
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topLeft,
-        heightFactor: _dropdownVisible ? 1 : 0,
-        // Drop the cached list only after a completed slide-shut (the
-        // dropdown may have been re-opened mid-animation).
-        onEnd: () {
-          if (!_dropdownVisible) setState(() => _lastSuggestionList = null);
-        },
-        child: _lastSuggestionList,
-      ),
+    return SlidingReveal(
+      key: const Key('suggestion-dropdown'),
+      visible: list != null,
+      child: list == null ? null : Padding(padding: const EdgeInsets.only(top: 8), child: list),
     );
   }
 
-  /// Section body that slides open/closed under a clip, matching the
-  /// segmented selectors' feel. Collapsed bodies are unmounted (not just
-  /// zero-height) so hidden pills can't be found or hit; [_settlingSections]
-  /// keeps a body mounted just long enough to slide shut.
+  /// Section body that slides open/closed, matching the segmented
+  /// selectors' feel. Collapsed bodies are unmounted (not just zero-height)
+  /// so hidden pills can't be found or hit.
   Widget _buildSectionBody(String name, Widget child) {
-    final bool expanded = _expandedSections.contains(name);
-    return ClipRect(
-      child: AnimatedAlign(
-        key: Key('section-body-$name'),
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topLeft,
-        heightFactor: expanded ? 1 : 0,
-        onEnd: () => setState(() => _settlingSections.remove(name)),
-        child: expanded || _settlingSections.contains(name)
-            ? Padding(padding: const EdgeInsets.only(top: 4), child: child)
-            : null,
-      ),
+    return SlidingReveal(
+      key: Key('section-body-$name'),
+      visible: _expandedSections.contains(name),
+      child: Padding(padding: const EdgeInsets.only(top: 4), child: child),
     );
   }
 
@@ -722,7 +684,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: Motion.duration,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           // Idle pills get a solid dark fill so they read as buttons against
@@ -789,8 +751,8 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             Positioned.fill(
               child: AnimatedAlign(
                 key: const Key('segment-highlight'),
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
+                duration: Motion.duration,
+                curve: Motion.curve,
                 alignment: Alignment(values.length == 1 ? 0 : -1 + 2 * selectedIndex / (values.length - 1), 0),
                 child: FractionallySizedBox(
                   widthFactor: 1 / values.length,
@@ -816,7 +778,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                       padding: const EdgeInsets.symmetric(vertical: 9),
                       child: Center(
                         child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 180),
+                          duration: Motion.duration,
                           style: TextStyle(
                             fontSize: 12,
                             color: isSelected(value) ? colorScheme.primary : colorScheme.onSurfaceVariant,
@@ -882,7 +844,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: Motion.duration,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: filter == null ? Colors.black.withValues(alpha: 0.35) : accent.withValues(alpha: 0.18),
