@@ -1,0 +1,334 @@
+import 'package:html/dom.dart';
+import 'package:html/parser.dart' as html_parser;
+
+import '../models/forum.dart';
+import 'thread_page_parser.dart' show parseRichContent;
+
+/// Parsers for XenForo forum pages. Like the thread-page parser, nothing
+/// here is required: unrecognized or missing markup degrades to empty
+/// fields rather than failing the parse.
+
+final RegExp _nodeIdPattern = RegExp(r'node--id(\d+)');
+final RegExp _categoryIdPattern = RegExp(r'block--category(\d+)');
+final RegExp _threadRowIdPattern = RegExp(r'js-threadListItem-(\d+)');
+final RegExp _prefixIdPattern = RegExp(r'prefix_id\[0\]=(\d+)');
+final RegExp _postIdPattern = RegExp(r'post-(\d+)');
+final RegExp _othersPattern = RegExp(r'and (\d+) others');
+final RegExp _tabReactionPattern = RegExp(r'tabs-tab--reaction(\d+)');
+final RegExp _tabCountPattern = RegExp(r'\((\d+)\)');
+
+/// Parses the forum index (f95zone.to/forum/) into categories of forums.
+ForumIndex parseForumIndex(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+
+  final categories = <ForumCategory>[];
+  for (final block in document.querySelectorAll('.block--category')) {
+    final title = block.querySelector('.uix_categoryTitle') ?? block.querySelector('.block-header a');
+    if (title == null) continue;
+
+    categories.add(
+      ForumCategory(
+        id: _idFrom(block.className, _categoryIdPattern),
+        title: _clean(title.text),
+        forums: [
+          for (final node in block.querySelectorAll('.node--forum'))
+            if (node.classes.contains('node--depth2')) _parseNode(node),
+        ],
+      ),
+    );
+  }
+
+  return ForumIndex(categories: categories);
+}
+
+/// Parses one forum's page: title, subforum block, thread rows, pagination.
+ForumPage parseForumPage(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+
+  final (currentPage, totalPages) = _parsePageNav(document);
+
+  return ForumPage(
+    title: _clean(document.querySelector('h1.p-title-value')?.text ?? ''),
+    subforums: [for (final node in document.querySelectorAll('.node--forum')) _parseNode(node)],
+    threads: [
+      for (final row in document.querySelectorAll('.structItem--thread'))
+        if (_idFrom(row.className, _threadRowIdPattern) != 0) _parseThreadRow(row),
+    ],
+    currentPage: currentPage,
+    totalPages: totalPages,
+  );
+}
+
+/// Parses a thread page's full post loop for the forum viewer: every post
+/// with attribution, body blocks, and reaction summary, plus pagination.
+ThreadPostsPage parseThreadPosts(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final (currentPage, totalPages) = _parsePageNav(document);
+
+  // Prefix labels render inside the h1; only the bare title is wanted.
+  final h1 = document.querySelector('h1.p-title-value');
+  for (final label in h1?.querySelectorAll('.labelLink, .label') ?? const <Element>[]) {
+    label.remove();
+  }
+
+  return ThreadPostsPage(
+    title: _clean(h1?.text ?? ''),
+    posts: [for (final post in document.querySelectorAll('article.message--post')) _parsePost(post)],
+    currentPage: currentPage,
+    totalPages: totalPages,
+  );
+}
+
+ForumPost _parsePost(Element post) {
+  final source = post.attributes['data-content'] ?? post.attributes['id'] ?? '';
+
+  // The "#21" permalink sits in the attribution header's opposite list.
+  int number = 0;
+  final header = post.querySelector('.message-attribution') ?? post.querySelector('header');
+  for (final link in header?.querySelectorAll('a') ?? const <Element>[]) {
+    final text = _clean(link.text);
+    if (text.startsWith('#')) {
+      number = int.tryParse(text.substring(1).replaceAll(',', '')) ?? 0;
+      if (number != 0) break;
+    }
+  }
+
+  return ForumPost(
+    postId: _idFrom(source, _postIdPattern),
+    number: number,
+    author: _clean(post.attributes['data-author'] ?? ''),
+    avatarUrl: post.querySelector('.message-avatar img')?.attributes['src'],
+    memberTitle: _clean(post.querySelector('.message-userTitle')?.text ?? ''),
+    date: _clean(post.querySelector('.message-attribution-main time')?.text ?? ''),
+    blocks: _parsePostBlocks(post.querySelector('.message-body .bbWrapper')),
+    reactions: _parseReactionSummary(post.querySelector('.reactionsBar')),
+  );
+}
+
+/// Splits a post body into ordered blocks: quotes and spoilers become
+/// their own blocks, everything between them accumulates into rich runs.
+List<ForumPostBlock> _parsePostBlocks(Element? body) {
+  if (body == null) return const [];
+
+  final blocks = <ForumPostBlock>[];
+  final pending = <Node>[];
+
+  void flushRich() {
+    if (pending.isEmpty) return;
+    final container = Element.tag('div');
+    for (final node in pending) {
+      container.append(node.clone(true));
+    }
+    pending.clear();
+    final pieces = parseRichContent(container);
+    if (pieces.isNotEmpty) blocks.add(ForumPostBlock(kind: PostBlockKind.rich, pieces: pieces));
+  }
+
+  for (final node in body.nodes) {
+    if (node is Element && node.classes.contains('bbCodeBlock--quote')) {
+      flushRich();
+      final attribution = _clean(node.querySelector('.bbCodeBlock-title')?.text ?? '');
+      final content = node.querySelector('.bbCodeBlock-expandContent') ?? node.querySelector('.bbCodeBlock-content');
+      blocks.add(
+        ForumPostBlock(
+          kind: PostBlockKind.quote,
+          label: attribution.replaceFirst(RegExp(r' said:$'), ''),
+          pieces: content == null ? const [] : parseRichContent(content),
+        ),
+      );
+    } else if (node is Element && node.classes.contains('bbCodeSpoiler')) {
+      flushRich();
+      final title = _clean(node.querySelector('.bbCodeSpoiler-button-title')?.text ?? '');
+      final content = node.querySelector('.bbCodeSpoiler-content');
+      blocks.add(
+        ForumPostBlock(
+          kind: PostBlockKind.spoiler,
+          label: title.isEmpty ? 'Spoiler' : title,
+          pieces: content == null ? const [] : parseRichContent(content),
+        ),
+      );
+    } else {
+      pending.add(node);
+    }
+  }
+  flushRich();
+
+  return blocks;
+}
+
+PostReactionSummary? _parseReactionSummary(Element? bar) {
+  if (bar == null) return null;
+  final link = bar.querySelector('.reactionsBar-link');
+  if (link == null) return null;
+
+  // "A, B, C and 12,834 others" — combined count is names + others.
+  final names = link.querySelectorAll('bdi').length;
+  final others = _idFrom(_clean(link.text).replaceAll(',', ''), _othersPattern);
+
+  return PostReactionSummary(
+    topReactionIds: [
+      for (final reaction in bar.querySelectorAll('.reactionSummary .reaction'))
+        if (int.tryParse(reaction.attributes['data-reaction-id'] ?? '') != null)
+          int.parse(reaction.attributes['data-reaction-id']!),
+    ],
+    count: names + others,
+    url: link.attributes['href'] ?? '',
+  );
+}
+
+/// Parses the reactions overlay (`/posts/<id>/reactions` visited as a
+/// page): reaction tabs with counts, and up to 50 member rows.
+ReactionsPage parseReactionsPage(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+
+  final tabs = <ReactionTab>[];
+  for (final tab in document.querySelectorAll('.tabs-tab')) {
+    // Reaction tabs carry tabs-tab--reactionN; other tab strips (the
+    // thread's Discussion/Reviews tabs) don't and are skipped.
+    final idMatch = _tabReactionPattern.firstMatch(tab.className);
+    if (idMatch == null) continue;
+    final countMatch = _tabCountPattern.firstMatch(_clean(tab.text).replaceAll(',', ''));
+    tabs.add(
+      ReactionTab(
+        id: int.parse(idMatch.group(1)!),
+        name: _clean(tab.querySelector('bdi')?.text ?? ''),
+        count: int.tryParse(countMatch?.group(1) ?? '') ?? 0,
+      ),
+    );
+  }
+
+  return ReactionsPage(
+    tabs: tabs,
+    members: [
+      for (final row in document.querySelectorAll('.js-reactionTabPanes .contentRow'))
+        ReactionMember(
+          username: _clean(row.querySelector('.contentRow-header')?.text ?? ''),
+          avatarUrl: row.querySelector('.contentRow-figure img')?.attributes['src'],
+          memberTitle: _clean(row.querySelector('.userTitle')?.text ?? ''),
+          reactionId:
+              int.tryParse(
+                row.querySelector('.contentRow-extra .reaction')?.attributes['data-reaction-id'] ?? '',
+              ) ??
+              0,
+          date: _clean(row.querySelector('.contentRow-extra time')?.text ?? ''),
+        ),
+    ],
+  );
+}
+
+/// Shared by thread and reaction pages too: XenForo's pageNav lists the
+/// current page plus a neighborhood and the last page.
+(int, int) _parsePageNav(Document document) {
+  int current = 1;
+  int total = 1;
+  for (final li in document.querySelectorAll('.pageNav-page')) {
+    final page = int.tryParse(_clean(li.text)) ?? 0;
+    if (page <= 0) continue;
+    if (total < page) total = page;
+    if (li.classes.contains('pageNav-page--current')) current = page;
+  }
+  return (current, total);
+}
+
+ForumNode _parseNode(Element node) {
+  final titleLink = node.querySelector('.node-title a');
+  final url = titleLink?.attributes['href'] ?? '';
+
+  String threads = '';
+  String messages = '';
+  final stats = node.querySelector('.node-stats') ?? node.querySelector('.node-statsMeta');
+  for (final dl in stats?.querySelectorAll('dl') ?? const <Element>[]) {
+    final label = _clean(dl.querySelector('dt')?.text ?? '').toLowerCase();
+    final value = _clean(dl.querySelector('dd')?.text ?? '');
+    if (label == 'threads') threads = value;
+    if (label == 'messages') messages = value;
+  }
+
+  ForumLastPost? lastPost;
+  final extraTitle = node.querySelector('.node-extra-title');
+  if (extraTitle != null) {
+    lastPost = ForumLastPost(
+      title: _clean(extraTitle.attributes['title'] ?? extraTitle.text),
+      url: extraTitle.attributes['href'] ?? '',
+      date: _clean(node.querySelector('.node-extra-date')?.text ?? ''),
+      username: _clean(node.querySelector('.node-extra-user')?.text ?? ''),
+    );
+  }
+
+  return ForumNode(
+    id: _idFrom(node.className, _nodeIdPattern),
+    title: _clean(titleLink?.text ?? ''),
+    url: url,
+    description: _clean(node.querySelector('.node-description')?.text ?? ''),
+    threads: threads,
+    messages: messages,
+    unread: node.classes.contains('node--unread'),
+    isLink: url.contains('/link-forums/'),
+    lastPost: lastPost,
+    subforums: [
+      for (final sub in node.querySelectorAll('a.subNodeLink'))
+        ForumNode(
+          id: _idFrom(sub.className, _nodeIdPattern),
+          title: _clean(sub.text),
+          url: sub.attributes['href'] ?? '',
+          isLink: sub.classes.contains('subNodeLink--link'),
+        ),
+    ],
+  );
+}
+
+ForumThreadRow _parseThreadRow(Element row) {
+  final titleCell = row.querySelector('.structItem-title');
+
+  final prefixes = <ForumThreadPrefix>[];
+  String title = '';
+  String url = '';
+  for (final link in titleCell?.querySelectorAll('a') ?? const <Element>[]) {
+    if (link.classes.contains('labelLink')) {
+      final id = _idFrom(link.attributes['href'] ?? '', _prefixIdPattern);
+      if (id != 0) prefixes.add(ForumThreadPrefix(id: id, label: _clean(link.text)));
+    } else {
+      title = _clean(link.text);
+      // Unread rows link to /unread; keep the canonical thread URL.
+      url = (link.attributes['href'] ?? '').replaceFirst(RegExp(r'unread$'), '');
+    }
+  }
+
+  String replies = '';
+  String views = '';
+  for (final dl in row.querySelectorAll('.structItem-cell--meta dl')) {
+    final label = _clean(dl.querySelector('dt')?.text ?? '').toLowerCase();
+    final value = _clean(dl.querySelector('dd')?.text ?? '');
+    if (label == 'replies') replies = value;
+    if (label == 'views') views = value;
+  }
+
+  int lastPage = 1;
+  for (final jump in row.querySelectorAll('.structItem-pageJump a')) {
+    final page = int.tryParse(_clean(jump.text)) ?? 0;
+    if (page > lastPage) lastPage = page;
+  }
+
+  final latest = row.querySelector('.structItem-cell--latest');
+
+  return ForumThreadRow(
+    threadId: _idFrom(row.className, _threadRowIdPattern),
+    title: title,
+    url: url,
+    prefixes: prefixes,
+    author: _clean(row.attributes['data-author'] ?? ''),
+    authorAvatarUrl: row.querySelector('.structItem-cell--icon .avatar img')?.attributes['src'],
+    startDate: _clean(row.querySelector('.structItem-startDate time')?.text ?? ''),
+    sticky: row.querySelector('.structItem-status--sticky') != null,
+    unread: row.classes.contains('is-unread'),
+    replies: replies,
+    views: views,
+    lastPostDate: _clean(latest?.querySelector('time')?.text ?? ''),
+    lastPostUser: _clean(latest?.querySelector('.username')?.text ?? ''),
+    lastPage: lastPage,
+  );
+}
+
+int _idFrom(String source, RegExp pattern) => int.tryParse(pattern.firstMatch(source)?.group(1) ?? '') ?? 0;
+
+String _clean(String text) => text.replaceAll(RegExp(r'\s+'), ' ').trim();

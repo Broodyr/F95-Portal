@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/forum_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/threads_screen.dart';
@@ -25,51 +26,9 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _onTabTapped(int index) {
-    if (index != 1) {
-      // Everything except Forum is implemented.
-      setState(() {
-        _currentIndex = index;
-      });
-    } else {
-      // Other tabs - show coming soon message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${_getTabName(index)} coming soon!'),
-          backgroundColor: Theme.of(context).colorScheme.secondary,
-        ),
-      );
-    }
-  }
-
-  String _getTabName(int index) {
-    switch (index) {
-      case 0:
-        return 'Browse';
-      case 1:
-        return 'Forum';
-      case 2:
-        return 'Settings';
-      case 3:
-        return 'Profile';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  Widget _buildPlaceholder(String tabName) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.construction, size: 64, color: Colors.grey[600]),
-            const SizedBox(height: 16),
-            Text('$tabName coming soon!', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
-          ],
-        ),
-      ),
-    );
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   @override
@@ -84,7 +43,7 @@ class _MainAppState extends State<MainApp> {
             index: _currentIndex,
             children: [
               ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible),
-              _buildPlaceholder('Forum'),
+              const ForumScreen(),
               const SettingsScreen(),
               const ProfileScreen(),
             ],

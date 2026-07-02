@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'main_app.dart';
 import 'models/f95_metadata.dart';
 import 'services/auth_service.dart';
+import 'services/forum_service.dart';
 import 'services/settings_service.dart';
 import 'services/thread_page_service.dart';
 
@@ -13,6 +14,7 @@ Future<void> main() async {
   await AuthService.instance.load();
   await SettingsService.instance.load();
   ThreadPageService.bindToAuthChanges();
+  ForumService.bindToAuthChanges();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent, systemNavigationBarColor: Colors.transparent),

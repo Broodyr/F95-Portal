@@ -393,8 +393,13 @@ String? _spoilerTitle(Element spoiler) {
 const int _spoilerTextCap = 8000;
 const int _spoilerImageCap = 30;
 
-List<RichPiece> _spoilerRich(Element spoiler) {
-  final content = spoiler.querySelector('.bbCodeSpoiler-content') ?? spoiler;
+List<RichPiece> _spoilerRich(Element spoiler) =>
+    parseRichContent(spoiler.querySelector('.bbCodeSpoiler-content') ?? spoiler);
+
+/// Walks [content] into inline [RichPiece]s (bold/italic/underline/strike,
+/// bullets, links, non-smilie images), capped for pathological posts.
+/// Shared by spoiler sections and the forum post-loop parser.
+List<RichPiece> parseRichContent(Element content) {
   final pieces = <RichPiece>[];
   int textLength = 0;
   int imageCount = 0;

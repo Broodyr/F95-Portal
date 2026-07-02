@@ -1,0 +1,315 @@
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+
+import '../models/forum.dart';
+import '../models/thread_page.dart';
+import 'api_service.dart';
+import 'auth_service.dart';
+import 'forum_parser.dart';
+
+/// Fetches and parses forum pages (directory, thread lists, post loops,
+/// reaction overlays), with a small URL-keyed cache like ThreadPageService.
+class ForumService {
+  static const String indexUrl = 'https://f95zone.to/';
+  static const int _cacheLimit = 20;
+  static final Map<String, Object> _cache = {};
+
+  static Future<ForumIndex> fetchIndex({http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockForumIndex();
+    }
+    return _cached(
+      indexUrl,
+      () async => parseForumIndex(await _fetchHtml(indexUrl, client: client, packageInfoLoader: packageInfoLoader)),
+    );
+  }
+
+  static Future<ForumPage> fetchForumPage(
+    String url, {
+    int page = 1,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockForumPage();
+    }
+    final pageUrl = _withPage(url, page);
+    return _cached(
+      pageUrl,
+      () async => parseForumPage(await _fetchHtml(pageUrl, client: client, packageInfoLoader: packageInfoLoader)),
+    );
+  }
+
+  static Future<ThreadPostsPage> fetchThreadPosts(
+    String url, {
+    int page = 1,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockThreadPosts(page: page);
+    }
+    final pageUrl = _withPage(url, page);
+    return _cached(
+      pageUrl,
+      () async => parseThreadPosts(await _fetchHtml(pageUrl, client: client, packageInfoLoader: packageInfoLoader)),
+    );
+  }
+
+  static Future<ReactionsPage> fetchReactions(
+    String url, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockReactionsPage();
+    }
+    return _cached(
+      url,
+      () async => parseReactionsPage(await _fetchHtml(url, client: client, packageInfoLoader: packageInfoLoader)),
+    );
+  }
+
+  /// XenForo page URLs: `<base>/page-N`, page 1 is the base itself.
+  static String _withPage(String url, int page) {
+    final base = url.endsWith('/') ? url : '$url/';
+    return page <= 1 ? base : '${base}page-$page';
+  }
+
+  static Future<T> _cached<T extends Object>(String key, Future<T> Function() load) async {
+    final cached = _cache[key];
+    if (cached is T) return cached;
+    final value = await load();
+    if (_cache.length >= _cacheLimit) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[key] = value;
+    return value;
+  }
+
+  static Future<String> _fetchHtml(String url, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
+    final http.Client httpClient = client ?? http.Client();
+    final bool shouldCloseClient = client == null;
+
+    try {
+      final headers = {'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader), 'Accept': 'text/html'};
+      final cookies = AuthService.instance.cookieHeader;
+      if (cookies != null) headers['Cookie'] = cookies;
+
+      final response = await httpClient.get(Uri.parse(url), headers: headers);
+      if (response.statusCode != 200) {
+        throw ApiException('Failed to load forum page: ${response.statusCode}');
+      }
+      return response.body;
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException('Failed to load forum page: $e');
+    } finally {
+      if (shouldCloseClient) httpClient.close();
+    }
+  }
+
+  static void clearCache() => _cache.clear();
+
+  /// Guest renditions differ from member ones (unread markers, visibility);
+  /// drop everything when the session changes.
+  static void bindToAuthChanges() {
+    AuthService.instance.addListener(clearCache);
+  }
+
+  // --- Mock data (web build + widget tests) --------------------------------
+
+  static ForumIndex createMockForumIndex() {
+    return const ForumIndex(
+      categories: [
+        ForumCategory(
+          id: 1,
+          title: 'Adult Games',
+          forums: [
+            ForumNode(
+              id: 2,
+              title: 'Games',
+              url: 'https://example.com/forums/games.2/',
+              description: 'Adult games of all engines',
+              threads: '54.3K',
+              messages: '12.9M',
+              unread: true,
+              lastPost: ForumLastPost(title: 'Eternum [v0.9]', date: '4 minutes ago', username: 'Caribdis'),
+              subforums: [
+                ForumNode(id: 114, title: 'Trending Games', url: 'https://example.com/link-forums/114/', isLink: true),
+              ],
+            ),
+            ForumNode(
+              id: 7,
+              title: 'Mods',
+              url: 'https://example.com/forums/mods.7/',
+              threads: '12.1K',
+              messages: '1.2M',
+              lastPost: ForumLastPost(title: 'SummertimeSaga cheat mod', date: '22 minutes ago', username: 'modder'),
+            ),
+          ],
+        ),
+        ForumCategory(
+          id: 5,
+          title: 'Discussion',
+          forums: [
+            ForumNode(
+              id: 9,
+              title: 'General Discussions',
+              url: 'https://example.com/forums/general-discussions.9/',
+              threads: '8.4K',
+              messages: '640K',
+              unread: true,
+              lastPost: ForumLastPost(title: 'Hidden gems thread', date: '1 minute ago', username: 'hexgem'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static ForumPage createMockForumPage() {
+    return const ForumPage(
+      title: 'General Discussions',
+      subforums: [
+        ForumNode(
+          id: 11,
+          title: 'Introduction',
+          url: 'https://example.com/forums/introduction.11/',
+          description: 'Introduce yourself to the rest of the community',
+          threads: '4K',
+          messages: '19.6K',
+        ),
+        ForumNode(id: 106, title: 'Off-Topic', url: 'https://example.com/forums/off-topic.106/', threads: '3.1K'),
+      ],
+      threads: [
+        ForumThreadRow(
+          threadId: 17387,
+          title: 'Post your signatures here',
+          url: 'https://example.com/threads/17387/',
+          author: 'TCMS',
+          startDate: 'Aug 28, 2018',
+          sticky: true,
+          unread: true,
+          replies: '4K',
+          views: '2M',
+          lastPostDate: 'Today at 4:32 PM',
+          lastPostUser: 'Admirer',
+          lastPage: 225,
+        ),
+        ForumThreadRow(
+          threadId: 188349,
+          title: 'Hidden gems you almost skipped',
+          url: 'https://example.com/threads/188349/',
+          prefixes: [ForumThreadPrefix(id: 15, label: 'README')],
+          author: 'hexgem',
+          startDate: 'Jun 12, 2026',
+          unread: true,
+          replies: '823',
+          views: '104K',
+          lastPostDate: '1 minute ago',
+          lastPostUser: 'RenLover',
+          lastPage: 42,
+        ),
+        ForumThreadRow(
+          threadId: 190001,
+          title: 'What made you stop playing a game?',
+          url: 'https://example.com/threads/190001/',
+          author: 'RenLover',
+          startDate: 'Jun 2, 2026',
+          replies: '214',
+          views: '18K',
+          lastPostDate: '18 minutes ago',
+          lastPostUser: 'avoxel',
+          lastPage: 11,
+        ),
+      ],
+      // A single page: a perpetual load-more spinner would spin forever on
+      // the web build (and time out pumpAndSettle in widget tests).
+      currentPage: 1,
+      totalPages: 1,
+    );
+  }
+
+  static ThreadPostsPage createMockThreadPosts({int page = 1}) {
+    return ThreadPostsPage(
+      title: 'Hidden gems you almost skipped',
+      posts: [
+        ForumPost(
+          postId: 9000 + page,
+          number: (page - 1) * 2 + 1,
+          author: 'DarkVault',
+          memberTitle: 'Well-known member',
+          date: 'Jun 28, 2026',
+          blocks: const [
+            ForumPostBlock(
+              kind: PostBlockKind.rich,
+              pieces: [
+                RichPiece.text('Nobody mentions '),
+                RichPiece.text('Wands & Witches', bold: true),
+                RichPiece.text(' — the progression system is genuinely one of the best on the site.'),
+              ],
+            ),
+          ],
+          reactions: const PostReactionSummary(
+            topReactionIds: [3, 1, 14],
+            count: 69,
+            url: 'https://example.com/posts/9001/reactions',
+          ),
+        ),
+        ForumPost(
+          postId: 9100 + page,
+          number: (page - 1) * 2 + 2,
+          author: 'mikkoxd',
+          memberTitle: 'Member',
+          date: 'Jun 29, 2026',
+          blocks: const [
+            ForumPostBlock(
+              kind: PostBlockKind.quote,
+              label: 'DarkVault',
+              pieces: [RichPiece.text('Nobody mentions Wands & Witches…')],
+            ),
+            ForumPostBlock(
+              kind: PostBlockKind.rich,
+              pieces: [RichPiece.text('Seconding this. The dev posts monthly progress updates, worth watching.')],
+            ),
+            ForumPostBlock(
+              kind: PostBlockKind.spoiler,
+              label: 'Ending spoiler',
+              pieces: [RichPiece.text('The witch did it.')],
+            ),
+          ],
+          reactions: const PostReactionSummary(
+            topReactionIds: [1],
+            count: 31,
+            url: 'https://example.com/posts/9102/reactions',
+          ),
+        ),
+      ],
+      currentPage: page,
+      totalPages: 42,
+    );
+  }
+
+  static ReactionsPage createMockReactionsPage() {
+    return const ReactionsPage(
+      tabs: [
+        ReactionTab(id: 0, name: 'All', count: 69),
+        ReactionTab(id: 3, name: 'Haha', count: 43),
+        ReactionTab(id: 1, name: 'Like', count: 19),
+        ReactionTab(id: 14, name: 'Heart', count: 7),
+      ],
+      members: [
+        ReactionMember(username: 'iDrought', memberTitle: 'Member', reactionId: 3, date: 'Today at 2:11 PM'),
+        ReactionMember(username: 'ThyElyson', memberTitle: 'New Member', reactionId: 1, date: 'Today at 1:40 PM'),
+        ReactionMember(username: 'OnlyHeStandsThere', memberTitle: 'Member', reactionId: 3, date: 'Yesterday'),
+        ReactionMember(username: 'quietfan', memberTitle: 'Member', reactionId: 14, date: 'Yesterday'),
+      ],
+    );
+  }
+}
