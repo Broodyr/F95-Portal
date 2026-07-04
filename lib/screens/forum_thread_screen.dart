@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../models/forum.dart';
 import '../services/forum_service.dart';
+import 'login_screen.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/rich_spoiler_text.dart';
@@ -85,6 +86,15 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   }
 
   Future<void> _launch(Uri uri) async {
+    // Guest-rendered pages route masked links to the login page; open the
+    // in-app sign-in (same flow as the thread modal) and reload after.
+    // The auth change already clears ForumService's cache.
+    if (uri.host.endsWith('f95zone.to') && (uri.path.startsWith('/login') || uri.path.startsWith('/register'))) {
+      final success = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen()));
+      if (success == true && mounted) await _load();
+      return;
+    }
+
     final launch =
         widget.urlLauncher ?? ((uri) => launcher.launchUrl(uri, mode: launcher.LaunchMode.externalApplication));
     await launch(uri);

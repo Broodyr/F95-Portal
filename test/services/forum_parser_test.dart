@@ -190,6 +190,47 @@ void main() {
     });
   });
 
+  group('guest-masked links', () {
+    // Guests see <div class="messageHide messageHide--link">You must be
+    // registered to see the links</div> per link (live markup; logged-in
+    // fixtures can't contain it).
+    test('become a tappable sign-in prompt', () {
+      final page = parseThreadPosts('''
+        <article class="message message--post" data-author="A" data-content="post-7">
+          <div class="message-body"><div class="bbWrapper">
+            Grab it here:
+            <div class="messageHide messageHide--link">You must be registered to see the links</div>
+          </div></div>
+        </article>
+      ''');
+
+      final pieces = page.posts.single.blocks.single.pieces;
+      expect(pieces.map((p) => p.text).join().trim(), 'Grab it here: Sign in to see links');
+      final signIn = pieces.firstWhere((p) => p.text == 'Sign in');
+      expect(signIn.url, 'https://f95zone.to/login/');
+    });
+
+    test('clustered masks collapse into one prompt; distant ones stay', () {
+      final page = parseThreadPosts('''
+        <article class="message message--post" data-author="A" data-content="post-7">
+          <div class="message-body"><div class="bbWrapper">
+            <b>Win</b>:
+            <div class="messageHide messageHide--link">You must be registered to see the links</div> -
+            <div class="messageHide messageHide--link">You must be registered to see the links</div> -
+            <div class="messageHide messageHide--link">You must be registered to see the links</div>
+            <br>Also check the walkthrough:
+            <div class="messageHide messageHide--link">You must be registered to see the links</div>
+          </div></div>
+        </article>
+      ''');
+
+      final text = page.posts.single.blocks.single.pieces.map((p) => p.newline ? '\n' : p.text).join();
+      expect('Sign in to see links'.allMatches(text), hasLength(2));
+      expect(text, isNot(contains('-')));
+      expect(text, contains('walkthrough: Sign in to see links'));
+    });
+  });
+
   group('parseReactionsPage', () {
     late ReactionsPage page;
 

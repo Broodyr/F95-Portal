@@ -404,6 +404,7 @@ List<RichPiece> parseRichContent(Element content) {
   int textLength = 0;
   int imageCount = 0;
   bool capped = false;
+  bool afterMaskedLink = false;
 
   void addNewline() {
     if (pieces.isNotEmpty && !pieces.last.newline) pieces.add(const RichPiece.newline());
@@ -421,6 +422,18 @@ List<RichPiece> parseRichContent(Element content) {
 
     if (node is Element) {
       final tag = node.localName;
+      if (node.classes.contains('messageHide')) {
+        // Guest-masked link ("You must be registered to see the links"),
+        // one div per link. Replace with a tappable sign-in prompt, and
+        // collapse consecutive masks (host lists separated by dashes)
+        // into a single prompt.
+        if (!afterMaskedLink) {
+          pieces.add(const RichPiece.text('Sign in', url: 'https://f95zone.to/login/'));
+          pieces.add(const RichPiece.text(' to see links'));
+          afterMaskedLink = true;
+        }
+        return;
+      }
       if (node.classes.contains('bbCodeSpoiler-button')) return;
       if (tag == 'script' || tag == 'style' || tag == 'noscript') return;
       if (tag == 'br') {
@@ -466,6 +479,12 @@ List<RichPiece> parseRichContent(Element content) {
     if (node is Text) {
       final raw = node.text.replaceAll('​', '');
       if (raw.trim().isEmpty) return;
+      if (afterMaskedLink) {
+        // Separator-only runs (" - ") between masked links vanish with
+        // the masks they separated; real text ends the cluster.
+        if (!raw.contains(RegExp(r'[a-zA-Z0-9]'))) return;
+        afterMaskedLink = false;
+      }
       var text = raw.replaceAll(RegExp(r'\s+'), ' ');
       if (textLength + text.length > _spoilerTextCap) {
         text = '${text.substring(0, (_spoilerTextCap - textLength).clamp(0, text.length))}…';
