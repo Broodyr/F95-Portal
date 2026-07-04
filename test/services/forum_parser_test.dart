@@ -148,6 +148,48 @@ void main() {
     });
   });
 
+  group('relative URLs', () {
+    // Saved-page fixtures have browser-absolutized hrefs; the live site
+    // emits relative ones, so the parsers must absolutize themselves.
+    test('forum page URLs are absolutized', () {
+      final page = parseForumPage('''
+        <div class="node node--id9 node--depth2 node--forum">
+          <h3 class="node-title"><a href="/forums/general-discussions.9/">General Discussions</a></h3>
+          <div class="node-extra">
+            <a href="/threads/hi.1/unread" class="node-extra-title" title="Hi">Hi</a>
+          </div>
+        </div>
+        <div class="structItem structItem--thread js-threadListItem-42">
+          <div class="structItem-cell structItem-cell--icon">
+            <a class="avatar"><img src="/data/avatars/s/0/92.jpg"></a>
+          </div>
+          <div class="structItem-title"><a href="/threads/some-thread.42/unread">Some thread</a></div>
+        </div>
+      ''');
+
+      expect(page.subforums.single.url, 'https://f95zone.to/forums/general-discussions.9/');
+      expect(page.subforums.single.lastPost?.url, 'https://f95zone.to/threads/hi.1/unread');
+      expect(page.threads.single.url, 'https://f95zone.to/threads/some-thread.42/');
+      expect(page.threads.single.authorAvatarUrl, 'https://f95zone.to/data/avatars/s/0/92.jpg');
+    });
+
+    test('post reaction and avatar URLs are absolutized', () {
+      final page = parseThreadPosts('''
+        <article class="message message--post" data-author="A" data-content="post-7">
+          <div class="message-avatar"><img src="/data/avatars/m/0/7.jpg"></div>
+          <div class="message-body"><div class="bbWrapper">hello</div></div>
+          <div class="reactionsBar">
+            <a class="reactionsBar-link" href="/posts/7/reactions"><bdi>B</bdi></a>
+          </div>
+        </article>
+      ''');
+
+      final post = page.posts.single;
+      expect(post.avatarUrl, 'https://f95zone.to/data/avatars/m/0/7.jpg');
+      expect(post.reactions?.url, 'https://f95zone.to/posts/7/reactions');
+    });
+  });
+
   group('parseReactionsPage', () {
     late ReactionsPage page;
 

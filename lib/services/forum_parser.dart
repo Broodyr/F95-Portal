@@ -97,7 +97,7 @@ ForumPost _parsePost(Element post) {
     postId: _idFrom(source, _postIdPattern),
     number: number,
     author: _clean(post.attributes['data-author'] ?? ''),
-    avatarUrl: post.querySelector('.message-avatar img')?.attributes['src'],
+    avatarUrl: _absoluteOrNull(post.querySelector('.message-avatar img')?.attributes['src']),
     memberTitle: _clean(post.querySelector('.message-userTitle')?.text ?? ''),
     date: _clean(post.querySelector('.message-attribution-main time')?.text ?? ''),
     blocks: _parsePostBlocks(post.querySelector('.message-body .bbWrapper')),
@@ -172,7 +172,7 @@ PostReactionSummary? _parseReactionSummary(Element? bar) {
           int.parse(reaction.attributes['data-reaction-id']!),
     ],
     count: names + others,
-    url: link.attributes['href'] ?? '',
+    url: _absoluteUrl(link.attributes['href'] ?? ''),
   );
 }
 
@@ -203,7 +203,7 @@ ReactionsPage parseReactionsPage(String htmlSource) {
       for (final row in document.querySelectorAll('.js-reactionTabPanes .contentRow'))
         ReactionMember(
           username: _clean(row.querySelector('.contentRow-header')?.text ?? ''),
-          avatarUrl: row.querySelector('.contentRow-figure img')?.attributes['src'],
+          avatarUrl: _absoluteOrNull(row.querySelector('.contentRow-figure img')?.attributes['src']),
           memberTitle: _clean(row.querySelector('.userTitle')?.text ?? ''),
           reactionId:
               int.tryParse(
@@ -232,7 +232,7 @@ ReactionsPage parseReactionsPage(String htmlSource) {
 
 ForumNode _parseNode(Element node) {
   final titleLink = node.querySelector('.node-title a');
-  final url = titleLink?.attributes['href'] ?? '';
+  final url = _absoluteUrl(titleLink?.attributes['href'] ?? '');
 
   String threads = '';
   String messages = '';
@@ -249,7 +249,7 @@ ForumNode _parseNode(Element node) {
   if (extraTitle != null) {
     lastPost = ForumLastPost(
       title: _clean(extraTitle.attributes['title'] ?? extraTitle.text),
-      url: extraTitle.attributes['href'] ?? '',
+      url: _absoluteUrl(extraTitle.attributes['href'] ?? ''),
       date: _clean(node.querySelector('.node-extra-date')?.text ?? ''),
       username: _clean(node.querySelector('.node-extra-user')?.text ?? ''),
     );
@@ -270,7 +270,7 @@ ForumNode _parseNode(Element node) {
         ForumNode(
           id: _idFrom(sub.className, _nodeIdPattern),
           title: _clean(sub.text),
-          url: sub.attributes['href'] ?? '',
+          url: _absoluteUrl(sub.attributes['href'] ?? ''),
           isLink: sub.classes.contains('subNodeLink--link'),
         ),
     ],
@@ -290,7 +290,7 @@ ForumThreadRow _parseThreadRow(Element row) {
     } else {
       title = _clean(link.text);
       // Unread rows link to /unread; keep the canonical thread URL.
-      url = (link.attributes['href'] ?? '').replaceFirst(RegExp(r'unread$'), '');
+      url = _absoluteUrl((link.attributes['href'] ?? '').replaceFirst(RegExp(r'unread$'), ''));
     }
   }
 
@@ -317,7 +317,7 @@ ForumThreadRow _parseThreadRow(Element row) {
     url: url,
     prefixes: prefixes,
     author: _clean(row.attributes['data-author'] ?? ''),
-    authorAvatarUrl: row.querySelector('.structItem-cell--icon .avatar img')?.attributes['src'],
+    authorAvatarUrl: _absoluteOrNull(row.querySelector('.structItem-cell--icon .avatar img')?.attributes['src']),
     startDate: _clean(row.querySelector('.structItem-startDate time')?.text ?? ''),
     sticky: row.querySelector('.structItem-status--sticky') != null,
     unread: row.classes.contains('is-unread'),
@@ -332,3 +332,12 @@ ForumThreadRow _parseThreadRow(Element row) {
 int _idFrom(String source, RegExp pattern) => int.tryParse(pattern.firstMatch(source)?.group(1) ?? '') ?? 0;
 
 String _clean(String text) => text.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+/// Live pages emit relative hrefs (saved fixtures have browser-absolutized
+/// ones); everything stored in a model must be fetchable as-is.
+String _absoluteUrl(String url) {
+  if (url.isEmpty || url.startsWith('http')) return url;
+  return url.startsWith('/') ? 'https://f95zone.to$url' : 'https://f95zone.to/$url';
+}
+
+String? _absoluteOrNull(String? url) => url == null ? null : _absoluteUrl(url);
