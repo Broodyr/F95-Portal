@@ -10,7 +10,7 @@ void main() {
   }
 
   testWidgets('reactions render as emoji text, never IconData', (tester) async {
-    await pumpBadge(tester, 2); // Heart
+    await pumpBadge(tester, 14); // Heart (f95 reaction id 14)
     // Emoji (not icon fonts) so nothing depends on Material Symbols glyphs,
     // which Impeller blanks selectively on some devices. Single emoji-default
     // codepoints only — no VS16 sequences, which Impeller also mishandles.

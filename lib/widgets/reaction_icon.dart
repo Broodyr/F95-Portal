@@ -15,9 +15,7 @@ class ReactionGlyph {
 
   static const Map<int, ReactionGlyph> _byId = {
     1: ReactionGlyph('\u{1F44D}', Color(0xFF378ADD)), // Like 👍
-    // A single emoji-default codepoint (not U+2764 + VS16, whose emoji
-    // presentation Impeller doesn't honor on some devices — renders tofu).
-    2: ReactionGlyph('\u{1F496}', Color(0xFFD4537E)), // Heart 💖
+    14: ReactionGlyph('\u{1F496}', Color(0xFFD4537E)), // Heart 💖 (f95 reaction id 14, not 2)
     3: ReactionGlyph('\u{1F606}', Color(0xFFEF7727)), // Haha 😆
     4: ReactionGlyph('\u{1F62E}', Color(0xFFEF9F27)), // Wow 😮
     5: ReactionGlyph('\u{1F622}', Color(0xFF888780)), // Sad 😢
