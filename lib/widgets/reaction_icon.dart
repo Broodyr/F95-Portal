@@ -15,14 +15,16 @@ class ReactionGlyph {
 
   static const Map<int, ReactionGlyph> _byId = {
     1: ReactionGlyph('\u{1F44D}', Color(0xFF378ADD)), // Like 👍
-    2: ReactionGlyph('\u{2764}\u{FE0F}', Color(0xFFD4537E)), // Heart ❤️
+    // A single emoji-default codepoint (not U+2764 + VS16, whose emoji
+    // presentation Impeller doesn't honor on some devices — renders tofu).
+    2: ReactionGlyph('\u{1F496}', Color(0xFFD4537E)), // Heart 💖
     3: ReactionGlyph('\u{1F606}', Color(0xFFEF7727)), // Haha 😆
     4: ReactionGlyph('\u{1F62E}', Color(0xFFEF9F27)), // Wow 😮
     5: ReactionGlyph('\u{1F622}', Color(0xFF888780)), // Sad 😢
     7: ReactionGlyph('\u{1F914}', Color(0xFF7F77DD)), // Thinking Face 🤔
     8: ReactionGlyph('\u{1F620}', Color(0xFFE24B4A)), // Angry 😠
     9: ReactionGlyph('\u{1F440}', Color(0xFF5DCAA5)), // Hey there 👀
-    12: ReactionGlyph('\u{1F389}', Color(0xFF97C459)), // Yay, update! 🎉
+    12: ReactionGlyph('\u{1F973}', Color(0xFF97C459)), // Yay, update! 🥳
     13: ReactionGlyph('\u{1F924}', Color(0xFF85B7EB)), // Jizzed my pants 🤤
     17: ReactionGlyph('\u{1F451}', Color(0xFFE3B341)), // Crown 👑
     18: ReactionGlyph('\u{1F44E}', Color(0xFF993C1D)), // Disagree 👎

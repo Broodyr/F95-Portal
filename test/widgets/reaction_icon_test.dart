@@ -12,9 +12,10 @@ void main() {
   testWidgets('reactions render as emoji text, never IconData', (tester) async {
     await pumpBadge(tester, 2); // Heart
     // Emoji (not icon fonts) so nothing depends on Material Symbols glyphs,
-    // which Impeller blanks selectively on some devices.
+    // which Impeller blanks selectively on some devices. Single emoji-default
+    // codepoints only — no VS16 sequences, which Impeller also mishandles.
     expect(find.byType(Icon), findsNothing);
-    expect(find.text('\u{2764}\u{FE0F}'), findsOneWidget);
+    expect(find.text('\u{1F496}'), findsOneWidget);
   });
 
   testWidgets('a known id maps to its emoji', (tester) async {
