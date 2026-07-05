@@ -388,11 +388,15 @@ class _PostCardState extends State<_PostCard> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Overlapping icon stack: each badge after the first cedes 30%
-            // of its width so the row reads as a cluster.
+            // Overlapping cluster: each badge after the first occupies 70%
+            // of its width and right-aligns within that box, so it overlaps
+            // only leftward into its predecessor. This keeps the advance
+            // between every badge constant (unlike centered overflow, which
+            // spills both sides and unevens the gaps) and the cluster bounded.
             for (int i = 0; i < reactions.topReactionIds.length; i++)
               Align(
                 widthFactor: i == 0 ? 1 : 0.7,
+                alignment: Alignment.centerRight,
                 child: ReactionBadge(reactionId: reactions.topReactionIds[i]),
               ),
             const SizedBox(width: 6),
