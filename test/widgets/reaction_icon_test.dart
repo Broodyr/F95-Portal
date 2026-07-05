@@ -1,6 +1,7 @@
 import 'package:f95_portal/widgets/reaction_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   Future<void> pumpBadge(WidgetTester tester, int reactionId) {
@@ -9,9 +10,9 @@ void main() {
     );
   }
 
-  testWidgets('icon reactions render an Icon, not text', (tester) async {
+  testWidgets('icon reactions render a Material Symbols Icon, not text', (tester) async {
     await pumpBadge(tester, 1); // Like
-    expect(find.byIcon(Icons.thumb_up), findsOneWidget);
+    expect(find.byIcon(Symbols.thumb_up), findsOneWidget);
     expect(find.byType(Text), findsNothing);
   });
 
@@ -25,6 +26,6 @@ void main() {
 
   testWidgets('unknown reaction ids fall back to an icon', (tester) async {
     await pumpBadge(tester, 999);
-    expect(find.byIcon(Icons.add_reaction), findsOneWidget);
+    expect(find.byIcon(Symbols.add_reaction), findsOneWidget);
   });
 }
