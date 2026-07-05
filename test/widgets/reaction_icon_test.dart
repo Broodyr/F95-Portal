@@ -1,7 +1,6 @@
 import 'package:f95_portal/widgets/reaction_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_symbols_icons/symbols.dart';
 
 void main() {
   Future<void> pumpBadge(WidgetTester tester, int reactionId) {
@@ -10,22 +9,21 @@ void main() {
     );
   }
 
-  testWidgets('icon reactions render a Material Symbols Icon, not text', (tester) async {
-    await pumpBadge(tester, 1); // Like
-    expect(find.byIcon(Symbols.thumb_up), findsOneWidget);
-    expect(find.byType(Text), findsNothing);
-  });
-
-  testWidgets('emoji reactions render as text so the icon font stays subsettable', (tester) async {
-    await pumpBadge(tester, 4); // Wow → 😮
-    // No IconData carries the emoji codepoint (that would break release
-    // icon tree-shaking); it renders as a plain emoji string instead.
+  testWidgets('reactions render as emoji text, never IconData', (tester) async {
+    await pumpBadge(tester, 2); // Heart
+    // Emoji (not icon fonts) so nothing depends on Material Symbols glyphs,
+    // which Impeller blanks selectively on some devices.
     expect(find.byType(Icon), findsNothing);
-    expect(find.text('\u{1F62E}'), findsOneWidget);
+    expect(find.text('\u{2764}\u{FE0F}'), findsOneWidget);
   });
 
-  testWidgets('unknown reaction ids fall back to an icon', (tester) async {
+  testWidgets('a known id maps to its emoji', (tester) async {
+    await pumpBadge(tester, 8); // Angry
+    expect(find.text('\u{1F620}'), findsOneWidget);
+  });
+
+  testWidgets('unknown reaction ids fall back to a neutral glyph', (tester) async {
     await pumpBadge(tester, 999);
-    expect(find.byIcon(Symbols.add_reaction), findsOneWidget);
+    expect(find.text('\u{2753}'), findsOneWidget);
   });
 }
