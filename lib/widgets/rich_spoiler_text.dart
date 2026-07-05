@@ -48,12 +48,15 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
       }
       final imageUrl = piece.imageUrl;
       if (imageUrl != null) {
+        // Inline shows the thumbnail; tapping opens the full-resolution
+        // source (the same URL when no separate full-size was parsed).
+        final fullUrl = piece.fullImageUrl ?? imageUrl;
         spans.add(
           WidgetSpan(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: GestureDetector(
-                onTap: () => ScreenshotGallery.show(context, [imageUrl]),
+                onTap: () => ScreenshotGallery.show(context, [fullUrl]),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: ConstrainedBox(

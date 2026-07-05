@@ -231,6 +231,47 @@ void main() {
     });
   });
 
+  group('post images', () {
+    // Live pages show a `/thumb/` src linked to the full image; saved
+    // fixtures instead carry the full URL in data-src, so these use
+    // synthetic markup like the other live-only cases.
+    ForumPostBlock imageBlock(String bbWrapper) {
+      final page = parseThreadPosts(
+        '<article class="message message--post" data-author="A" data-content="post-7">'
+        '<div class="message-body"><div class="bbWrapper">$bbWrapper</div></div></article>',
+      );
+      return page.posts.single.blocks.firstWhere((b) => b.pieces.any((p) => p.imageUrl != null));
+    }
+
+    test('uses the lightbox anchor as the full image, the img src as thumb', () {
+      final img = imageBlock(
+        '<a href="https://attachments.f95zone.to/2025/03/4646544_Cover.jpg" target="_blank">'
+        '<img src="https://attachments.f95zone.to/2025/03/thumb/4646544_Cover.jpg" class="bbImage"></a>',
+      ).pieces.firstWhere((p) => p.imageUrl != null);
+
+      expect(img.imageUrl, 'https://attachments.f95zone.to/2025/03/thumb/4646544_Cover.jpg');
+      expect(img.fullImageUrl, 'https://attachments.f95zone.to/2025/03/4646544_Cover.jpg');
+    });
+
+    test('falls back to stripping /thumb/ when the image is not anchored', () {
+      final img = imageBlock(
+        '<img src="https://attachments.f95zone.to/2025/03/thumb/999_x.png" class="bbImage">',
+      ).pieces.firstWhere((p) => p.imageUrl != null);
+
+      expect(img.imageUrl, 'https://attachments.f95zone.to/2025/03/thumb/999_x.png');
+      expect(img.fullImageUrl, 'https://attachments.f95zone.to/2025/03/999_x.png');
+    });
+
+    test('leaves fullImageUrl null when thumbnail and full coincide', () {
+      final img = imageBlock('<img src="https://example.com/pic.png" class="bbImage">').pieces.firstWhere(
+        (p) => p.imageUrl != null,
+      );
+
+      expect(img.imageUrl, 'https://example.com/pic.png');
+      expect(img.fullImageUrl, isNull);
+    });
+  });
+
   group('parseReactionsPage', () {
     late ReactionsPage page;
 

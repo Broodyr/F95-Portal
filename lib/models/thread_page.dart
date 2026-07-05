@@ -86,8 +86,13 @@ class RichPiece {
   /// Set when the piece is a link.
   final String? url;
 
-  /// Set when the piece is an inline image (text/styles unused).
+  /// Set when the piece is an inline image (text/styles unused). This is
+  /// the thumbnail shown inline; [fullImageUrl] is opened when tapped.
   final String? imageUrl;
+
+  /// Full-resolution source for an image piece, when it differs from the
+  /// inline thumbnail ([imageUrl] is used when null).
+  final String? fullImageUrl;
 
   /// True for explicit line breaks (text/styles unused).
   final bool newline;
@@ -100,9 +105,10 @@ class RichPiece {
     this.strike = false,
     this.url,
   }) : imageUrl = null,
+       fullImageUrl = null,
        newline = false;
 
-  const RichPiece.image(this.imageUrl)
+  const RichPiece.image(this.imageUrl, {this.fullImageUrl})
     : text = '',
       bold = false,
       italic = false,
@@ -119,6 +125,7 @@ class RichPiece {
       strike = false,
       url = null,
       imageUrl = null,
+      fullImageUrl = null,
       newline = true;
 }
 

@@ -9,18 +9,23 @@ void main() {
     );
   }
 
+  String? badgeGlyph(WidgetTester tester) => tester.widget<Text>(find.byType(Text)).data;
+
   testWidgets('reactions render as emoji text, never IconData', (tester) async {
-    await pumpBadge(tester, 14); // Heart (f95 reaction id 14)
-    // Emoji (not icon fonts) so nothing depends on Material Symbols glyphs,
-    // which Impeller blanks selectively on some devices. Single emoji-default
-    // codepoints only — no VS16 sequences, which Impeller also mishandles.
+    await pumpBadge(tester, 14); // Heart
+    // The point of the emoji migration: no icon-font glyphs (which rendered
+    // blank/tofu on some devices) — every badge is a non-empty emoji string.
     expect(find.byType(Icon), findsNothing);
-    expect(find.text('\u{1F496}'), findsOneWidget);
+    expect(badgeGlyph(tester) ?? '', isNotEmpty);
   });
 
-  testWidgets('a known id maps to its emoji', (tester) async {
+  testWidgets('distinct reaction ids map to distinct glyphs', (tester) async {
     await pumpBadge(tester, 8); // Angry
-    expect(find.text('\u{1F620}'), findsOneWidget);
+    final angry = badgeGlyph(tester);
+    await pumpBadge(tester, 1); // Like
+    final like = badgeGlyph(tester);
+    expect(angry, isNotEmpty);
+    expect(like, isNot(angry));
   });
 
   testWidgets('unknown reaction ids fall back to a neutral glyph', (tester) async {

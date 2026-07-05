@@ -304,6 +304,13 @@ String _absoluteUrl(String url) {
 
 String _collapse(String text) => text.replaceAll('​', '').replaceAll(RegExp(r'\s+'), ' ').trim();
 
+/// Whether a URL points directly at an image file (used to tell a lightbox
+/// anchor wrapping a thumbnail from an ordinary hyperlink).
+bool _isImageUrl(String url) {
+  final path = (Uri.tryParse(url)?.path ?? url).toLowerCase();
+  return RegExp(r'\.(jpe?g|png|gif|webp|avif|bmp)$').hasMatch(path);
+}
+
 /// Splits a line into its leading bold label, whether the label was followed
 /// by a colon (real labels are; bold emphasis is not), and the rest.
 (String, bool, List<_Item>) _splitLeadingBold(List<_Item> line) {
@@ -442,11 +449,25 @@ List<RichPiece> parseRichContent(Element content) {
       }
       if (tag == 'img') {
         if (node.classes.contains('smilie')) return;
-        final src = node.attributes['data-src'] ?? node.attributes['src'] ?? '';
-        if (src.startsWith('http') && imageCount < _spoilerImageCap) {
-          imageCount++;
-          pieces.add(RichPiece.image(src));
+        final rawSrc = node.attributes['src'] ?? '';
+        final dataSrc = node.attributes['data-src'];
+        // Inline thumbnail: the live `src` (an http `/thumb/` URL) when
+        // usable, else the saved-page `data-src` (JS-populated full URL).
+        final thumb = rawSrc.startsWith('http') ? rawSrc : (dataSrc ?? rawSrc);
+        if (!thumb.startsWith('http') || imageCount >= _spoilerImageCap) return;
+        // Full-size shown when tapped: the enclosing lightbox anchor when it
+        // points at an image, else data-src, else the thumbnail with the
+        // `/thumb/` segment dropped (f95 attachment thumbs live under it).
+        final String full;
+        if (link != null && _isImageUrl(link)) {
+          full = link;
+        } else if (dataSrc != null && dataSrc.startsWith('http')) {
+          full = dataSrc;
+        } else {
+          full = thumb.replaceFirst('/thumb/', '/');
         }
+        imageCount++;
+        pieces.add(RichPiece.image(thumb, fullImageUrl: full == thumb ? null : full));
         return;
       }
 
