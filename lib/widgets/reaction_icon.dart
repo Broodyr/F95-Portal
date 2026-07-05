@@ -15,7 +15,6 @@ class ReactionGlyph {
 
   static const Map<int, ReactionGlyph> _byId = {
     1: ReactionGlyph('\u{1F44D}', Color(0xFF378ADD)), // Like 👍
-    14: ReactionGlyph('\u{1F496}', Color(0xFFD4537E)), // Heart 💖 (f95 reaction id 14, not 2)
     3: ReactionGlyph('\u{1F606}', Color(0xFFEF7727)), // Haha 😆
     4: ReactionGlyph('\u{1F62E}', Color(0xFFEF9F27)), // Wow 😮
     5: ReactionGlyph('\u{1F622}', Color(0xFF888780)), // Sad 😢
@@ -24,6 +23,7 @@ class ReactionGlyph {
     9: ReactionGlyph('\u{1F440}', Color(0xFF5DCAA5)), // Hey there 👀
     12: ReactionGlyph('\u{1F973}', Color(0xFF97C459)), // Yay, update! 🥳
     13: ReactionGlyph('\u{1F924}', Color(0xFF85B7EB)), // Jizzed my pants 🤤
+    14: ReactionGlyph('\u{2764}\u{FE0F}', Color(0xFFD4537E)), // Heart ❤️
     17: ReactionGlyph('\u{1F451}', Color(0xFFE3B341)), // Crown 👑
     18: ReactionGlyph('\u{1F44E}', Color(0xFF993C1D)), // Disagree 👎
   };
