@@ -3,11 +3,11 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../models/forum.dart';
 import '../services/forum_service.dart';
-import 'login_screen.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/rich_spoiler_text.dart';
 import '../widgets/sliding_reveal.dart';
+import 'login_screen.dart';
 
 typedef FetchThreadPosts = Future<ThreadPostsPage> Function(String url, {int page});
 
@@ -274,8 +274,10 @@ class _PostCardState extends State<_PostCard> {
                       style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     Text(
-                      [if (post.memberTitle.isNotEmpty) post.memberTitle, if (post.date.isNotEmpty) post.date]
-                          .join(' · '),
+                      [
+                        if (post.memberTitle.isNotEmpty) post.memberTitle,
+                        if (post.date.isNotEmpty) post.date,
+                      ].join(' · '),
                       style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
                     ),
                   ],
@@ -334,8 +336,7 @@ class _PostCardState extends State<_PostCard> {
             children: [
               InkWell(
                 borderRadius: BorderRadius.circular(8),
-                onTap: () =>
-                    setState(() => expanded ? _expandedSpoilers.remove(index) : _expandedSpoilers.add(index)),
+                onTap: () => setState(() => expanded ? _expandedSpoilers.remove(index) : _expandedSpoilers.add(index)),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   child: Row(
@@ -395,7 +396,7 @@ class _PostCardState extends State<_PostCard> {
             // spills both sides and unevens the gaps) and the cluster bounded.
             for (int i = 0; i < reactions.topReactionIds.length; i++)
               Align(
-                widthFactor: i == 0 ? 1 : 0.7,
+                widthFactor: i == 0 ? 1 : 0.8,
                 alignment: Alignment.centerRight,
                 child: ReactionBadge(reactionId: reactions.topReactionIds[i]),
               ),
