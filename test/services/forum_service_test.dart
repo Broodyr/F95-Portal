@@ -98,6 +98,76 @@ void main() {
     expect(requests, 2);
   });
 
+  test('react posts to the reaction endpoint with the csrf token', () async {
+    late http.Request seen;
+    final client = MockClient((request) async {
+      seen = request;
+      return http.Response('{"status":"ok"}', 200);
+    });
+
+    await ForumService.react(13720617, 14, 'tok,en', client: client, packageInfoLoader: () async => _packageInfo());
+
+    expect(seen.url.toString(), 'https://f95zone.to/posts/13720617/react?reaction_id=14');
+    expect(seen.bodyFields['_xfToken'], 'tok,en');
+  });
+
+  test('sendReply posts the message to the add-reply action', () async {
+    late http.Request seen;
+    final client = MockClient((request) async {
+      seen = request;
+      return http.Response('{"status":"ok"}', 200);
+    });
+
+    await ForumService.sendReply(
+      'https://f95zone.to/threads/some-thread.42/add-reply',
+      'tok,en',
+      'Nice [b]post[/b]!',
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    expect(seen.url.toString(), 'https://f95zone.to/threads/some-thread.42/add-reply');
+    expect(seen.bodyFields['message'], 'Nice [b]post[/b]!');
+    expect(seen.bodyFields['_xfToken'], 'tok,en');
+  });
+
+  test('postThread posts title and message to the post-thread action', () async {
+    late http.Request seen;
+    final client = MockClient((request) async {
+      seen = request;
+      return http.Response('{"status":"ok"}', 200);
+    });
+
+    await ForumService.postThread(
+      'https://f95zone.to/forums/general-discussions.9/post-thread',
+      'tok,en',
+      title: 'Hello',
+      message: 'First!',
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    expect(seen.url.toString(), 'https://f95zone.to/forums/general-discussions.9/post-thread');
+    expect(seen.bodyFields['title'], 'Hello');
+    expect(seen.bodyFields['message'], 'First!');
+    expect(seen.bodyFields['_xfToken'], 'tok,en');
+  });
+
+  test('write failures surface as ApiException', () {
+    final client = MockClient((_) async => http.Response('{"errors":["nope"]}', 200));
+
+    expect(
+      () => ForumService.sendReply(
+        'https://f95zone.to/threads/1/add-reply',
+        't',
+        'x',
+        client: client,
+        packageInfoLoader: () async => _packageInfo(),
+      ),
+      throwsA(isA<ApiException>()),
+    );
+  });
+
   test('non-200 responses surface as ApiException', () async {
     final client = MockClient((_) async => http.Response('blocked', 403));
 

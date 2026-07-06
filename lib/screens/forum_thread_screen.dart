@@ -3,23 +3,30 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../models/forum.dart';
 import '../services/forum_service.dart';
+import '../widgets/forum_composer.dart';
 import '../widgets/reaction_icon.dart';
+import '../widgets/reaction_picker.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/rich_spoiler_text.dart';
 import '../widgets/sliding_reveal.dart';
 import 'login_screen.dart';
 
 typedef FetchThreadPosts = Future<ThreadPostsPage> Function(String url, {int page});
+typedef ReactSender = Future<void> Function(int postId, int reactionId, String csrfToken);
+typedef ReplySender = Future<void> Function(String replyUrl, String csrfToken, String message);
 
 /// Full-screen light thread viewer: the post loop as-is (author, avatar,
 /// body with quotes/spoilers, reaction summary) with page pills at the
-/// bottom. Read-only for now; react/reply actions come later.
+/// bottom. React/Quote/Reply appear when the page carries a reply URL
+/// (the quick-reply form only renders for members who can post).
 class ForumThreadScreen extends StatefulWidget {
   final String url;
   final String title;
   final int initialPage;
   final FetchThreadPosts? fetchPosts;
   final FetchReactions? fetchReactions;
+  final ReactSender? reactSender;
+  final ReplySender? replySender;
   final Future<bool> Function(Uri uri)? urlLauncher;
 
   const ForumThreadScreen({
@@ -29,6 +36,8 @@ class ForumThreadScreen extends StatefulWidget {
     this.initialPage = 1,
     this.fetchPosts,
     this.fetchReactions,
+    this.reactSender,
+    this.replySender,
     this.urlLauncher,
   });
 
@@ -85,6 +94,62 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
+  /// Refetches the current (or given) page bypassing the cache, so a just
+  /// sent write is reflected.
+  Future<void> _reload({int? page}) async {
+    ForumService.clearCache();
+    if (page != null) _pageNumber = page;
+    await _load();
+  }
+
+  Future<void> _react(ForumPost post) async {
+    final page = _page;
+    if (page == null) return;
+    final reactionId = await ReactionPicker.show(context);
+    if (reactionId == null || !mounted) return;
+    try {
+      final send = widget.reactSender ?? ForumService.react;
+      await send(post.postId, reactionId, page.csrfToken);
+      await _reload();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _openComposer({String initialMessage = ''}) async {
+    final page = _page;
+    final replyUrl = page?.replyUrl;
+    if (page == null || replyUrl == null) return;
+
+    final posted = await ForumComposer.show(
+      context,
+      heading: 'Reply',
+      submitLabel: 'Post reply',
+      initialMessage: initialMessage,
+      onSubmit: (_, message) {
+        final send = widget.replySender ?? ForumService.sendReply;
+        return send(replyUrl, page.csrfToken, message);
+      },
+    );
+    // New replies land at the thread's end; jump there (the reloaded page
+    // may reveal a fresh final page — one tap away, acceptable).
+    if (posted && mounted) await _reload(page: page.totalPages);
+  }
+
+  /// BBCode quote of a post's own words (nested quotes/spoilers omitted).
+  String _quoteBbcode(ForumPost post) {
+    final buffer = StringBuffer();
+    for (final block in post.blocks) {
+      if (block.kind != PostBlockKind.rich) continue;
+      for (final piece in block.pieces) {
+        buffer.write(piece.newline ? '\n' : (piece.imageUrl == null ? piece.text : ''));
+      }
+      buffer.write('\n');
+    }
+    return '[QUOTE="${post.author}, post: ${post.postId}"]\n${buffer.toString().trim()}\n[/QUOTE]\n';
+  }
+
   Future<void> _launch(Uri uri) async {
     // Guest-rendered pages route masked links to the login page; open the
     // in-app sign-in (same flow as the thread modal) and reload after.
@@ -128,6 +193,15 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         ],
       ),
       body: _buildBody(colorScheme, page, totalPages),
+      floatingActionButton: page?.replyUrl == null
+          ? null
+          : FloatingActionButton.small(
+              tooltip: 'Reply',
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              onPressed: () => _openComposer(),
+              child: const Icon(Icons.reply),
+            ),
     );
   }
 
@@ -160,6 +234,10 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               post: post,
               onOpenLink: _launch,
               fetchReactions: widget.fetchReactions ?? ForumService.fetchReactions,
+              // Writes gate on the reply URL: the quick-reply form only
+              // renders for members who can post here.
+              onReact: page.replyUrl == null ? null : () => _react(post),
+              onQuote: page.replyUrl == null ? null : () => _openComposer(initialMessage: _quoteBbcode(post)),
             ),
           ),
         if (totalPages > 1) _buildPagination(colorScheme, totalPages),
@@ -237,8 +315,16 @@ class _PostCard extends StatefulWidget {
   final ForumPost post;
   final void Function(Uri uri) onOpenLink;
   final FetchReactions fetchReactions;
+  final VoidCallback? onReact;
+  final VoidCallback? onQuote;
 
-  const _PostCard({required this.post, required this.onOpenLink, required this.fetchReactions});
+  const _PostCard({
+    required this.post,
+    required this.onOpenLink,
+    required this.fetchReactions,
+    this.onReact,
+    this.onQuote,
+  });
 
   @override
   State<_PostCard> createState() => _PostCardState();
@@ -291,11 +377,40 @@ class _PostCardState extends State<_PostCard> {
             if (i > 0) const SizedBox(height: 6),
             _buildBlock(colorScheme, i, post.blocks[i]),
           ],
-          if (post.reactions != null && post.reactions!.count > 0) ...[
+          if ((post.reactions?.count ?? 0) > 0 || widget.onReact != null) ...[
             const SizedBox(height: 9),
-            _buildReactionChip(colorScheme, post.reactions!),
+            Row(
+              children: [
+                if ((post.reactions?.count ?? 0) > 0) _buildReactionChip(colorScheme, post.reactions!),
+                const Spacer(),
+                if (widget.onReact != null)
+                  _buildFooterAction(Icons.add_reaction_outlined, 'React', widget.onReact!),
+                if (widget.onQuote != null) ...[
+                  const SizedBox(width: 14),
+                  _buildFooterAction(Icons.format_quote_outlined, 'Quote', widget.onQuote!),
+                ],
+              ],
+            ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildFooterAction(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 11.5, fontWeight: FontWeight.w500)),
+          ],
+        ),
       ),
     );
   }

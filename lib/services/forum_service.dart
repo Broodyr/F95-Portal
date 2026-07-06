@@ -6,6 +6,7 @@ import '../models/thread_page.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 import 'forum_parser.dart';
+import 'thread_page_service.dart';
 
 /// Fetches and parses forum pages (directory, thread lists, post loops,
 /// reaction overlays), with a small URL-keyed cache like ThreadPageService.
@@ -112,6 +113,64 @@ class ForumService {
     } finally {
       if (shouldCloseClient) httpClient.close();
     }
+  }
+
+  // --- Writes (react, reply, new thread) -----------------------------------
+  // All XenForo form POSTs with the page CSRF; ThreadPageService.postAction
+  // already speaks that protocol (cookies, _xfToken, error sniffing).
+
+  /// Reacts to a post; posting the same reaction id again removes it.
+  static Future<void> react(
+    int postId,
+    int reactionId,
+    String csrfToken, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    return ThreadPageService.postAction(
+      'https://f95zone.to/posts/$postId/react?reaction_id=$reactionId',
+      csrfToken,
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
+  /// Posts a BBCode reply to a thread's add-reply action.
+  static Future<void> sendReply(
+    String replyUrl,
+    String csrfToken,
+    String message, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    return ThreadPageService.postAction(
+      replyUrl,
+      csrfToken,
+      fields: {'message': message},
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
+  /// Creates a thread via a forum's post-thread action.
+  static Future<void> postThread(
+    String postThreadUrl,
+    String csrfToken, {
+    required String title,
+    required String message,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    return ThreadPageService.postAction(
+      postThreadUrl,
+      csrfToken,
+      fields: {'title': title, 'message': message},
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
   }
 
   static void clearCache() => _cache.clear();
@@ -233,6 +292,8 @@ class ForumService {
       // the web build (and time out pumpAndSettle in widget tests).
       currentPage: 1,
       totalPages: 1,
+      postThreadUrl: 'https://example.com/forums/general-discussions.9/post-thread',
+      csrfToken: 'mock-csrf',
     );
   }
 
@@ -293,6 +354,8 @@ class ForumService {
       ],
       currentPage: page,
       totalPages: 42,
+      csrfToken: 'mock-csrf',
+      replyUrl: 'https://example.com/threads/188349/add-reply',
     );
   }
 

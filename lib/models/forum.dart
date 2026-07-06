@@ -162,7 +162,22 @@ class ThreadPostsPage {
   final int currentPage;
   final int totalPages;
 
-  const ThreadPostsPage({this.title = '', this.posts = const [], this.currentPage = 1, this.totalPages = 1});
+  /// Page-level XenForo CSRF token (`<html data-csrf>`); present for
+  /// guests too, but only useful with a session.
+  final String csrfToken;
+
+  /// The quick-reply form's action URL; null when the page was rendered
+  /// for a guest (or the thread is locked), which is the posting gate.
+  final String? replyUrl;
+
+  const ThreadPostsPage({
+    this.title = '',
+    this.posts = const [],
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.csrfToken = '',
+    this.replyUrl,
+  });
 }
 
 /// One tab of the reactions overlay: a reaction type and how many members
@@ -211,11 +226,20 @@ class ForumPage {
   final int currentPage;
   final int totalPages;
 
+  /// The "Post thread" button's URL; null when the viewer can't create
+  /// threads here.
+  final String? postThreadUrl;
+
+  /// Page-level XenForo CSRF token (`<html data-csrf>`).
+  final String csrfToken;
+
   const ForumPage({
     this.title = '',
     this.subforums = const [],
     this.threads = const [],
     this.currentPage = 1,
     this.totalPages = 1,
+    this.postThreadUrl,
+    this.csrfToken = '',
   });
 }

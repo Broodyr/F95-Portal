@@ -47,6 +47,17 @@ ForumPage parseForumPage(String htmlSource) {
 
   final (currentPage, totalPages) = _parsePageNav(document);
 
+  // The "Post thread" button link doubles as the create-thread endpoint;
+  // absent when the viewer can't post here.
+  String? postThreadUrl;
+  for (final link in document.querySelectorAll('a[href]')) {
+    final href = link.attributes['href'] ?? '';
+    if (href.endsWith('/post-thread') && link.classes.contains('button')) {
+      postThreadUrl = _absoluteUrl(href);
+      break;
+    }
+  }
+
   return ForumPage(
     title: _clean(document.querySelector('h1.p-title-value')?.text ?? ''),
     subforums: [for (final node in document.querySelectorAll('.node--forum')) _parseNode(node)],
@@ -56,6 +67,8 @@ ForumPage parseForumPage(String htmlSource) {
     ],
     currentPage: currentPage,
     totalPages: totalPages,
+    postThreadUrl: postThreadUrl,
+    csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
   );
 }
 
@@ -71,11 +84,17 @@ ThreadPostsPage parseThreadPosts(String htmlSource) {
     label.remove();
   }
 
+  // Write context: page CSRF lives on the html tag; the quick-reply form
+  // only renders for members who can post, so its absence gates reply UI.
+  final replyAction = document.querySelector('form.js-quickReply')?.attributes['action'];
+
   return ThreadPostsPage(
     title: _clean(h1?.text ?? ''),
     posts: [for (final post in document.querySelectorAll('article.message--post')) _parsePost(post)],
     currentPage: currentPage,
     totalPages: totalPages,
+    csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
+    replyUrl: replyAction == null ? null : _absoluteUrl(replyAction),
   );
 }
 

@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../models/forum.dart';
 import '../services/forum_service.dart';
+import '../widgets/forum_composer.dart';
 import '../widgets/forum_node_row.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import 'forum_thread_screen.dart';
 
 typedef FetchForumPage = Future<ForumPage> Function(String url, {int page});
+typedef ThreadPoster = Future<void> Function(String url, String csrfToken, {required String title, required String message});
 
 /// One forum's thread list: the subforum block above (same row style as
 /// the directory), a splitter, then infinite-scrolling thread rows.
@@ -16,8 +18,20 @@ class ForumThreadsScreen extends StatefulWidget {
   final FetchForumPage? fetchPage;
   final FetchThreadPosts? fetchThreadPosts;
   final FetchReactions? fetchReactions;
+  final ThreadPoster? threadPoster;
+  final ReactSender? reactSender;
+  final ReplySender? replySender;
 
-  const ForumThreadsScreen({super.key, required this.node, this.fetchPage, this.fetchThreadPosts, this.fetchReactions});
+  const ForumThreadsScreen({
+    super.key,
+    required this.node,
+    this.fetchPage,
+    this.fetchThreadPosts,
+    this.fetchReactions,
+    this.threadPoster,
+    this.reactSender,
+    this.replySender,
+  });
 
   @override
   State<ForumThreadsScreen> createState() => _ForumThreadsScreenState();
@@ -103,6 +117,8 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
           title: row.title,
           fetchPosts: widget.fetchThreadPosts,
           fetchReactions: widget.fetchReactions,
+          reactSender: widget.reactSender,
+          replySender: widget.replySender,
         ),
       ),
     );
@@ -128,7 +144,37 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
         ),
       ),
       body: _buildBody(colorScheme, page),
+      floatingActionButton: page?.postThreadUrl == null
+          ? null
+          : FloatingActionButton.small(
+              tooltip: 'New thread',
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              onPressed: _composeThread,
+              child: const Icon(Icons.edit),
+            ),
     );
+  }
+
+  Future<void> _composeThread() async {
+    final page = _firstPage;
+    final postThreadUrl = page?.postThreadUrl;
+    if (page == null || postThreadUrl == null) return;
+
+    final posted = await ForumComposer.show(
+      context,
+      heading: 'New thread',
+      submitLabel: 'Post thread',
+      withTitle: true,
+      onSubmit: (title, message) {
+        final send = widget.threadPoster ?? ForumService.postThread;
+        return send(postThreadUrl, page.csrfToken, title: title, message: message);
+      },
+    );
+    if (posted && mounted) {
+      ForumService.clearCache();
+      await _load();
+    }
   }
 
   Widget _buildBody(ColorScheme colorScheme, ForumPage? page) {
@@ -183,6 +229,9 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                             fetchPage: widget.fetchPage,
                             fetchThreadPosts: widget.fetchThreadPosts,
                             fetchReactions: widget.fetchReactions,
+                            threadPoster: widget.threadPoster,
+                            reactSender: widget.reactSender,
+                            replySender: widget.replySender,
                           ),
                         ),
                       ),

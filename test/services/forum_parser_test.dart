@@ -231,6 +231,32 @@ void main() {
     });
   });
 
+  group('write context', () {
+    test('thread pages carry the csrf token and reply-form action', () {
+      final page = parseThreadPosts(fixture('thread_renpy_bubbles_page2.htm'));
+      expect(page.csrfToken, '1782950895,ebc0cfdc26c3ed20a0ccff7b3285a58f');
+      expect(page.replyUrl, 'https://f95zone.to/threads/bubbles-and-babes-v0-162-bubbles-and-babes.207754/add-reply');
+    });
+
+    test('guest pages (no quick-reply form) yield a null reply URL', () {
+      final page = parseThreadPosts('''
+        <html data-csrf="123,abc"><body>
+        <article class="message message--post" data-author="A" data-content="post-7">
+          <div class="message-body"><div class="bbWrapper">hello</div></div>
+        </article>
+        </body></html>
+      ''');
+      expect(page.csrfToken, '123,abc');
+      expect(page.replyUrl, isNull);
+    });
+
+    test('forum pages carry the post-thread URL and csrf', () {
+      final page = parseForumPage(fixture('forum_gd.htm'));
+      expect(page.postThreadUrl, 'https://f95zone.to/forums/general-discussions.9/post-thread');
+      expect(page.csrfToken, '1781316060,3efe4d931f62f94a6ecbb1ba79338231');
+    });
+  });
+
   group('post images', () {
     // Live pages show a `/thumb/` src linked to the full image; saved
     // fixtures instead carry the full URL in data-src, so these use

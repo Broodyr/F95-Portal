@@ -1,4 +1,6 @@
+import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/screens/forum_screen.dart';
+import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/forum_threads_screen.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:flutter/material.dart';
@@ -6,18 +8,37 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// The whole forum stack pumped with the service's mock data, so the tests
 /// walk directory → thread list → thread viewer → reactions sheet offline.
-Future<void> pumpForum(WidgetTester tester, {FetchForumIndex? fetchIndex, FetchForumPage? fetchForumPage}) async {
+Future<void> pumpForum(
+  WidgetTester tester, {
+  FetchForumIndex? fetchIndex,
+  FetchForumPage? fetchForumPage,
+  FetchThreadPosts? fetchThreadPosts,
+  ReactSender? reactSender,
+  ReplySender? replySender,
+  ThreadPoster? threadPoster,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(),
       home: ForumScreen(
         fetchIndex: fetchIndex ?? () async => ForumService.createMockForumIndex(),
         fetchForumPage: fetchForumPage ?? (url, {page = 1}) async => ForumService.createMockForumPage(),
-        fetchThreadPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
+        fetchThreadPosts: fetchThreadPosts ?? (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
         fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+        reactSender: reactSender,
+        replySender: replySender,
+        threadPoster: threadPoster,
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+/// Directory → General Discussions → the mock thread's viewer.
+Future<void> openThreadViewer(WidgetTester tester) async {
+  await tester.tap(find.text('General Discussions'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.textContaining('Hidden gems you almost skipped'));
   await tester.pumpAndSettle();
 }
 
@@ -131,6 +152,97 @@ void main() {
     // Mock posts number themselves per page: page 2 starts at #3.
     expect(find.text('#3'), findsOneWidget);
     expect(find.text('#1'), findsNothing);
+  });
+
+  testWidgets('React opens the picker and sends the picked reaction', (tester) async {
+    final reacted = <(int, int, String)>[];
+    await pumpForum(tester, reactSender: (postId, reactionId, csrf) async => reacted.add((postId, reactionId, csrf)));
+    await openThreadViewer(tester);
+
+    await tester.tap(find.text('React').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Yay, update!'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pick-reaction-14')));
+    await tester.pumpAndSettle();
+
+    expect(reacted, [(9001, 14, 'mock-csrf')]);
+  });
+
+  testWidgets('Quote prefills the composer; posting sends the reply', (tester) async {
+    final replies = <(String, String, String)>[];
+    await pumpForum(tester, replySender: (url, csrf, message) async => replies.add((url, csrf, message)));
+    await openThreadViewer(tester);
+
+    await tester.tap(find.text('Quote').first);
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byKey(const Key('composer-message')));
+    expect(field.controller!.text, contains('[QUOTE="DarkVault, post: 9001"]'));
+    expect(field.controller!.text, contains('Nobody mentions Wands & Witches'));
+
+    await tester.tap(find.text('Post reply'));
+    await tester.pumpAndSettle();
+
+    expect(replies, hasLength(1));
+    expect(replies.single.$1, 'https://example.com/threads/188349/add-reply');
+    expect(replies.single.$2, 'mock-csrf');
+    expect(replies.single.$3, contains('[/QUOTE]'));
+  });
+
+  testWidgets('the reply FAB opens the composer and posts the message', (tester) async {
+    final replies = <String>[];
+    await pumpForum(tester, replySender: (url, csrf, message) async => replies.add(message));
+    await openThreadViewer(tester);
+
+    await tester.tap(find.byTooltip('Reply'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('composer-message')), 'Nice thread!');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Post reply'));
+    await tester.pumpAndSettle();
+
+    expect(replies, ['Nice thread!']);
+  });
+
+  testWidgets('write actions are hidden when the page has no reply URL', (tester) async {
+    await pumpForum(
+      tester,
+      fetchThreadPosts: (url, {page = 1}) async => const ThreadPostsPage(
+        title: 'Guest view',
+        posts: [ForumPost(postId: 1, number: 1, author: 'A')],
+      ),
+    );
+    await openThreadViewer(tester);
+
+    expect(find.text('React'), findsNothing);
+    expect(find.text('Quote'), findsNothing);
+    expect(find.byTooltip('Reply'), findsNothing);
+  });
+
+  testWidgets('the new-thread FAB posts a titled thread', (tester) async {
+    final posted = <(String, String, String, String)>[];
+    await pumpForum(
+      tester,
+      threadPoster: (url, csrf, {required title, required message}) async => posted.add((url, csrf, title, message)),
+    );
+
+    await tester.tap(find.text('General Discussions'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('New thread'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('composer-title')), 'Hello forum');
+    await tester.enterText(find.byKey(const Key('composer-message')), 'First post!');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Post thread'));
+    await tester.pumpAndSettle();
+
+    expect(posted, [
+      ('https://example.com/forums/general-discussions.9/post-thread', 'mock-csrf', 'Hello forum', 'First post!'),
+    ]);
   });
 
   testWidgets('reaction chip opens the sheet; pills filter members', (tester) async {

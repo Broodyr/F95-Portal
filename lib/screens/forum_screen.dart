@@ -17,8 +17,20 @@ class ForumScreen extends StatefulWidget {
   final FetchForumPage? fetchForumPage;
   final FetchThreadPosts? fetchThreadPosts;
   final FetchReactions? fetchReactions;
+  final ThreadPoster? threadPoster;
+  final ReactSender? reactSender;
+  final ReplySender? replySender;
 
-  const ForumScreen({super.key, this.fetchIndex, this.fetchForumPage, this.fetchThreadPosts, this.fetchReactions});
+  const ForumScreen({
+    super.key,
+    this.fetchIndex,
+    this.fetchForumPage,
+    this.fetchThreadPosts,
+    this.fetchReactions,
+    this.threadPoster,
+    this.reactSender,
+    this.replySender,
+  });
 
   @override
   State<ForumScreen> createState() => _ForumScreenState();
@@ -65,6 +77,9 @@ class _ForumScreenState extends State<ForumScreen> {
           fetchPage: widget.fetchForumPage,
           fetchThreadPosts: widget.fetchThreadPosts,
           fetchReactions: widget.fetchReactions,
+          threadPoster: widget.threadPoster,
+          reactSender: widget.reactSender,
+          replySender: widget.replySender,
         ),
       ),
     );
