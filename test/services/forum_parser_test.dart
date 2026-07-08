@@ -298,6 +298,63 @@ void main() {
     });
   });
 
+  group('parseSearchResults', () {
+    late ForumSearchPage page;
+
+    setUpAll(() => page = parseSearchResults(fixture('search_results.htm')));
+
+    test('parses rows with title, prefixes, snippet, and attribution', () {
+      expect(page.results, hasLength(20));
+      final first = page.results.first;
+      expect(first.title, 'Corruption of Champions II [v0.9.0] [Savin/Salamander Studios]');
+      expect(first.prefixes, ['Others']);
+      expect(
+        first.url,
+        'https://f95zone.to/threads/corruption-of-champions-ii-v0-9-0-savin-salamander-studios.11371/post-20920422',
+      );
+      expect(first.snippet, contains('might make the player feel powerful'));
+      expect(first.author, 'Dragons Are Romance');
+      expect(first.date, '5 minutes ago');
+      expect(first.forum, 'Games');
+    });
+
+    test('parses pagination and the GET-able results URL', () {
+      expect(page.currentPage, 1);
+      expect(page.totalPages, 50);
+      expect(page.searchUrl, 'https://f95zone.to/search/649178657/?q=futanari&t=post&o=date');
+    });
+  });
+
+  group('edit context', () {
+    // No fixture has an edit link (own posts only); synthetic markup
+    // mirrors XenForo's action bar.
+    test('own posts carry their edit URL', () {
+      final page = parseThreadPosts('''
+        <article class="message message--post" data-author="Me" data-content="post-7">
+          <div class="message-body"><div class="bbWrapper">mine</div></div>
+          <div class="message-actionBar actionBar">
+            <a href="/posts/7/edit" class="actionBar-action actionBar-action--edit js-quickEdit">Edit</a>
+          </div>
+        </article>
+        <article class="message message--post" data-author="Other" data-content="post-8">
+          <div class="message-body"><div class="bbWrapper">theirs</div></div>
+        </article>
+      ''');
+
+      expect(page.posts.first.editUrl, 'https://f95zone.to/posts/7/edit');
+      expect(page.posts.last.editUrl, isNull);
+    });
+
+    test('parseEditBbcode reads the edit form message', () {
+      final bbcode = parseEditBbcode('''
+        <form action="/posts/7/edit" method="post">
+          <textarea name="message">Original [b]text[/b] &amp; more</textarea>
+        </form>
+      ''');
+      expect(bbcode, 'Original [b]text[/b] & more');
+    });
+  });
+
   group('parseReactionsPage', () {
     late ReactionsPage page;
 

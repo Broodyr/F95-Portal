@@ -98,6 +98,71 @@ ThreadPostsPage parseThreadPosts(String htmlSource) {
   );
 }
 
+/// Parses a search results page (`/search/<id>/?q=...`, reachable by GET
+/// after the search POST's 303).
+ForumSearchPage parseSearchResults(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final (currentPage, totalPages) = _parsePageNav(document);
+
+  final results = <ForumSearchResult>[];
+  for (final row in document.querySelectorAll('.block-row .contentRow')) {
+    final titleHeader = row.querySelector('.contentRow-title');
+    final link = titleHeader?.querySelector('a[href]');
+    if (titleHeader == null || link == null) continue;
+
+    // Prefix labels render inside the title anchor; lift them out.
+    final prefixes = <String>[];
+    for (final label in link.querySelectorAll('.label')) {
+      prefixes.add(_clean(label.text));
+      label.remove();
+    }
+    for (final append in link.querySelectorAll('.label-append')) {
+      append.remove();
+    }
+
+    String forum = '';
+    String date = '';
+    for (final li in row.querySelectorAll('.contentRow-minor li')) {
+      final text = _clean(li.text);
+      if (text.startsWith('Forum:')) forum = _clean(li.querySelector('a')?.text ?? '');
+      final time = li.querySelector('time');
+      if (time != null) date = _clean(time.text);
+    }
+
+    results.add(
+      ForumSearchResult(
+        title: _clean(link.text),
+        prefixes: prefixes,
+        url: _absoluteUrl(link.attributes['href'] ?? ''),
+        snippet: _clean(row.querySelector('.contentRow-snippet')?.text ?? ''),
+        author: _clean(row.querySelector('.contentRow-minor .username')?.text ?? ''),
+        date: date,
+        forum: forum,
+      ),
+    );
+  }
+
+  return ForumSearchPage(
+    results: results,
+    currentPage: currentPage,
+    totalPages: totalPages,
+    searchUrl: _absoluteUrl(document.querySelector('meta[property="og:url"]')?.attributes['content'] ?? ''),
+  );
+}
+
+/// Extracts the BBCode source from a post's edit page (`/posts/<id>/edit`
+/// visited directly renders the full edit form).
+String parseEditBbcode(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  return document.querySelector('textarea[name="message"]')?.text.trim() ?? '';
+}
+
+/// The page-level XenForo CSRF token, needed before POSTing when no parsed
+/// page is at hand (e.g. initiating a search).
+String parseCsrfToken(String htmlSource) {
+  return html_parser.parse(htmlSource).documentElement?.attributes['data-csrf'] ?? '';
+}
+
 ForumPost _parsePost(Element post) {
   final source = post.attributes['data-content'] ?? post.attributes['id'] ?? '';
 
@@ -121,6 +186,7 @@ ForumPost _parsePost(Element post) {
     date: _clean(post.querySelector('.message-attribution-main time')?.text ?? ''),
     blocks: _parsePostBlocks(post.querySelector('.message-body .bbWrapper')),
     reactions: _parseReactionSummary(post.querySelector('.reactionsBar')),
+    editUrl: _absoluteOrNull(post.querySelector('a.actionBar-action--edit')?.attributes['href']),
   );
 }
 

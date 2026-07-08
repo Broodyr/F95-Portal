@@ -143,6 +143,9 @@ class ForumPost {
   final List<ForumPostBlock> blocks;
   final PostReactionSummary? reactions;
 
+  /// The action-bar Edit link; present only on the viewer's own posts.
+  final String? editUrl;
+
   const ForumPost({
     required this.postId,
     this.number = 0,
@@ -152,7 +155,41 @@ class ForumPost {
     this.date = '',
     this.blocks = const [],
     this.reactions,
+    this.editUrl,
   });
+}
+
+/// One row of forum search results (post-level, with a snippet).
+class ForumSearchResult {
+  final String title;
+  final List<String> prefixes;
+
+  /// Thread URL, usually with a `/post-N` permalink suffix.
+  final String url;
+  final String snippet;
+  final String author;
+  final String date;
+  final String forum;
+
+  const ForumSearchResult({
+    required this.title,
+    required this.url,
+    this.prefixes = const [],
+    this.snippet = '',
+    this.author = '',
+    this.date = '',
+    this.forum = '',
+  });
+}
+
+/// A page of search results plus the GET-able URL for further pages.
+class ForumSearchPage {
+  final List<ForumSearchResult> results;
+  final int currentPage;
+  final int totalPages;
+  final String searchUrl;
+
+  const ForumSearchPage({this.results = const [], this.currentPage = 1, this.totalPages = 1, this.searchUrl = ''});
 }
 
 /// One page of a thread's posts.

@@ -1,5 +1,6 @@
 import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/screens/forum_screen.dart';
+import 'package:f95_portal/screens/forum_search_screen.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/forum_threads_screen.dart';
 import 'package:f95_portal/services/forum_service.dart';
@@ -16,6 +17,8 @@ Future<void> pumpForum(
   ReactSender? reactSender,
   ReplySender? replySender,
   ThreadPoster? threadPoster,
+  ForumSearcher? searcher,
+  ForumSearchPager? searchPager,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -28,6 +31,9 @@ Future<void> pumpForum(
         reactSender: reactSender,
         replySender: replySender,
         threadPoster: threadPoster,
+        searcher: searcher ?? (keywords, {titleOnly = false, user = '', order = 'relevance'}) async =>
+            ForumService.createMockSearchPage(),
+        searchPager: searchPager ?? (url, page) async => ForumService.createMockSearchPage(page: page),
       ),
     ),
   );
@@ -243,6 +249,87 @@ void main() {
     expect(posted, [
       ('https://example.com/forums/general-discussions.9/post-thread', 'mock-csrf', 'Hello forum', 'First post!'),
     ]);
+  });
+
+  testWidgets('forum search runs a query and opens results in the viewer', (tester) async {
+    final queries = <(String, bool, String)>[];
+    final openedThreads = <String>[];
+    await pumpForum(
+      tester,
+      searcher: (keywords, {titleOnly = false, user = '', order = 'relevance'}) async {
+        queries.add((keywords, titleOnly, order));
+        return ForumService.createMockSearchPage();
+      },
+      fetchThreadPosts: (url, {page = 1}) async {
+        openedThreads.add(url);
+        return ForumService.createMockThreadPosts(page: page);
+      },
+    );
+
+    await tester.tap(find.byTooltip('Search the forum'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('forum-search-field')), 'futanari');
+    await tester.tap(find.text('Titles only'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Newest'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+
+    expect(queries, [('futanari', true, 'date')]);
+    expect(find.textContaining('Corruption of Champions II'), findsOneWidget);
+    expect(find.textContaining('might make the player feel powerful'), findsOneWidget);
+
+    // Opening a result strips the /post-N permalink for the viewer fetch.
+    await tester.tap(find.textContaining('Corruption of Champions II'));
+    await tester.pumpAndSettle();
+    expect(openedThreads, ['https://example.com/threads/coc2.11371/']);
+  });
+
+  testWidgets('Edit fetches the post source, saves, and reloads', (tester) async {
+    const editUrl = 'https://example.com/posts/9001/edit';
+    final saved = <(String, String, String)>[];
+    int fetches = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/188349/',
+          title: 'Hidden gems',
+          fetchPosts: (url, {page = 1}) async {
+            fetches++;
+            return const ThreadPostsPage(
+              title: 'Hidden gems',
+              csrfToken: 'mock-csrf',
+              replyUrl: 'https://example.com/threads/188349/add-reply',
+              posts: [
+                ForumPost(postId: 9001, number: 1, author: 'Broodyr', editUrl: editUrl),
+              ],
+            );
+          },
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+          editFetcher: (url) async => 'Old [b]body[/b]',
+          editSaver: (url, csrf, message) async => saved.add((url, csrf, message)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byKey(const Key('composer-message')));
+    expect(field.controller!.text, 'Old [b]body[/b]');
+
+    await tester.enterText(find.byKey(const Key('composer-message')), 'New body');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(saved, [(editUrl, 'mock-csrf', 'New body')]);
+    expect(fetches, 2); // initial load + post-save reload
   });
 
   testWidgets('reaction chip opens the sheet; pills filter members', (tester) async {

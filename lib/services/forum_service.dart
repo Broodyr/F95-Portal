@@ -115,6 +115,113 @@ class ForumService {
     }
   }
 
+  // --- Search ---------------------------------------------------------------
+
+  /// Runs a forum search: fetches a CSRF token from the search form page,
+  /// POSTs the query, and parses the results page the site redirects to
+  /// (dart:io follows the 303 automatically; a manual hop covers clients
+  /// that don't). Further pages come from [searchPage].
+  static Future<ForumSearchPage> search(
+    String keywords, {
+    bool titleOnly = false,
+    String user = '',
+    String order = 'relevance',
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockSearchPage();
+    }
+
+    final formHtml = await _fetchHtml('https://f95zone.to/search/', client: client, packageInfoLoader: packageInfoLoader);
+    final csrf = parseCsrfToken(formHtml);
+
+    final http.Client httpClient = client ?? http.Client();
+    final bool shouldCloseClient = client == null;
+    try {
+      final headers = {'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader), 'Accept': 'text/html'};
+      final cookies = AuthService.instance.cookieHeader;
+      if (cookies != null) headers['Cookie'] = cookies;
+
+      final response = await httpClient.post(
+        Uri.parse('https://f95zone.to/search/search'),
+        headers: headers,
+        body: {
+          'keywords': keywords,
+          'search_type': 'post',
+          'order': order,
+          if (titleOnly) 'c[title_only]': '1',
+          if (user.trim().isNotEmpty) 'c[users]': user.trim(),
+          '_xfToken': csrf,
+        },
+      );
+
+      final location = response.headers['location'];
+      if (response.statusCode >= 300 && response.statusCode < 400 && location != null) {
+        return parseSearchResults(
+          await _fetchHtml(location, client: client, packageInfoLoader: packageInfoLoader),
+        );
+      }
+      if (response.statusCode != 200) {
+        throw ApiException('Search failed: ${response.statusCode}');
+      }
+      return parseSearchResults(response.body);
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException('Search failed: $e');
+    } finally {
+      if (shouldCloseClient) httpClient.close();
+    }
+  }
+
+  /// Fetches page N of an earlier search via its GET-able results URL.
+  static Future<ForumSearchPage> searchPage(
+    String searchUrl,
+    int page, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockSearchPage(page: page);
+    }
+    final separator = searchUrl.contains('?') ? '&' : '?';
+    return parseSearchResults(
+      await _fetchHtml('$searchUrl${separator}page=$page', client: client, packageInfoLoader: packageInfoLoader),
+    );
+  }
+
+  // --- Edit -----------------------------------------------------------------
+
+  /// Fetches the BBCode source of an editable post from its edit page.
+  static Future<String> fetchEditBbcode(String editUrl, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      return 'Mock post body to edit.';
+    }
+    return parseEditBbcode(await _fetchHtml(editUrl, client: client, packageInfoLoader: packageInfoLoader));
+  }
+
+  /// Saves an edited post body back through its edit action.
+  static Future<void> saveEdit(
+    String editUrl,
+    String csrfToken,
+    String message, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    return ThreadPageService.postAction(
+      editUrl,
+      csrfToken,
+      fields: {'message': message},
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
   // --- Writes (react, reply, new thread) -----------------------------------
   // All XenForo form POSTs with the page CSRF; ThreadPageService.postAction
   // already speaks that protocol (cookies, _xfToken, error sniffing).
@@ -356,6 +463,35 @@ class ForumService {
       totalPages: 42,
       csrfToken: 'mock-csrf',
       replyUrl: 'https://example.com/threads/188349/add-reply',
+    );
+  }
+
+  static ForumSearchPage createMockSearchPage({int page = 1}) {
+    return ForumSearchPage(
+      results: [
+        ForumSearchResult(
+          title: 'Corruption of Champions II [v0.9.0] [Savin]',
+          prefixes: const ['Others'],
+          url: 'https://example.com/threads/coc2.11371/post-${20920000 + page}',
+          snippet: 'No, no, because that might make the player feel powerful…',
+          author: 'Dragons Are Romance',
+          date: '5 minutes ago',
+          forum: 'Games',
+        ),
+        const ForumSearchResult(
+          title: 'Hidden gems you almost skipped',
+          url: 'https://example.com/threads/188349/',
+          snippet: 'Nobody mentions Wands & Witches…',
+          author: 'DarkVault',
+          date: 'Jun 28, 2026',
+          forum: 'General Discussions',
+        ),
+      ],
+      // Single page, as with the other mocks: a perpetual load-more spinner
+      // would never settle in widget tests (or on the web build).
+      currentPage: page,
+      totalPages: 1,
+      searchUrl: 'https://example.com/search/649178657/?q=mock',
     );
   }
 

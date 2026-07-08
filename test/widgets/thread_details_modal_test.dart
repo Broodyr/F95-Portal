@@ -1,6 +1,8 @@
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/thread_page_service.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:f95_portal/widgets/sliding_reveal.dart';
@@ -68,6 +70,7 @@ Future<(ThreadTagSelection? Function(), List<Uri>)> pumpDetails(
                   },
                   fetchThreadPage: fetchThreadPage ?? (id) async => ThreadPage(threadId: id),
                   actionSender: actionSender,
+                  fetchThreadPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
                 );
               },
               child: const Text('open'),
@@ -150,7 +153,7 @@ void main() {
     expect(find.byType(ScreenshotGallery), findsOneWidget);
   });
 
-  testWidgets('open thread launches the canonical thread URL', (tester) async {
+  testWidgets('open thread pushes the in-app forum viewer', (tester) async {
     final (_, launched) = await pumpDetails(tester);
 
     await tester.scrollUntilVisible(find.text('Open thread'), 100);
@@ -159,7 +162,10 @@ void main() {
     await tester.tap(find.text('Open thread'));
     await tester.pumpAndSettle();
 
-    expect(launched, [Uri.parse('https://f95zone.to/threads/42/')]);
+    // Internal viewer (its app bar keeps the external-browser action);
+    // nothing is launched externally.
+    expect(find.byType(ForumThreadScreen), findsOneWidget);
+    expect(launched, isEmpty);
   });
 
   testWidgets('screenshot strip appears only when screens exist', (tester) async {

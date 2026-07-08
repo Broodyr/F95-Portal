@@ -14,6 +14,8 @@ import 'login_screen.dart';
 typedef FetchThreadPosts = Future<ThreadPostsPage> Function(String url, {int page});
 typedef ReactSender = Future<void> Function(int postId, int reactionId, String csrfToken);
 typedef ReplySender = Future<void> Function(String replyUrl, String csrfToken, String message);
+typedef EditFetcher = Future<String> Function(String editUrl);
+typedef EditSaver = Future<void> Function(String editUrl, String csrfToken, String message);
 
 /// Full-screen light thread viewer: the post loop as-is (author, avatar,
 /// body with quotes/spoilers, reaction summary) with page pills at the
@@ -27,6 +29,8 @@ class ForumThreadScreen extends StatefulWidget {
   final FetchReactions? fetchReactions;
   final ReactSender? reactSender;
   final ReplySender? replySender;
+  final EditFetcher? editFetcher;
+  final EditSaver? editSaver;
   final Future<bool> Function(Uri uri)? urlLauncher;
 
   const ForumThreadScreen({
@@ -38,6 +42,8 @@ class ForumThreadScreen extends StatefulWidget {
     this.fetchReactions,
     this.reactSender,
     this.replySender,
+    this.editFetcher,
+    this.editSaver,
     this.urlLauncher,
   });
 
@@ -135,6 +141,35 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     // New replies land at the thread's end; jump there (the reloaded page
     // may reveal a fresh final page — one tap away, acceptable).
     if (posted && mounted) await _reload(page: page.totalPages);
+  }
+
+  Future<void> _editPost(ForumPost post) async {
+    final page = _page;
+    final editUrl = post.editUrl;
+    if (page == null || editUrl == null) return;
+
+    final String bbcode;
+    try {
+      final fetch = widget.editFetcher ?? ForumService.fetchEditBbcode;
+      bbcode = await fetch(editUrl);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      return;
+    }
+    if (!mounted) return;
+
+    final posted = await ForumComposer.show(
+      context,
+      heading: 'Edit post',
+      submitLabel: 'Save',
+      initialMessage: bbcode,
+      onSubmit: (_, message) {
+        final save = widget.editSaver ?? ForumService.saveEdit;
+        return save(editUrl, page.csrfToken, message);
+      },
+    );
+    if (posted && mounted) await _reload();
   }
 
   /// BBCode quote of a post's own words (nested quotes/spoilers omitted).
@@ -235,9 +270,11 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               onOpenLink: _launch,
               fetchReactions: widget.fetchReactions ?? ForumService.fetchReactions,
               // Writes gate on the reply URL: the quick-reply form only
-              // renders for members who can post here.
+              // renders for members who can post here. Edit gates on the
+              // per-post edit link (own posts only).
               onReact: page.replyUrl == null ? null : () => _react(post),
               onQuote: page.replyUrl == null ? null : () => _openComposer(initialMessage: _quoteBbcode(post)),
+              onEdit: post.editUrl == null ? null : () => _editPost(post),
             ),
           ),
         if (totalPages > 1) _buildPagination(colorScheme, totalPages),
@@ -317,6 +354,7 @@ class _PostCard extends StatefulWidget {
   final FetchReactions fetchReactions;
   final VoidCallback? onReact;
   final VoidCallback? onQuote;
+  final VoidCallback? onEdit;
 
   const _PostCard({
     required this.post,
@@ -324,6 +362,7 @@ class _PostCard extends StatefulWidget {
     required this.fetchReactions,
     this.onReact,
     this.onQuote,
+    this.onEdit,
   });
 
   @override
@@ -377,12 +416,16 @@ class _PostCardState extends State<_PostCard> {
             if (i > 0) const SizedBox(height: 6),
             _buildBlock(colorScheme, i, post.blocks[i]),
           ],
-          if ((post.reactions?.count ?? 0) > 0 || widget.onReact != null) ...[
+          if ((post.reactions?.count ?? 0) > 0 || widget.onReact != null || widget.onEdit != null) ...[
             const SizedBox(height: 9),
             Row(
               children: [
                 if ((post.reactions?.count ?? 0) > 0) _buildReactionChip(colorScheme, post.reactions!),
                 const Spacer(),
+                if (widget.onEdit != null) ...[
+                  _buildFooterAction(Icons.edit_outlined, 'Edit', widget.onEdit!),
+                  const SizedBox(width: 14),
+                ],
                 if (widget.onReact != null)
                   _buildFooterAction(Icons.add_reaction_outlined, 'React', widget.onReact!),
                 if (widget.onQuote != null) ...[

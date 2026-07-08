@@ -98,6 +98,100 @@ void main() {
     expect(requests, 2);
   });
 
+  test('search fetches a csrf, posts the query, and parses results', () async {
+    final results = File('test/fixtures/search_results.htm').readAsStringSync();
+    final log = <String>[];
+    late Map<String, String> posted;
+    final client = MockClient((request) async {
+      log.add('${request.method} ${request.url}');
+      if (request.method == 'GET') return http.Response('<html data-csrf="tok,en"></html>', 200);
+      posted = request.bodyFields;
+      return http.Response.bytes(results.codeUnits, 200);
+    });
+
+    final page = await ForumService.search(
+      'futanari',
+      titleOnly: true,
+      user: 'SomeDev',
+      order: 'date',
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    expect(log, ['GET https://f95zone.to/search/', 'POST https://f95zone.to/search/search']);
+    expect(posted['keywords'], 'futanari');
+    expect(posted['search_type'], 'post');
+    expect(posted['order'], 'date');
+    expect(posted['c[title_only]'], '1');
+    expect(posted['c[users]'], 'SomeDev');
+    expect(posted['_xfToken'], 'tok,en');
+    expect(page.results, hasLength(20));
+    expect(page.totalPages, 50);
+  });
+
+  test('search follows a 303 location when the client does not', () async {
+    final results = File('test/fixtures/search_results.htm').readAsStringSync();
+    final client = MockClient((request) async {
+      if (request.method == 'GET' && request.url.path == '/search/') {
+        return http.Response('<html data-csrf="t"></html>', 200);
+      }
+      if (request.method == 'POST') {
+        return http.Response('', 303, headers: {'location': 'https://f95zone.to/search/649178657/?q=futanari'});
+      }
+      expect(request.url.toString(), 'https://f95zone.to/search/649178657/?q=futanari');
+      return http.Response.bytes(results.codeUnits, 200);
+    });
+
+    final page = await ForumService.search('futanari', client: client, packageInfoLoader: () async => _packageInfo());
+    expect(page.results, hasLength(20));
+  });
+
+  test('searchPage appends the page parameter to the results URL', () async {
+    final results = File('test/fixtures/search_results.htm').readAsStringSync();
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      return http.Response.bytes(results.codeUnits, 200);
+    });
+
+    await ForumService.searchPage(
+      'https://f95zone.to/search/649178657/?q=futanari',
+      2,
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+    expect(urls, ['https://f95zone.to/search/649178657/?q=futanari&page=2']);
+  });
+
+  test('fetchEditBbcode reads the edit form; saveEdit posts the message', () async {
+    final log = <String>[];
+    final client = MockClient((request) async {
+      log.add('${request.method} ${request.url}');
+      if (request.method == 'GET') {
+        return http.Response('<form><textarea name="message">Old [b]body[/b]</textarea></form>', 200);
+      }
+      expect(request.bodyFields['message'], 'New body');
+      expect(request.bodyFields['_xfToken'], 'tok');
+      return http.Response('{"status":"ok"}', 200);
+    });
+
+    final bbcode = await ForumService.fetchEditBbcode(
+      'https://f95zone.to/posts/7/edit',
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+    expect(bbcode, 'Old [b]body[/b]');
+
+    await ForumService.saveEdit(
+      'https://f95zone.to/posts/7/edit',
+      'tok',
+      'New body',
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+    expect(log, ['GET https://f95zone.to/posts/7/edit', 'POST https://f95zone.to/posts/7/edit']);
+  });
+
   test('react posts to the reaction endpoint with the csrf token', () async {
     late http.Request seen;
     final client = MockClient((request) async {

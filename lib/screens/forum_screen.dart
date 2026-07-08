@@ -4,6 +4,7 @@ import '../models/forum.dart';
 import '../services/forum_service.dart';
 import '../widgets/forum_node_row.dart';
 import '../widgets/reactions_sheet.dart';
+import 'forum_search_screen.dart';
 import 'forum_thread_screen.dart';
 import 'forum_threads_screen.dart';
 
@@ -20,6 +21,8 @@ class ForumScreen extends StatefulWidget {
   final ThreadPoster? threadPoster;
   final ReactSender? reactSender;
   final ReplySender? replySender;
+  final ForumSearcher? searcher;
+  final ForumSearchPager? searchPager;
 
   const ForumScreen({
     super.key,
@@ -30,6 +33,8 @@ class ForumScreen extends StatefulWidget {
     this.threadPoster,
     this.reactSender,
     this.replySender,
+    this.searcher,
+    this.searchPager,
   });
 
   @override
@@ -99,12 +104,28 @@ class _ForumScreenState extends State<ForumScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Text('Forum', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
                   Text('f95zone.to', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: 'Search the forum',
+                    icon: Icon(Icons.search, size: 22, color: Colors.grey[400]),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ForumSearchScreen(
+                          searcher: widget.searcher,
+                          searchPager: widget.searchPager,
+                          fetchThreadPosts: widget.fetchThreadPosts,
+                          fetchReactions: widget.fetchReactions,
+                          reactSender: widget.reactSender,
+                          replySender: widget.replySender,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

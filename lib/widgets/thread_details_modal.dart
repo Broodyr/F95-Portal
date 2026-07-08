@@ -10,6 +10,7 @@ import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/thread_page.dart';
 import '../models/thread_summary.dart';
+import '../screens/forum_thread_screen.dart';
 import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
@@ -42,6 +43,9 @@ class ThreadDetailsModal extends StatefulWidget {
   final FetchThreadPage? fetchThreadPage;
   final ThreadActionSender? actionSender;
 
+  /// Passed to the forum viewer that "Open thread" pushes (tests inject it).
+  final FetchThreadPosts? fetchThreadPosts;
+
   const ThreadDetailsModal({
     super.key,
     required this.thread,
@@ -49,6 +53,7 @@ class ThreadDetailsModal extends StatefulWidget {
     this.urlLauncher,
     this.fetchThreadPage,
     this.actionSender,
+    this.fetchThreadPosts,
   });
 
   static Future<ThreadTagSelection?> show(
@@ -58,6 +63,7 @@ class ThreadDetailsModal extends StatefulWidget {
     UrlLauncher? urlLauncher,
     FetchThreadPage? fetchThreadPage,
     ThreadActionSender? actionSender,
+    FetchThreadPosts? fetchThreadPosts,
   }) {
     return showModalBottomSheet<ThreadTagSelection>(
       context: context,
@@ -70,6 +76,7 @@ class ThreadDetailsModal extends StatefulWidget {
         urlLauncher: urlLauncher,
         fetchThreadPage: fetchThreadPage,
         actionSender: actionSender,
+        fetchThreadPosts: fetchThreadPosts,
       ),
     );
   }
@@ -167,6 +174,16 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   void _shareThread() {
     // Link only; receivers' rich link previews supply the title/art.
     SharePlus.instance.share(ShareParams(text: '$_threadUri'));
+  }
+
+  /// Opens the thread in the in-app forum viewer (which keeps its own
+  /// open-in-browser action for the external escape hatch).
+  void _openThread() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ForumThreadScreen(url: '$_threadUri', title: thread.title, fetchPosts: widget.fetchThreadPosts),
+      ),
+    );
   }
 
   /// Optimistically toggles like/watch, reverting on failure. The page cache
@@ -287,13 +304,13 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                             children: [
                               Expanded(
                                 child: FilledButton.icon(
-                                  onPressed: () => _launch(_threadUri),
+                                  onPressed: _openThread,
                                   style: FilledButton.styleFrom(
                                     backgroundColor: colorScheme.primary,
                                     foregroundColor: colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(vertical: 14),
                                   ),
-                                  icon: const Icon(Icons.open_in_new, size: 18),
+                                  icon: const Icon(Icons.forum_outlined, size: 18),
                                   label: const Text('Open thread'),
                                 ),
                               ),

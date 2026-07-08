@@ -603,72 +603,78 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     List<_EmptyTag> emptyTags = const [],
     bool recentMode = false,
   }) {
-    return Container(
+    // A Material (not a decorated Container): ListTile paints its ink on
+    // the nearest Material, and newer SDKs assert when a colored
+    // DecoratedBox would hide it.
+    return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 240),
-      decoration: BoxDecoration(
+      child: Material(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
-      ),
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        children: [
-          for (final suggestion in suggestions)
-            ListTile(
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              leading: Icon(suggestion.icon, size: 18, color: colorScheme.onSurfaceVariant),
-              title: Text(suggestion.label),
-              trailing: suggestion.trailing == null
-                  ? null
-                  : Text(suggestion.trailing!, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
-              onTap: () => _addFilter(suggestion.kind, suggestion.id, suggestion.label),
-            ),
-          if (_hasCreatorSuggestion) ...[
-            ListTile(
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              leading: Icon(Icons.search, size: 18, color: colorScheme.onSurfaceVariant),
-              title: Text('Title: "${_searchController.text.trim()}"'),
-              onTap: _setTitleFromText,
-            ),
-            ListTile(
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              leading: Icon(Icons.person_outline, size: 18, color: colorScheme.onSurfaceVariant),
-              title: Text('Creator: "${_searchController.text.trim()}"'),
-              onTap: _setCreatorFromText,
-            ),
-          ],
-          if (emptyTags.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              child: Text(
-                '${recentMode ? 'Recent' : 'Popular'} tags — engines & statuses match here too',
-                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-              ),
-            ),
-            for (final tag in emptyTags)
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          children: [
+            for (final suggestion in suggestions)
               ListTile(
                 dense: true,
                 visualDensity: VisualDensity.compact,
-                leading: Icon(
-                  recentMode ? Icons.history : Icons.trending_up,
-                  size: 18,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                title: Text(tag.name),
-                trailing: tag.count == null
+                leading: Icon(suggestion.icon, size: 18, color: colorScheme.onSurfaceVariant),
+                title: Text(suggestion.label),
+                trailing: suggestion.trailing == null
                     ? null
-                    : Text(
-                        NumberFormatter.formatNumber(tag.count!),
-                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-                      ),
-                onTap: () => _addFilter(_FilterKind.tag, tag.id, tag.name),
+                    : Text(suggestion.trailing!, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+                onTap: () => _addFilter(suggestion.kind, suggestion.id, suggestion.label),
               ),
+            if (_hasCreatorSuggestion) ...[
+              ListTile(
+                dense: true,
+                visualDensity: VisualDensity.compact,
+                leading: Icon(Icons.search, size: 18, color: colorScheme.onSurfaceVariant),
+                title: Text('Title: "${_searchController.text.trim()}"'),
+                onTap: _setTitleFromText,
+              ),
+              ListTile(
+                dense: true,
+                visualDensity: VisualDensity.compact,
+                leading: Icon(Icons.person_outline, size: 18, color: colorScheme.onSurfaceVariant),
+                title: Text('Creator: "${_searchController.text.trim()}"'),
+                onTap: _setCreatorFromText,
+              ),
+            ],
+            if (emptyTags.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Text(
+                  '${recentMode ? 'Recent' : 'Popular'} tags — engines & statuses match here too',
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                ),
+              ),
+              for (final tag in emptyTags)
+                ListTile(
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  leading: Icon(
+                    recentMode ? Icons.history : Icons.trending_up,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(tag.name),
+                  trailing: tag.count == null
+                      ? null
+                      : Text(
+                          NumberFormatter.formatNumber(tag.count!),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                        ),
+                  onTap: () => _addFilter(_FilterKind.tag, tag.id, tag.name),
+                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
