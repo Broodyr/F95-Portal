@@ -25,7 +25,7 @@ class ReactionGlyph {
     12: ReactionGlyph('\u{1F973}', Color(0xFF97C459), 'Yay, update!'), // 🥳
     13: ReactionGlyph('\u{1F924}', Color(0xFF85B7EB), 'Jizzed my pants'), // 🤤
     14: ReactionGlyph('\u{2764}\u{FE0F}', Color(0xFFD4537E), 'Heart'), // ❤️
-    17: ReactionGlyph('\u{1F451}', Color(0xFFE3B341), 'Crown'), // 👑
+    // 17: ReactionGlyph('\u{1F451}', Color(0xFFE3B341), 'Crown'), // 👑 - not in use/rejected by API, do NOT uncomment
     18: ReactionGlyph('\u{1F44E}', Color(0xFF993C1D), 'Disagree'), // 👎
   };
 
