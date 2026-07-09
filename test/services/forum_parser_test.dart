@@ -353,6 +353,33 @@ void main() {
       ''');
       expect(bbcode, 'Original [b]text[/b] & more');
     });
+
+    test('parseEditBbcode finds the noscript BBCode textarea (real editor markup)', () {
+      // The live editor macro: a jsOnly textarea holding HTML, with the
+      // BBCode fallback inside <noscript> — which package:html parses as
+      // raw text, so it needs a fragment re-parse.
+      final bbcode = parseEditBbcode('''
+        <form action="/posts/7/edit" method="post">
+          <textarea name="message_html" class="input js-editor u-jsOnly" data-original-name="message"
+            style="display: none;"><p>Original <b>text</b></p></textarea>
+          <input type="hidden" value="" data-bb-code="message">
+          <noscript>
+            <textarea name="message" class="input">Original [b]text[/b] &amp; more</textarea>
+          </noscript>
+        </form>
+      ''');
+      expect(bbcode, 'Original [b]text[/b] & more');
+    });
+
+    test('parseEditBbcode falls back to the data-bb-code input value', () {
+      final bbcode = parseEditBbcode('''
+        <form action="/posts/7/edit" method="post">
+          <textarea name="message_html" class="input js-editor u-jsOnly"><p>html</p></textarea>
+          <input type="hidden" value="Fallback [i]bbcode[/i]" data-bb-code="message">
+        </form>
+      ''');
+      expect(bbcode, 'Fallback [i]bbcode[/i]');
+    });
   });
 
   group('parseReactionsPage', () {

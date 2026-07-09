@@ -152,9 +152,24 @@ ForumSearchPage parseSearchResults(String htmlSource) {
 
 /// Extracts the BBCode source from a post's edit page (`/posts/<id>/edit`
 /// visited directly renders the full edit form).
+///
+/// The editor macro puts the BBCode textarea (`name="message"`) inside
+/// `<noscript>`, whose content package:html keeps as raw text — so it
+/// needs a fragment re-parse. The jsOnly `message_html` textarea holds
+/// HTML and is never used.
 String parseEditBbcode(String htmlSource) {
   final document = html_parser.parse(htmlSource);
-  return document.querySelector('textarea[name="message"]')?.text.trim() ?? '';
+
+  final direct = document.querySelector('textarea[name="message"]')?.text.trim() ?? '';
+  if (direct.isNotEmpty) return direct;
+
+  for (final noscript in document.querySelectorAll('noscript')) {
+    final fragment = html_parser.parseFragment(noscript.text);
+    final text = fragment.querySelector('textarea[name="message"]')?.text.trim() ?? '';
+    if (text.isNotEmpty) return text;
+  }
+
+  return document.querySelector('input[data-bb-code]')?.attributes['value']?.trim() ?? '';
 }
 
 /// The page-level XenForo CSRF token, needed before POSTing when no parsed
