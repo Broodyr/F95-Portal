@@ -303,14 +303,24 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     int? previous;
     for (final page in pages) {
       if (previous != null && page - previous > 1) {
-        // Tappable gap: jump straight to a typed page number.
+        // Tappable gap: jump straight to a typed page number. Styled as a
+        // pill like its neighbors so it reads as tappable, with a dotted
+        // outline instead of a fill to keep it subordinate to real pages.
         items.add(
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => _promptForPage(totalPages),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 6),
-              child: Text('…', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              ),
+              child: Text(
+                '…',
+                style: TextStyle(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.w600, height: 1.1),
+              ),
             ),
           ),
         );
