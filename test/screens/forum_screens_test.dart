@@ -353,6 +353,38 @@ void main() {
     expect(fetches, 2); // initial load + post-save reload
   });
 
+  testWidgets('tapping the pagination ellipsis jumps to an exact page', (tester) async {
+    await pumpForum(tester);
+    await openThreadViewer(tester);
+
+    await tester.scrollUntilVisible(find.text('…'), 150);
+    await tester.ensureVisible(find.text('…'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('…'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Go to page'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('page-jump-field')), '7');
+    await tester.tap(find.text('Go'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('page 7 of 42'), findsOneWidget);
+    // Mock posts number themselves per page: page 7 starts at #13.
+    expect(find.text('#13'), findsOneWidget);
+
+    // Out-of-range input clamps to the last page.
+    await tester.scrollUntilVisible(find.text('…').first, 150);
+    await tester.ensureVisible(find.text('…').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('…').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('page-jump-field')), '999');
+    await tester.tap(find.text('Go'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('page 42 of 42'), findsOneWidget);
+  });
+
   testWidgets('reaction chip opens the sheet; pills filter members', (tester) async {
     await pumpForum(tester);
 

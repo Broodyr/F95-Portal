@@ -303,7 +303,17 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     int? previous;
     for (final page in pages) {
       if (previous != null && page - previous > 1) {
-        items.add(Text('…', style: TextStyle(color: Colors.grey[500], fontSize: 12)));
+        // Tappable gap: jump straight to a typed page number.
+        items.add(
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _promptForPage(totalPages),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 6),
+              child: Text('…', style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+            ),
+          ),
+        );
       }
       items.add(_buildPagePill(colorScheme, page));
       previous = page;
@@ -321,6 +331,31 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       padding: const EdgeInsets.only(top: 6),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: items),
     );
+  }
+
+  Future<void> _promptForPage(int totalPages) async {
+    // No controller (the field tracks its own text); reading via onChanged
+    // avoids disposing a controller while the dialog is still animating out.
+    int? entered;
+    final page = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Go to page', style: TextStyle(fontSize: 16)),
+        content: TextField(
+          key: const Key('page-jump-field'),
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          onChanged: (value) => entered = int.tryParse(value.trim()),
+          onSubmitted: (value) => Navigator.of(dialogContext).pop(int.tryParse(value.trim())),
+          decoration: InputDecoration(hintText: '1–$totalPages'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(entered), child: const Text('Go')),
+        ],
+      ),
+    );
+    if (page != null && mounted) _goToPage(page.clamp(1, totalPages));
   }
 
   Widget _buildPagePill(ColorScheme colorScheme, int page) {
