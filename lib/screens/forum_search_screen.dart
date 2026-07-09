@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/forum.dart';
+import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/sliding_reveal.dart';
 import 'forum_thread_screen.dart';
+import 'login_screen.dart';
 
 typedef ForumSearcher = Future<ForumSearchPage> Function(String keywords, {bool titleOnly, String user, String order});
 typedef ForumSearchPager = Future<ForumSearchPage> Function(String searchUrl, int page);
@@ -205,19 +207,54 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
   }
 
   Widget _buildBody(ColorScheme colorScheme) {
+    // Guests can't search on f95 (the endpoint 403s outright); prompt for
+    // the same in-app sign-in the rest of the forum uses.
+    if (!AuthService.instance.isLoggedIn) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline, size: 32, color: Colors.grey[600]),
+            const SizedBox(height: 8),
+            Text('Searching requires an account', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            TextButton(
+              onPressed: () async {
+                final success = await Navigator.of(
+                  context,
+                ).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen()));
+                if (success == true && mounted) setState(() {});
+              },
+              child: const Text('Sign in'),
+            ),
+          ],
+        ),
+      );
+    }
     if (_searching) {
       return const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
     }
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
-            const SizedBox(height: 8),
-            Text("Couldn't search", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
-            TextButton(onPressed: _search, child: const Text('Retry')),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
+              const SizedBox(height: 8),
+              Text("Couldn't search", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+              const SizedBox(height: 4),
+              // The underlying message distinguishes which stage failed.
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.grey[700], fontSize: 11),
+              ),
+              TextButton(onPressed: _search, child: const Text('Retry')),
+            ],
+          ),
         ),
       );
     }

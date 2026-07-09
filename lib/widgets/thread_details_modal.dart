@@ -177,13 +177,20 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   }
 
   /// Opens the thread in the in-app forum viewer (which keeps its own
-  /// open-in-browser action for the external escape hatch).
-  void _openThread() {
-    Navigator.of(context).push(
+  /// open-in-browser action for the external escape hatch). The user can
+  /// sign in from inside the viewer, so on return the modal refetches if
+  /// the session appeared while it was showing guest content.
+  Future<void> _openThread() async {
+    final bool wasLoggedIn = AuthService.instance.isLoggedIn;
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ForumThreadScreen(url: '$_threadUri', title: thread.title, fetchPosts: widget.fetchThreadPosts),
       ),
     );
+    if (!wasLoggedIn && AuthService.instance.isLoggedIn && mounted) {
+      ThreadPageService.invalidate(thread.threadId);
+      await _loadPage();
+    }
   }
 
   /// Optimistically toggles like/watch, reverting on failure. The page cache

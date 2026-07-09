@@ -440,6 +440,39 @@ void main() {
     expect(find.textContaining('Sign in to see download links'), findsNothing);
   });
 
+  testWidgets('signing in inside the pushed viewer refreshes the modal on return', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+
+    await pumpDetails(
+      tester,
+      // Guest fetches see no downloads; member fetches do.
+      fetchThreadPage: (id) async => AuthService.instance.isLoggedIn
+          ? ThreadPageService.createMockThreadPage(id)
+          : ThreadPage(threadId: id, overview: 'Guest view.'),
+    );
+
+    await tester.scrollUntilVisible(find.textContaining('Sign in to see download links'), 150);
+
+    await tester.scrollUntilVisible(find.text('Open thread'), 100);
+    await tester.ensureVisible(find.text('Open thread'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open thread'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ForumThreadScreen), findsOneWidget);
+
+    // Sign in while the viewer is on top, then come back.
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // The modal refetched as a member: downloads replace the notice.
+    expect(find.textContaining('Sign in to see download links'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Downloads'), 150);
+    expect(find.text('Downloads'), findsOneWidget);
+  });
+
   testWidgets('page load failure shows an inline retry that recovers', (tester) async {
     int attempts = 0;
     await pumpDetails(

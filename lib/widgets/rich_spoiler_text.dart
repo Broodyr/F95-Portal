@@ -40,6 +40,14 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
     final colorScheme = Theme.of(context).colorScheme;
     final baseStyle = TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45);
 
+    // All full-size image URLs in this block, so tapping any one opens the
+    // gallery positioned there with the rest swipeable.
+    final galleryUrls = [
+      for (final piece in widget.pieces)
+        if (piece.imageUrl != null) piece.fullImageUrl ?? piece.imageUrl!,
+    ];
+    int imageIndex = -1;
+
     final spans = <InlineSpan>[];
     for (final piece in widget.pieces) {
       if (piece.newline) {
@@ -50,13 +58,14 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
       if (imageUrl != null) {
         // Inline shows the thumbnail; tapping opens the full-resolution
         // source (the same URL when no separate full-size was parsed).
-        final fullUrl = piece.fullImageUrl ?? imageUrl;
+        imageIndex++;
+        final int galleryIndex = imageIndex;
         spans.add(
           WidgetSpan(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: GestureDetector(
-                onTap: () => ScreenshotGallery.show(context, [fullUrl]),
+                onTap: () => ScreenshotGallery.show(context, galleryUrls, initialIndex: galleryIndex),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: ConstrainedBox(

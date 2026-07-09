@@ -1,4 +1,5 @@
 import 'package:f95_portal/models/forum.dart';
+import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/screens/forum_screen.dart';
 import 'package:f95_portal/screens/forum_search_screen.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
@@ -6,6 +7,8 @@ import 'package:f95_portal/screens/forum_threads_screen.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../helpers/in_memory_cookie_storage.dart';
 
 /// The whole forum stack pumped with the service's mock data, so the tests
 /// walk directory → thread list → thread viewer → reactions sheet offline.
@@ -251,7 +254,25 @@ void main() {
     ]);
   });
 
+  testWidgets('forum search prompts guests to sign in', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+
+    await pumpForum(tester);
+    await tester.tap(find.byTooltip('Search the forum'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Searching requires an account'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
+  });
+
   testWidgets('forum search runs a query and opens results in the viewer', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+
     final queries = <(String, bool, String)>[];
     final openedThreads = <String>[];
     await pumpForum(
