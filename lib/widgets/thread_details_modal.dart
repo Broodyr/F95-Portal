@@ -16,6 +16,7 @@ import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../services/thread_page_service.dart';
 import '../utils/formatters.dart';
+import 'app_toast.dart';
 import 'engine_tag.dart';
 import 'rich_spoiler_text.dart';
 import 'screenshot_gallery.dart';
@@ -201,9 +202,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
     if (actions == null || url == null) return;
 
     if (!AuthService.instance.isLoggedIn) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Sign in from the Profile tab to like and bookmark threads.')));
+      AppToast.show(context, 'Sign in from the Profile tab to like and bookmark threads.');
       return;
     }
 
@@ -220,7 +219,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
     } catch (e) {
       if (!mounted) return;
       setState(() => isLike ? _liked = wasActive : _watched = wasActive);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      AppToast.show(context, '$e', error: true);
     }
   }
 

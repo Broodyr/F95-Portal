@@ -138,6 +138,9 @@ class ForumPost {
   final int number;
   final String author;
   final String? avatarUrl;
+
+  /// The author's member page URL; lets the viewer open their profile.
+  final String? authorUrl;
   final String memberTitle;
   final String date;
   final List<ForumPostBlock> blocks;
@@ -151,6 +154,7 @@ class ForumPost {
     this.number = 0,
     this.author = '',
     this.avatarUrl,
+    this.authorUrl,
     this.memberTitle = '',
     this.date = '',
     this.blocks = const [],

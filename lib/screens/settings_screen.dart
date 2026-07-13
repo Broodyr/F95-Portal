@@ -8,6 +8,7 @@ import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../services/settings_service.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/search_options_modal.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -51,9 +52,9 @@ class SettingsScreen extends StatelessWidget {
     try {
       await DefaultCacheManager().emptyCache();
       PaintingBinding.instance.imageCache.clear();
-      messenger.showSnackBar(const SnackBar(content: Text('Image cache cleared.')));
+      AppToast.showOn(messenger, 'Image cache cleared.');
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not clear cache: $e')));
+      AppToast.showOn(messenger, 'Could not clear cache: $e', error: true);
     }
   }
 
@@ -147,7 +148,7 @@ class SettingsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Glass effects', style: TextStyle(color: Colors.white, fontSize: 15)),
                   subtitle: Text(
-                    'Backdrop blur on sheets, nav bar, and overlays — disable if animations lag',
+                    'Backdrop blur on sheets, nav bar, and overlays; disable if animations lag',
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                   activeTrackColor: colorScheme.primary,

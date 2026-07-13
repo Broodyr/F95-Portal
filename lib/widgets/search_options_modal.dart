@@ -6,6 +6,7 @@ import '../models/search_query.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../utils/formatters.dart';
+import 'app_toast.dart';
 import 'sliding_reveal.dart';
 
 typedef _EmptyTag = ({int id, String name, int? count});
@@ -223,9 +224,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
       _filters.where((f) => f.kind == _FilterKind.tag && f.exclude == exclude).length;
 
   void _showTagLimitNotice() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('The API supports at most ${SearchQuery.maxTagsPerDirection} tags per direction.')),
-    );
+    AppToast.show(context, 'The API supports at most ${SearchQuery.maxTagsPerDirection} tags per direction.');
   }
 
   void _addFilter(_FilterKind kind, int id, String label) {

@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../models/forum.dart';
 import '../services/forum_service.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reaction_picker.dart';
@@ -10,6 +11,7 @@ import '../widgets/reactions_sheet.dart';
 import '../widgets/rich_spoiler_text.dart';
 import '../widgets/sliding_reveal.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 typedef FetchThreadPosts = Future<ThreadPostsPage> Function(String url, {int page});
 typedef ReactSender = Future<void> Function(int postId, int reactionId, String csrfToken);
@@ -108,6 +110,12 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     await _load();
   }
 
+  void _openProfile(ForumPost post) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ProfileScreen(url: post.authorUrl!, username: post.author)),
+    );
+  }
+
   Future<void> _react(ForumPost post) async {
     final page = _page;
     if (page == null) return;
@@ -119,7 +127,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       await _reload();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      AppToast.show(context, '$e', error: true);
     }
   }
 
@@ -154,7 +162,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       bbcode = await fetch(editUrl);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      AppToast.show(context, '$e', error: true);
       return;
     }
     if (!mounted) return;
@@ -269,6 +277,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               post: post,
               onOpenLink: _launch,
               fetchReactions: widget.fetchReactions ?? ForumService.fetchReactions,
+              onAuthorTap: post.authorUrl == null ? null : () => _openProfile(post),
               // Writes gate on the reply URL: the quick-reply form only
               // renders for members who can post here. Edit gates on the
               // per-post edit link (own posts only).
@@ -397,6 +406,7 @@ class _PostCard extends StatefulWidget {
   final ForumPost post;
   final void Function(Uri uri) onOpenLink;
   final FetchReactions fetchReactions;
+  final VoidCallback? onAuthorTap;
   final VoidCallback? onReact;
   final VoidCallback? onQuote;
   final VoidCallback? onEdit;
@@ -405,6 +415,7 @@ class _PostCard extends StatefulWidget {
     required this.post,
     required this.onOpenLink,
     required this.fetchReactions,
+    this.onAuthorTap,
     this.onReact,
     this.onQuote,
     this.onEdit,
@@ -433,24 +444,34 @@ class _PostCardState extends State<_PostCard> {
         children: [
           Row(
             children: [
-              ForumAvatar(username: post.author, avatarUrl: post.avatarUrl),
-              const SizedBox(width: 9),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.author,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      [
-                        if (post.memberTitle.isNotEmpty) post.memberTitle,
-                        if (post.date.isNotEmpty) post.date,
-                      ].join(' · '),
-                      style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
-                    ),
-                  ],
+                child: GestureDetector(
+                  onTap: widget.onAuthorTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      ForumAvatar(username: post.author, avatarUrl: post.avatarUrl),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              post.author,
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              [
+                                if (post.memberTitle.isNotEmpty) post.memberTitle,
+                                if (post.date.isNotEmpty) post.date,
+                              ].join(' · '),
+                              style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               if (post.number > 0) Text('#${post.number}', style: TextStyle(color: Colors.grey[600], fontSize: 11)),

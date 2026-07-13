@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import '../models/search_query.dart';
 import '../services/settings_service.dart';
 import '../widgets/active_filters_bar.dart';
+import '../widgets/app_toast.dart';
 import '../widgets/search_fab.dart';
 import '../widgets/thread_details_modal.dart';
 import '../widgets/search_options_modal.dart';
@@ -105,9 +106,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
         : _activeQuery.withTagAdded(selection.tagId);
 
     if (!selection.replace && !updated.tags.contains(selection.tagId)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Tag limit reached (${SearchQuery.maxTagsPerDirection}).')));
+      AppToast.show(context, 'Tag limit reached (${SearchQuery.maxTagsPerDirection}).');
       return;
     }
 

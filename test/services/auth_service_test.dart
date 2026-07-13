@@ -37,6 +37,22 @@ void main() {
       expect(fresh.cookieHeader, 'xf_user=abc123');
     });
 
+    test('userId parses the id prefix of the xf_user cookie', () async {
+      await auth.saveCookies({'xf_user': '328002,sometoken'});
+      expect(auth.userId, 328002);
+    });
+
+    test('userId handles URL-encoded cookie values from the webview', () async {
+      await auth.saveCookies({'xf_user': '1957582%2Cabc%20def'});
+      expect(auth.userId, 1957582);
+    });
+
+    test('userId is null when logged out or unparseable', () async {
+      expect(auth.userId, isNull);
+      await auth.saveCookies({'xf_user': 'garbage'});
+      expect(auth.userId, isNull);
+    });
+
     test('session cookies alone do not count as logged in', () async {
       await auth.saveCookies({'xf_session': 'only-session'});
 

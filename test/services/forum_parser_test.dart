@@ -115,6 +115,7 @@ void main() {
       expect(post.memberTitle, 'Bussyloader');
       expect(post.date, 'May 12, 2024');
       expect(post.avatarUrl, endsWith('137028_002_iNbu.jpg'));
+      expect(post.authorUrl, 'https://f95zone.to/members/lerd0.137028/');
     });
 
     test('splits the body into quote and rich blocks in order', () {
@@ -176,7 +177,7 @@ void main() {
     test('post reaction and avatar URLs are absolutized', () {
       final page = parseThreadPosts('''
         <article class="message message--post" data-author="A" data-content="post-7">
-          <div class="message-avatar"><img src="/data/avatars/m/0/7.jpg"></div>
+          <div class="message-avatar"><a href="/members/a.9/"><img src="/data/avatars/m/0/7.jpg"></a></div>
           <div class="message-body"><div class="bbWrapper">hello</div></div>
           <div class="reactionsBar">
             <a class="reactionsBar-link" href="/posts/7/reactions"><bdi>B</bdi></a>
@@ -186,6 +187,7 @@ void main() {
 
       final post = page.posts.single;
       expect(post.avatarUrl, 'https://f95zone.to/data/avatars/m/0/7.jpg');
+      expect(post.authorUrl, 'https://f95zone.to/members/a.9/');
       expect(post.reactions?.url, 'https://f95zone.to/posts/7/reactions');
     });
   });
@@ -316,6 +318,12 @@ void main() {
       expect(first.author, 'Dragons Are Romance');
       expect(first.date, '5 minutes ago');
       expect(first.forum, 'Games');
+    });
+
+    test('lifts engine spans (pre-* classes) into prefixes too', () {
+      final mirrored = page.results.firstWhere((r) => r.url.contains('mirrored-act-1'));
+      expect(mirrored.title, 'Mirrored [Act 1 Ch.3] [Infinite Drift Studios]');
+      expect(mirrored.prefixes, ['VN', "Ren'Py"]);
     });
 
     test('parses pagination and the GET-able results URL', () {

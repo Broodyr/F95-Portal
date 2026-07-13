@@ -4,6 +4,7 @@ import 'package:f95_portal/screens/forum_screen.dart';
 import 'package:f95_portal/screens/forum_search_screen.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/forum_threads_screen.dart';
+import 'package:f95_portal/screens/profile_screen.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -138,6 +139,20 @@ void main() {
     await tester.tap(find.text('Ending spoiler'));
     await tester.pumpAndSettle();
     expect(find.textContaining('The witch did it'), findsOneWidget);
+  });
+
+  testWidgets('tapping a post author opens their profile', (tester) async {
+    await pumpForum(tester);
+    await openThreadViewer(tester);
+
+    await tester.tap(find.text('DarkVault').first);
+    await tester.pumpAndSettle();
+
+    final profile = tester.widget<ProfileScreen>(find.byType(ProfileScreen));
+    expect(profile.url, 'https://example.com/members/darkvault.4242/');
+    expect(profile.username, 'DarkVault');
+    // Logged out in this test, so the pushed profile asks to sign in.
+    expect(find.textContaining('to view member profiles.'), findsOneWidget);
   });
 
   testWidgets('pagination pills switch pages', (tester) async {

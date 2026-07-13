@@ -111,14 +111,7 @@ ForumSearchPage parseSearchResults(String htmlSource) {
     if (titleHeader == null || link == null) continue;
 
     // Prefix labels render inside the title anchor; lift them out.
-    final prefixes = <String>[];
-    for (final label in link.querySelectorAll('.label')) {
-      prefixes.add(_clean(label.text));
-      label.remove();
-    }
-    for (final append in link.querySelectorAll('.label-append')) {
-      append.remove();
-    }
+    final prefixes = liftTitlePrefixes(link);
 
     String forum = '';
     String date = '';
@@ -197,6 +190,10 @@ ForumPost _parsePost(Element post) {
     number: number,
     author: _clean(post.attributes['data-author'] ?? ''),
     avatarUrl: _absoluteOrNull(post.querySelector('.message-avatar img')?.attributes['src']),
+    authorUrl: _absoluteOrNull(
+      post.querySelector('.message-avatar a')?.attributes['href'] ??
+          post.querySelector('.message-name a')?.attributes['href'],
+    ),
     memberTitle: _clean(post.querySelector('.message-userTitle')?.text ?? ''),
     date: _clean(post.querySelector('.message-attribution-main time')?.text ?? ''),
     blocks: _parsePostBlocks(post.querySelector('.message-body .bbWrapper')),
@@ -427,6 +424,23 @@ ForumThreadRow _parseThreadRow(Element row) {
     lastPostUser: _clean(latest?.querySelector('.username')?.text ?? ''),
     lastPage: lastPage,
   );
+}
+
+/// Lifts prefix chips out of a contentRow title anchor, mutating it so the
+/// remaining text is the bare title. Thread prefixes render as `.label`
+/// spans, but engine prefixes (Ren'Py, Unity, …) use bare `pre-*` classes —
+/// both count. Shared with the profile parser's postings list.
+List<String> liftTitlePrefixes(Element link) {
+  final prefixes = <String>[];
+  for (final child in link.children.toList()) {
+    if (child.classes.contains('label-append')) {
+      child.remove();
+    } else if (child.classes.contains('label') || child.classes.any((c) => c.startsWith('pre-'))) {
+      prefixes.add(_clean(child.text));
+      child.remove();
+    }
+  }
+  return prefixes;
 }
 
 int _idFrom(String source, RegExp pattern) => int.tryParse(pattern.firstMatch(source)?.group(1) ?? '') ?? 0;

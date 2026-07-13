@@ -1,5 +1,10 @@
+import 'package:f95_portal/models/profile.dart';
+import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/services/forum_service.dart';
+import 'package:f95_portal/services/profile_service.dart';
+import 'package:f95_portal/widgets/reaction_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,37 +24,366 @@ void main() {
     AuthService.instance = previous;
   });
 
-  Future<void> pumpProfile(WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: ProfileScreen()));
+  Future<void> signIn() => AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
+
+  Future<void> pumpProfile(
+    WidgetTester tester, {
+    FetchProfile? fetchProfile,
+    FetchProfilePostings? fetchPostings,
+    FetchProfileAbout? fetchAbout,
+    ProfileMessagePoster? messagePoster,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ProfileScreen(
+          fetchProfile: fetchProfile ?? () async => ProfileService.createMockProfilePage(),
+          fetchPostings: fetchPostings ?? (_) async => ProfileService.createMockPostings(),
+          fetchAbout: fetchAbout ?? (_) async => ProfileService.createMockProfileAbout(),
+          messagePoster: messagePoster,
+          fetchThreadPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('shows sign-in call to action when logged out', (tester) async {
-    await pumpProfile(tester);
+  group('sign-in gate', () {
+    testWidgets('shows the call to action when logged out', (tester) async {
+      await pumpProfile(tester);
 
-    expect(find.text('Not signed in'), findsOneWidget);
-    expect(find.text('Sign in to F95Zone'), findsOneWidget);
-    expect(find.text('Sign out'), findsNothing);
+      expect(find.text('Not signed in'), findsOneWidget);
+      expect(find.text('Sign in to F95Zone'), findsOneWidget);
+      expect(find.byTooltip('Sign out'), findsNothing);
+    });
+
+    testWidgets('signing in mid-session loads the profile', (tester) async {
+      await pumpProfile(tester);
+
+      await signIn();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Broodyr'), findsOneWidget);
+      expect(find.text('Not signed in'), findsNothing);
+    });
+
+    testWidgets('signing out returns to the gate', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
+
+      await tester.tap(find.byTooltip('Sign out'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Not signed in'), findsOneWidget);
+      expect(AuthService.instance.isLoggedIn, isFalse);
+    });
   });
 
-  testWidgets('shows signed-in state and reacts to session changes', (tester) async {
-    await pumpProfile(tester);
+  group('header', () {
+    testWidgets('shows identity, stats, and member title', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
 
-    await AuthService.instance.saveCookies({'xf_user': 'tok'});
-    await tester.pumpAndSettle();
+      expect(find.text('Broodyr'), findsOneWidget);
+      expect(find.text('Member'), findsOneWidget);
+      expect(find.text('291 messages · Joined Dec 11, 2017'), findsOneWidget);
+      expect(find.text('Last seen Today at 4:55 PM'), findsOneWidget);
+    });
 
-    expect(find.text('Signed in to F95Zone'), findsOneWidget);
-    expect(find.text('Sign out'), findsOneWidget);
+    testWidgets('shows a retry on load failure', (tester) async {
+      await signIn();
+      int calls = 0;
+      await pumpProfile(
+        tester,
+        fetchProfile: () async {
+          calls++;
+          if (calls == 1) throw Exception('boom');
+          return ProfileService.createMockProfilePage();
+        },
+      );
+
+      expect(find.text('Retry'), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Broodyr'), findsOneWidget);
+    });
   });
 
-  testWidgets('sign out returns to the logged-out state', (tester) async {
-    await AuthService.instance.saveCookies({'xf_user': 'tok'});
-    await pumpProfile(tester);
+  group('profile posts tab', () {
+    testWidgets('shows wall posts with nested comments', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
 
-    await tester.tap(find.text('Sign out'));
-    await tester.pumpAndSettle();
+      // Twice: as the wall post's author and on their own follow-up comment.
+      expect(find.text('VoidWalker'), findsNWidgets(2));
+      expect(find.textContaining('gallery unlock works great'), findsOneWidget);
+      expect(find.textContaining('report anything odd'), findsOneWidget);
+      expect(find.text('Will do!'), findsOneWidget);
+    });
 
-    expect(find.text('Not signed in'), findsOneWidget);
-    expect(AuthService.instance.isLoggedIn, isFalse);
+    testWidgets('shows the empty state when the wall has no posts', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => const ProfilePage(username: 'Broodyr', profileUrl: 'https://example.com/members/x.1/'),
+      );
+
+      expect(find.text('No messages on your profile yet.'), findsOneWidget);
+      // No composer without a wall-post action.
+      expect(find.text('Write something…'), findsNothing);
+    });
+
+    testWidgets('posts a wall message through the composer', (tester) async {
+      await signIn();
+      final posted = <(String, String, String)>[];
+      await pumpProfile(
+        tester,
+        messagePoster: (url, csrf, message) async => posted.add((url, csrf, message)),
+      );
+
+      await tester.tap(find.text('Write something…'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Hello wall');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Post'));
+      await tester.pumpAndSettle();
+
+      expect(posted.single.$1, 'https://example.com/members/broodyr.1957582/post');
+      expect(posted.single.$2, 'mock-csrf');
+      expect(posted.single.$3, 'Hello wall');
+    });
+
+    testWidgets('tapping a wall author opens their profile', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
+
+      // The post author's header row; index 0 is the wall post, 1 their comment.
+      await tester.tap(find.text('VoidWalker').first);
+      // No pumpAndSettle: the pushed screen's real fetch stays pending under
+      // fake async and its loader would never settle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final pushed = tester.widgetList<ProfileScreen>(find.byType(ProfileScreen)).firstWhere((s) => s.url != null);
+      expect(pushed.url, 'https://example.com/members/voidwalker.101/');
+      expect(pushed.username, 'VoidWalker');
+    });
+
+    testWidgets('tapping a comment avatar opens that member too', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
+
+      // VoidWalker's follow-up comment renders a 17px avatar.
+      final commentAvatar = find.byWidgetPredicate(
+        (w) => w is ForumAvatar && w.username == 'VoidWalker' && w.size == 17,
+      );
+      await tester.tap(commentAvatar);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final pushed = tester.widgetList<ProfileScreen>(find.byType(ProfileScreen)).firstWhere((s) => s.url != null);
+      expect(pushed.url, 'https://example.com/members/voidwalker.101/');
+    });
+
+    testWidgets('tapping the viewed profile owner in a comment goes nowhere', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => const ProfilePage(
+          username: 'OtherGuy',
+          profileUrl: 'https://example.com/members/otherguy.42/',
+          wallPosts: [
+            ProfilePost(
+              id: 1,
+              author: 'Visitor',
+              body: 'Nice mods!',
+              comments: [
+                ProfileComment(
+                  id: 2,
+                  author: 'OtherGuy',
+                  authorUrl: 'https://example.com/members/otherguy.42/',
+                  body: 'Thanks!',
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      await tester.tap(find.text('OtherGuy').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProfileScreen), findsOneWidget);
+    });
+
+    testWidgets('comments on a wall post through its add-comment action', (tester) async {
+      await signIn();
+      final posted = <(String, String, String)>[];
+      await pumpProfile(
+        tester,
+        messagePoster: (url, csrf, message) async => posted.add((url, csrf, message)),
+      );
+
+      await tester.tap(find.text('Comment').first);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Nice one');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Post'));
+      await tester.pumpAndSettle();
+
+      expect(posted.single.$1, 'https://example.com/profile-posts/142106/add-comment');
+      expect(posted.single.$3, 'Nice one');
+    });
+  });
+
+  group('postings tab', () {
+    testWidgets('lazy loads and renders postings with their footer', (tester) async {
+      await signIn();
+      int fetches = 0;
+      await pumpProfile(
+        tester,
+        fetchPostings: (_) async {
+          fetches++;
+          return ProfileService.createMockPostings();
+        },
+      );
+      expect(fetches, 0);
+
+      await tester.tap(find.text('Postings'));
+      await tester.pumpAndSettle();
+
+      expect(fetches, 1);
+      expect(find.textContaining('Myth of Slayer Walkthrough [Ch 11]'), findsOneWidget);
+      expect(find.text('Post #29 · 21 minutes ago · Mods'), findsOneWidget);
+      expect(find.text('Thread · Jun 2, 2026 · Replies: 1 · Mods'), findsOneWidget);
+      expect(find.text('Mod'), findsWidgets);
+    });
+
+    testWidgets('uses an inline postings pane without refetching', (tester) async {
+      await signIn();
+      int fetches = 0;
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => ProfilePage(
+          username: 'Broodyr',
+          profileUrl: 'https://example.com/members/x.1/',
+          postings: ProfileService.createMockPostings(),
+        ),
+        fetchPostings: (_) async {
+          fetches++;
+          return const [];
+        },
+      );
+
+      await tester.tap(find.text('Postings'));
+      await tester.pumpAndSettle();
+
+      expect(fetches, 0);
+      expect(find.textContaining('Myth of Slayer Walkthrough [Ch 11]'), findsOneWidget);
+    });
+
+    testWidgets('tapping a posting opens the internal thread viewer', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
+
+      await tester.tap(find.text('Postings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Myth of Slayer Walkthrough [Ch 11]'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ForumThreadScreen), findsOneWidget);
+      final screen = tester.widget<ForumThreadScreen>(find.byType(ForumThreadScreen));
+      // The /post-N suffix is stripped so the viewer loads the thread.
+      expect(screen.url, 'https://example.com/threads/myth-of-slayer.276090/');
+    });
+  });
+
+  group('other member profiles (url mode)', () {
+    Future<void> pumpOther(WidgetTester tester, {FetchProfile? fetchProfile}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProfileScreen(
+            url: 'https://example.com/members/otherguy.42/',
+            username: 'OtherGuy',
+            fetchProfile: fetchProfile,
+            fetchPostings: (_) async => ProfileService.createMockPostings(),
+            fetchAbout: (_) async => ProfileService.createMockProfileAbout(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('loads by URL with a back button and no sign-out', (tester) async {
+      await signIn();
+      await pumpOther(
+        tester,
+        fetchProfile: () async => const ProfilePage(
+          username: 'OtherGuy',
+          memberTitle: 'Member',
+          profileUrl: 'https://example.com/members/otherguy.42/',
+        ),
+      );
+
+      // Username in the top bar and the identity header.
+      expect(find.text('OtherGuy'), findsNWidgets(2));
+      expect(find.byTooltip('Back'), findsOneWidget);
+      expect(find.byTooltip('Sign out'), findsNothing);
+      expect(find.text('No messages on this profile yet.'), findsOneWidget);
+    });
+
+    testWidgets('logged out prompts with a sign-in link instead of the gate', (tester) async {
+      await pumpOther(tester);
+
+      // "Sign in" renders as its own tappable widget inside the sentence.
+      expect(find.text('Sign in'), findsOneWidget);
+      expect(find.textContaining('to view member profiles.'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
+      expect(find.text('Not signed in'), findsNothing);
+      expect(find.text('OtherGuy'), findsOneWidget);
+    });
+
+    testWidgets('signing in mid-view loads the profile over the prompt', (tester) async {
+      await pumpOther(
+        tester,
+        fetchProfile: () async => const ProfilePage(
+          username: 'OtherGuy',
+          profileUrl: 'https://example.com/members/otherguy.42/',
+        ),
+      );
+      expect(find.text('Sign in'), findsOneWidget);
+
+      await signIn();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign in'), findsNothing);
+      expect(find.text('OtherGuy'), findsNWidgets(2));
+    });
+  });
+
+  group('about tab', () {
+    testWidgets('lazy loads bio and detail fields', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
+
+      await tester.tap(find.text('About'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Birthday'), findsOneWidget);
+      expect(find.text('Jan 28'), findsOneWidget);
+      expect(find.text('example.itch.io'), findsOneWidget);
+      expect(find.text('The Netherlands'), findsOneWidget);
+      expect(find.textContaining('Modding Ren\'Py games'), findsOneWidget);
+    });
+
+    testWidgets('shows an empty state when nothing is set', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchAbout: (_) async => const ProfileAbout());
+
+      await tester.tap(find.text('About'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nothing here yet.'), findsOneWidget);
+    });
   });
 }

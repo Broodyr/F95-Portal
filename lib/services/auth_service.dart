@@ -41,6 +41,20 @@ class AuthService extends ChangeNotifier {
 
   bool get isLoggedIn => _cookies.containsKey('xf_user');
 
+  /// The numeric member id from the xf_user cookie ("id,token", sometimes
+  /// URL-encoded by the webview); null when logged out or unparseable.
+  /// It's how the app finds its own profile: `/members/<id>/` redirects to
+  /// the canonical member URL.
+  int? get userId {
+    final raw = _cookies['xf_user'];
+    if (raw == null) return null;
+    String decoded = raw;
+    try {
+      decoded = Uri.decodeComponent(raw);
+    } catch (_) {}
+    return int.tryParse(decoded.split(',').first);
+  }
+
   String? get cookieHeader => _cookies.isEmpty ? null : _cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
 
   Future<void> load() async {

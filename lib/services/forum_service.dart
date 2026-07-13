@@ -412,6 +412,7 @@ class ForumService {
           postId: 9000 + page,
           number: (page - 1) * 2 + 1,
           author: 'DarkVault',
+          authorUrl: 'https://example.com/members/darkvault.4242/',
           memberTitle: 'Well-known member',
           date: 'Jun 28, 2026',
           blocks: const [
@@ -434,6 +435,7 @@ class ForumService {
           postId: 9100 + page,
           number: (page - 1) * 2 + 2,
           author: 'mikkoxd',
+          authorUrl: 'https://example.com/members/mikkoxd.777/',
           memberTitle: 'Member',
           date: 'Jun 29, 2026',
           blocks: const [
