@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'main_app.dart';
 import 'models/f95_metadata.dart';
 import 'services/auth_service.dart';
@@ -35,7 +36,7 @@ class F95Portal extends StatelessWidget {
         showPerformanceOverlay: SettingsService.instance.settings.showPerfOverlay && !kReleaseMode,
         theme: ThemeData(
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFFDC143C),
+            primary: Color(0xFFDC144D),
             secondary: Color(0xFF2189FF),
             surface: Color(0xFF1E1E1E),
           ),
