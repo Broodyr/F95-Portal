@@ -7,7 +7,6 @@ import '../utils/formatters.dart';
 import 'cover_image.dart';
 import 'engine_tag.dart';
 import 'version_pill.dart';
-import 'star_rating.dart';
 import 'metadata_row.dart';
 
 class ThreadCard extends StatelessWidget {
@@ -59,8 +58,6 @@ class ThreadCard extends StatelessWidget {
                   ),
                 ),
 
-                // Star rating (bottom-right)
-                Positioned(bottom: 8, right: 8, child: StarRating(rating: thread.rating)),
               ],
             ),
 
@@ -148,7 +145,12 @@ class ThreadCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           // Metadata row
-                          MetadataRow(timeUpdated: thread.date, likes: thread.likes, views: thread.views),
+                          MetadataRow(
+                            timeUpdated: thread.date,
+                            likes: thread.likes,
+                            views: thread.views,
+                            rating: thread.rating,
+                          ),
                         ],
                       ),
                     ),

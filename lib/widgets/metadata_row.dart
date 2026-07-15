@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import '../utils/formatters.dart';
+import 'star_rating.dart';
 
 class MetadataRow extends StatelessWidget {
   final String timeUpdated;
   final int likes;
   final int views;
+  final double rating;
 
-  const MetadataRow({super.key, required this.timeUpdated, required this.likes, required this.views});
+  const MetadataRow({
+    super.key,
+    required this.timeUpdated,
+    required this.likes,
+    required this.views,
+    required this.rating,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +36,10 @@ class MetadataRow extends StatelessWidget {
         Icon(Icons.visibility, size: 14, color: Colors.grey[400]),
         const SizedBox(width: 4),
         Text(NumberFormatter.formatNumber(views), style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+
+        // Score, pushed to the row's right end
+        const Spacer(),
+        StarRating(rating: rating, starSize: 14),
       ],
     );
   }
