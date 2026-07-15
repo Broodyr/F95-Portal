@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import 'glass_aware.dart';
 
 /// App-styled toast: a self-sized floating pill on the bottom nav's glass
@@ -26,7 +27,7 @@ class AppToast {
           elevation: 0,
           padding: EdgeInsets.zero,
           margin: const EdgeInsets.fromLTRB(32, 0, 32, 72),
-          duration: const Duration(milliseconds: 2800),
+          duration: AppDurations.toastDuration,
           content: Center(
             child: GlassAware(
               builder: (context, glass) => ClipRRect(
