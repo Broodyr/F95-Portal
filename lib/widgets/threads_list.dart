@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../models/search_query.dart';
 import '../models/thread_summary.dart';
@@ -219,6 +220,9 @@ class _ThreadsListState extends State<ThreadsList> {
       child: ListView.builder(
         controller: widget.scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
+        // Build about a screen's worth of offscreen cards so their cover
+        // images (low-res + HD upgrade) start loading before they scroll in.
+        scrollCacheExtent: const ScrollCacheExtent.viewport(1),
         padding: MediaQuery.of(context).padding,
         itemCount: headerCount + _threads.length + (showFooter ? 1 : 0),
         itemBuilder: (context, index) {

@@ -148,7 +148,9 @@ void main() {
     await pumpTestApp(tester, ThreadsList(fetchThreads: pagedFetch));
     await tester.pumpAndSettle();
 
-    expect(requestedPages, [1]);
+    // The cache extent may prefetch page 2 with these small test pages, but
+    // loading always starts from page 1.
+    expect(requestedPages.first, 1);
     expect(find.text('P1 #0'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('P2 #0'), 400);
@@ -234,10 +236,12 @@ void main() {
     await tester.pumpAndSettle();
 
     const updated = SearchQuery(search: 'goblin');
+    final requestsBeforeChange = requests.length;
     await tester.pumpWidget(buildList(updated));
     await tester.pumpAndSettle();
 
-    expect(requests.last, (updated, 1));
+    // The first request for the new query starts back at page one.
+    expect(requests[requestsBeforeChange], (updated, 1));
     expect(find.text('P1 #0'), findsOneWidget);
   });
 
