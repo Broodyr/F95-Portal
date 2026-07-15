@@ -36,4 +36,38 @@ void main() {
     // cached_network_image leaves pending timers.
     await tester.pump(const Duration(minutes: 1));
   });
+
+  testWidgets('a caller-provided gallery replaces the block-scoped one, offset applied', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: RichSpoilerText(
+            pieces: const [
+              RichPiece.image('https://example.com/thumb/c.jpg', fullImageUrl: 'https://example.com/c.jpg'),
+            ],
+            onOpenLink: (_) {},
+            galleryUrls: const ['https://example.com/a.jpg', 'https://example.com/b.jpg', 'https://example.com/c.jpg'],
+            galleryIndexOffset: 2,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byType(CachedNetworkImage));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final gallery = tester.widget<ScreenshotGallery>(find.byType(ScreenshotGallery));
+    expect(gallery.urls, [
+      'https://example.com/a.jpg',
+      'https://example.com/b.jpg',
+      'https://example.com/c.jpg',
+    ]);
+    expect(gallery.initialIndex, 2);
+
+    // cached_network_image leaves pending timers.
+    await tester.pump(const Duration(minutes: 1));
+  });
 }

@@ -13,7 +13,19 @@ class RichSpoilerText extends StatefulWidget {
   final List<RichPiece> pieces;
   final void Function(Uri uri) onOpenLink;
 
-  const RichSpoilerText({super.key, required this.pieces, required this.onOpenLink});
+  /// Full-size URLs the fullscreen gallery should page through instead of
+  /// just this block's images (e.g. every image of a forum post), with
+  /// [galleryIndexOffset] locating this block's first image inside it.
+  final List<String>? galleryUrls;
+  final int galleryIndexOffset;
+
+  const RichSpoilerText({
+    super.key,
+    required this.pieces,
+    required this.onOpenLink,
+    this.galleryUrls,
+    this.galleryIndexOffset = 0,
+  });
 
   @override
   State<RichSpoilerText> createState() => _RichSpoilerTextState();
@@ -40,12 +52,16 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
     final colorScheme = Theme.of(context).colorScheme;
     final baseStyle = TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45);
 
-    // All full-size image URLs in this block, so tapping any one opens the
-    // gallery positioned there with the rest swipeable.
-    final galleryUrls = [
-      for (final piece in widget.pieces)
-        if (piece.imageUrl != null) piece.fullImageUrl ?? piece.imageUrl!,
-    ];
+    // Tapping any image opens the gallery positioned on it with the rest
+    // swipeable: the caller-provided set when given, else this block's own
+    // full-size URLs.
+    final galleryUrls =
+        widget.galleryUrls ??
+        [
+          for (final piece in widget.pieces)
+            if (piece.imageUrl != null) piece.fullImageUrl ?? piece.imageUrl!,
+        ];
+    final indexOffset = widget.galleryUrls != null ? widget.galleryIndexOffset : 0;
     int imageIndex = -1;
 
     final spans = <InlineSpan>[];
@@ -59,7 +75,7 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
         // Inline shows the thumbnail; tapping opens the full-resolution
         // source (the same URL when no separate full-size was parsed).
         imageIndex++;
-        final int galleryIndex = imageIndex;
+        final int galleryIndex = indexOffset + imageIndex;
         spans.add(
           WidgetSpan(
             child: Padding(

@@ -731,10 +731,7 @@ class _PostCardState extends State<_PostCard> {
             ],
           ),
           const SizedBox(height: 8),
-          for (int i = 0; i < post.blocks.length; i++) ...[
-            if (i > 0) const SizedBox(height: 6),
-            _buildBlock(colorScheme, i, post.blocks[i]),
-          ],
+          ..._buildBlocks(colorScheme, post),
           if ((post.reactions?.count ?? 0) > 0 || widget.onReact != null || widget.onEdit != null) ...[
             const SizedBox(height: 9),
             Row(
@@ -777,10 +774,41 @@ class _PostCardState extends State<_PostCard> {
     );
   }
 
-  Widget _buildBlock(ColorScheme colorScheme, int index, ForumPostBlock block) {
+  /// Blocks share one gallery spanning the whole post, so tapping any image
+  /// pages through every image of the reply (quotes and spoilers included).
+  List<Widget> _buildBlocks(ColorScheme colorScheme, ForumPost post) {
+    final postGalleryUrls = [
+      for (final block in post.blocks)
+        for (final piece in block.pieces)
+          if (piece.imageUrl != null) piece.fullImageUrl ?? piece.imageUrl!,
+    ];
+
+    final widgets = <Widget>[];
+    int imageOffset = 0;
+    for (int i = 0; i < post.blocks.length; i++) {
+      if (i > 0) widgets.add(const SizedBox(height: 6));
+      final block = post.blocks[i];
+      widgets.add(_buildBlock(colorScheme, i, block, postGalleryUrls, imageOffset));
+      imageOffset += block.pieces.where((p) => p.imageUrl != null).length;
+    }
+    return widgets;
+  }
+
+  Widget _buildBlock(
+    ColorScheme colorScheme,
+    int index,
+    ForumPostBlock block,
+    List<String> galleryUrls,
+    int galleryIndexOffset,
+  ) {
     switch (block.kind) {
       case PostBlockKind.rich:
-        return RichSpoilerText(pieces: block.pieces, onOpenLink: widget.onOpenLink);
+        return RichSpoilerText(
+          pieces: block.pieces,
+          onOpenLink: widget.onOpenLink,
+          galleryUrls: galleryUrls,
+          galleryIndexOffset: galleryIndexOffset,
+        );
       case PostBlockKind.quote:
         return Container(
           width: double.infinity,
@@ -797,7 +825,12 @@ class _PostCardState extends State<_PostCard> {
                   padding: const EdgeInsets.only(bottom: 3),
                   child: Text('${block.label} said:', style: TextStyle(color: Colors.grey[500], fontSize: 10.5)),
                 ),
-              RichSpoilerText(pieces: block.pieces, onOpenLink: widget.onOpenLink),
+              RichSpoilerText(
+                pieces: block.pieces,
+                onOpenLink: widget.onOpenLink,
+                galleryUrls: galleryUrls,
+                galleryIndexOffset: galleryIndexOffset,
+              ),
             ],
           ),
         );
@@ -838,7 +871,12 @@ class _PostCardState extends State<_PostCard> {
                 visible: expanded,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                  child: RichSpoilerText(pieces: block.pieces, onOpenLink: widget.onOpenLink),
+                  child: RichSpoilerText(
+                    pieces: block.pieces,
+                    onOpenLink: widget.onOpenLink,
+                    galleryUrls: galleryUrls,
+                    galleryIndexOffset: galleryIndexOffset,
+                  ),
                 ),
               ),
             ],

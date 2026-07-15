@@ -2,6 +2,7 @@ import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
 
 import '../models/thread_page.dart';
+import '../utils/image_urls.dart';
 
 /// One inline item on a "line" of the first post: a text run (possibly
 /// bold), a link, or a placeholder for a spoiler block.
@@ -443,18 +444,22 @@ List<RichPiece> parseRichContent(Element content) {
         final thumb = rawSrc.startsWith('http') ? rawSrc : (dataSrc ?? rawSrc);
         if (!thumb.startsWith('http') || imageCount >= _spoilerImageCap) return;
         // Full-size shown when tapped: the enclosing lightbox anchor when it
-        // points at an image, else data-src, else the thumbnail with the
-        // `/thumb/` segment dropped (f95 attachment thumbs live under it).
+        // points at an image, else data-src, else the HD variant of the
+        // thumbnail (f95 attachment thumbs live under a `/thumb/` segment).
         final String full;
         if (link != null && _isImageUrl(link)) {
           full = link;
         } else if (dataSrc != null && dataSrc.startsWith('http')) {
           full = dataSrc;
         } else {
-          full = thumb.replaceFirst('/thumb/', '/');
+          full = toHdImageUrl(thumb) ?? thumb.replaceFirst('/thumb/', '/');
         }
+        // Posts often embed the full attachment directly; decoding many of
+        // those at once lags the thread view, so inline always shows the
+        // low-quality preview variant when one exists.
+        final display = toPreviewImageUrl(thumb) ?? thumb;
         imageCount++;
-        pieces.add(RichPiece.image(thumb, fullImageUrl: full == thumb ? null : full));
+        pieces.add(RichPiece.image(display, fullImageUrl: full == display ? null : full));
         return;
       }
 

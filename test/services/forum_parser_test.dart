@@ -133,10 +133,12 @@ void main() {
 
       final rich = blocks[1];
       expect(rich.kind, PostBlockKind.rich);
-      expect(
-        rich.pieces.map((p) => p.imageUrl).whereType<String>(),
-        contains('https://attachments.f95zone.to/2024/05/3652583_1715545111474.png'),
+      // The saved page embeds the full attachment; inline is downgraded to
+      // the preview host with the full kept for the viewer.
+      final image = rich.pieces.firstWhere(
+        (p) => p.imageUrl == 'https://preview.f95zone.to/2024/05/3652583_1715545111474.png',
       );
+      expect(image.fullImageUrl, 'https://attachments.f95zone.to/2024/05/3652583_1715545111474.png');
     });
 
     test('parses the thread watch endpoint and state', () {
@@ -480,6 +482,24 @@ void main() {
 
       expect(img.imageUrl, 'https://example.com/pic.png');
       expect(img.fullImageUrl, isNull);
+    });
+
+    test('downgrades directly-embedded full attachments to the preview host inline', () {
+      final img = imageBlock(
+        '<img src="https://attachments.f95zone.to/2025/03/777_full.png" class="bbImage">',
+      ).pieces.firstWhere((p) => p.imageUrl != null);
+
+      expect(img.imageUrl, 'https://preview.f95zone.to/2025/03/777_full.png');
+      expect(img.fullImageUrl, 'https://attachments.f95zone.to/2025/03/777_full.png');
+    });
+
+    test('downgrades saved-page data-src full URLs to the preview host inline', () {
+      final img = imageBlock(
+        '<img src="" data-src="https://attachments.f95zone.to/2025/03/888_saved.png" class="bbImage">',
+      ).pieces.firstWhere((p) => p.imageUrl != null);
+
+      expect(img.imageUrl, 'https://preview.f95zone.to/2025/03/888_saved.png');
+      expect(img.fullImageUrl, 'https://attachments.f95zone.to/2025/03/888_saved.png');
     });
   });
 

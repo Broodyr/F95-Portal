@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/models/thread_summary.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
@@ -151,6 +152,53 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byType(ScreenshotGallery), findsOneWidget);
+  });
+
+  testWidgets('the gallery gets the HD variant of a preview-host cover', (tester) async {
+    await pumpDetails(
+      tester,
+      thread: createThreadSummary(threadId: 42, cover: 'https://preview.f95zone.to/2023/02/42_cover.png'),
+    );
+
+    await tester.tap(find.byKey(const Key('details-cover')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final gallery = tester.widget<ScreenshotGallery>(find.byType(ScreenshotGallery));
+    expect(gallery.urls, ['https://attachments.f95zone.to/2023/02/42_cover.png']);
+
+    // cached_network_image leaves pending timers.
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('screenshot thumbs stay low-res while the gallery gets HD', (tester) async {
+    const screens = [
+      'https://preview.f95zone.to/2023/02/42_s1.png',
+      'https://preview.f95zone.to/2023/02/42_s2.png',
+    ];
+    await pumpDetails(tester, thread: createThreadSummary(threadId: 42, screens: screens));
+
+    await tester.scrollUntilVisible(find.text('Screenshots'), 150);
+    await tester.pumpAndSettle();
+
+    // The grid renders the low-quality preview URLs as-is.
+    thumbFinder(String url) =>
+        find.byWidgetPredicate((w) => w is CachedNetworkImage && w.imageUrl == url);
+    expect(thumbFinder(screens[1]), findsOneWidget);
+
+    await tester.tap(thumbFinder(screens[1]));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final gallery = tester.widget<ScreenshotGallery>(find.byType(ScreenshotGallery));
+    expect(gallery.urls, [
+      'https://attachments.f95zone.to/2023/02/42_s1.png',
+      'https://attachments.f95zone.to/2023/02/42_s2.png',
+    ]);
+    expect(gallery.initialIndex, 1);
+
+    // cached_network_image leaves pending timers.
+    await tester.pump(const Duration(minutes: 1));
   });
 
   testWidgets('open thread pushes the in-app forum viewer', (tester) async {

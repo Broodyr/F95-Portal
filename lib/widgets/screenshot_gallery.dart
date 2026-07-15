@@ -38,12 +38,26 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   /// one-finger drag pans the image instead of changing pages.
   bool get _pageSwipingDisabled => _pointerCount >= 2 || _zoomed;
 
+  bool _precached = false;
+
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
     _transformation.addListener(_onTransformationChanged);
+  }
+
+  /// HD images are only fetched once the viewer opens; start them all now so
+  /// swiping to the neighbors doesn't wait on the network.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_precached) return;
+    _precached = true;
+    for (final url in widget.urls) {
+      precacheImage(CachedNetworkImageProvider(url), context, onError: (error, stackTrace) {});
+    }
   }
 
   @override

@@ -16,6 +16,7 @@ import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../services/thread_page_service.dart';
 import '../utils/formatters.dart';
+import '../utils/image_urls.dart';
 import 'app_toast.dart';
 import 'engine_tag.dart';
 import 'rich_spoiler_text.dart';
@@ -774,7 +775,9 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
         key: const Key('details-cover'),
         behavior: HitTestBehavior.opaque,
         // Covers are cropped to 3:1 here; tap to see the full image.
-        onTap: thread.cover.isEmpty ? null : () => ScreenshotGallery.show(context, [thread.cover]),
+        onTap: thread.cover.isEmpty
+            ? null
+            : () => ScreenshotGallery.show(context, [toHdImageUrl(thread.cover) ?? thread.cover]),
         child: Stack(
           children: [
             ClipRRect(
@@ -884,7 +887,13 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
 
   Widget _buildScreenshotThumb(BuildContext context, int index) {
     return GestureDetector(
-      onTap: () => ScreenshotGallery.show(context, thread.screens, initialIndex: index),
+      // Thumbs stay on the low-quality preview host; the viewer gets the HD
+      // variants, all of which it starts loading as soon as it opens.
+      onTap: () => ScreenshotGallery.show(
+        context,
+        [for (final url in thread.screens) toHdImageUrl(url) ?? url],
+        initialIndex: index,
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
