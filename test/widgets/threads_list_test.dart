@@ -241,6 +241,50 @@ void main() {
     expect(find.text('P1 #0'), findsOneWidget);
   });
 
+  testWidgets('renders the header above the first thread and scrolls it away', (tester) async {
+    pagedFetch({
+      SearchQuery query = const SearchQuery(),
+      int page = 1,
+      int rows = 90,
+      bool fallbackToMockOnError = false,
+    }) async {
+      return createApiResponse(threads: pageOf(page, 8), page: page, total: 2, count: 16);
+    }
+
+    const headerKey = Key('list-header');
+    await pumpTestApp(tester, ThreadsList(fetchThreads: pagedFetch, header: const SizedBox(key: headerKey, height: 44)));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(headerKey), findsOneWidget);
+    expect(
+      tester.getBottomLeft(find.byKey(headerKey)).dy,
+      lessThanOrEqualTo(tester.getTopLeft(find.text('P1 #0')).dy),
+    );
+
+    await tester.drag(find.byType(ListView), const Offset(0, -3000));
+    await tester.pump();
+
+    expect(find.byKey(headerKey), findsNothing);
+  });
+
+  testWidgets('keeps the header visible when no threads match', (tester) async {
+    emptyFetch({
+      SearchQuery query = const SearchQuery(),
+      int page = 1,
+      int rows = 90,
+      bool fallbackToMockOnError = false,
+    }) async {
+      return createApiResponse(threads: [], count: 0);
+    }
+
+    const headerKey = Key('list-header');
+    await pumpTestApp(tester, ThreadsList(fetchThreads: emptyFetch, header: const SizedBox(key: headerKey, height: 44)));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(headerKey), findsOneWidget);
+    expect(find.text('No threads match this search'), findsOneWidget);
+  });
+
   testWidgets('does not refetch when rebuilt with an equal query', (tester) async {
     int calls = 0;
 

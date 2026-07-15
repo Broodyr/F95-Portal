@@ -32,8 +32,6 @@ class ThreadsScreen extends StatefulWidget {
 
 class _ThreadsScreenState extends State<ThreadsScreen> {
   // Use external ScrollController if provided, otherwise create internal one
-  static const double _filtersBarHeight = 56;
-
   late final ScrollController _scrollController;
   late SearchQuery _activeQuery;
   int? _resultCount;
@@ -167,28 +165,20 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
             scrollController: _scrollController,
             fetchThreads: widget.fetchThreads,
             query: _activeQuery,
-            topInset: showFiltersBar ? _filtersBarHeight : 0,
+            header: showFiltersBar
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: ActiveFiltersBar(
+                      query: _activeQuery,
+                      resultCount: _resultCount,
+                      onQueryChanged: _onQueryChanged,
+                      onClearAll: () => _onQueryChanged(SettingsService.instance.settings.defaultQuery),
+                    ),
+                  )
+                : null,
             onCountChanged: (count) => setState(() => _resultCount = count),
             onTagSelected: _onTagSelected,
           ),
-          if (showFiltersBar)
-            Positioned(
-              top: 0,
-              left: 16,
-              right: 16,
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: ActiveFiltersBar(
-                    query: _activeQuery,
-                    resultCount: _resultCount,
-                    onQueryChanged: _onQueryChanged,
-                    onClearAll: () => _onQueryChanged(SettingsService.instance.settings.defaultQuery),
-                  ),
-                ),
-              ),
-            ),
           SearchFab(
             scrollController: _scrollController,
             onSearchPressed: _onSearchPressed,

@@ -20,8 +20,9 @@ class ThreadsList extends StatefulWidget {
   /// Called when the user picks a tag inside the details modal.
   final ValueChanged<ThreadTagSelection>? onTagSelected;
 
-  /// Extra space reserved at the top of the list (e.g. for an overlay bar).
-  final double topInset;
+  /// Rendered as the first list item, scrolling with the content (also kept
+  /// visible above the loading/error/empty states).
+  final Widget? header;
 
   const ThreadsList({
     super.key,
@@ -30,7 +31,7 @@ class ThreadsList extends StatefulWidget {
     this.query = const SearchQuery(),
     this.onCountChanged,
     this.onTagSelected,
-    this.topInset = 0,
+    this.header,
   });
 
   @override
@@ -143,14 +144,29 @@ class _ThreadsListState extends State<ThreadsList> {
     }
   }
 
+  /// Keeps the header (e.g. the active-filters bar) reachable while a
+  /// non-list state fills the body, so filters can still be cleared when a
+  /// search matches nothing or fails.
+  Widget _withHeader(BuildContext context, Widget body) {
+    final header = widget.header;
+    if (header == null) return body;
+    return Padding(
+      padding: MediaQuery.of(context).padding,
+      child: Column(children: [header, Expanded(child: body)]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary));
+      return _withHeader(
+        context,
+        Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
+      );
     }
 
     if (_error != null) {
-      return Center(
+      return _withHeader(context, Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -174,23 +190,27 @@ class _ThreadsListState extends State<ThreadsList> {
             ),
           ],
         ),
-      );
+      ));
     }
 
     if (_threads.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text('No threads match this search', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
-          ],
+      return _withHeader(
+        context,
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text('No threads match this search', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
+            ],
+          ),
         ),
       );
     }
 
     final bool showFooter = _hasMore || _loadMoreError != null;
+    final int headerCount = widget.header != null ? 1 : 0;
 
     return RefreshIndicator(
       onRefresh: _onRefresh,
@@ -199,18 +219,25 @@ class _ThreadsListState extends State<ThreadsList> {
       child: ListView.builder(
         controller: widget.scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: MediaQuery.of(context).padding.add(EdgeInsets.only(top: widget.topInset)),
-        itemCount: _threads.length + (showFooter ? 1 : 0),
+        padding: MediaQuery.of(context).padding,
+        itemCount: headerCount + _threads.length + (showFooter ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index >= _threads.length) {
+          if (index < headerCount) {
+            return widget.header;
+          }
+          final threadIndex = index - headerCount;
+          if (threadIndex >= _threads.length) {
             return _buildFooter(context);
           }
 
-          if (index >= _threads.length - _loadMoreThreshold && _hasMore && !_isLoadingMore && _loadMoreError == null) {
+          if (threadIndex >= _threads.length - _loadMoreThreshold &&
+              _hasMore &&
+              !_isLoadingMore &&
+              _loadMoreError == null) {
             _scheduleLoadMore();
           }
 
-          final thread = _threads[index];
+          final thread = _threads[threadIndex];
           return ThreadCard(thread: thread, category: widget.query.category, onTap: () => _onThreadTap(thread));
         },
       ),
