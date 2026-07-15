@@ -295,7 +295,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                           ),
                         ],
                         if (thread.tags.isNotEmpty) ...[
-                          _buildSectionLabel('Tags', hint: 'tap to add to search · hold to replace'),
+                          _buildSectionLabel('Tags', hint: 'tap to add to search · hold to replace current search'),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: _buildTagChips(context, colorScheme),
@@ -431,10 +431,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
         // Guest-rendered pages hide download links, so an absent section
         // almost always means "not signed in" rather than "no downloads".
         _buildSectionLabel('Downloads'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: _buildDownloadsLoginPrompt(colorScheme),
-        ),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: _buildDownloadsLoginPrompt(colorScheme)),
       ],
       if (page.attachments.isNotEmpty) ...[
         _buildSectionLabel('Attachments'),
@@ -563,12 +560,12 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
             Icon(Icons.lock_outline, size: 16, color: Colors.grey[500]),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                'Sign in to see download links',
-                style: TextStyle(color: Colors.grey[300], fontSize: 13),
-              ),
+              child: Text('Sign in to see download links', style: TextStyle(color: Colors.grey[300], fontSize: 13)),
             ),
-            Text('Sign in', style: TextStyle(color: colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(
+              'Sign in',
+              style: TextStyle(color: colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
