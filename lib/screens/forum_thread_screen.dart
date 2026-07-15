@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../models/forum.dart';
 import '../services/forum_service.dart';
+import '../services/thread_page_service.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/reaction_icon.dart';
@@ -18,6 +20,10 @@ typedef ReactSender = Future<void> Function(int postId, int reactionId, String c
 typedef ReplySender = Future<void> Function(String replyUrl, String csrfToken, String message);
 typedef EditFetcher = Future<String> Function(String editUrl);
 typedef EditSaver = Future<void> Function(String editUrl, String csrfToken, String message);
+typedef WatchSender = Future<void> Function(String url, String csrfToken, Map<String, String> fields);
+
+/// The three watch modes the long-press sheet offers.
+enum WatchChoice { off, alerts, email }
 
 /// Full-screen light thread viewer: the post loop as-is (author, avatar,
 /// body with quotes/spoilers, reaction summary) with page pills at the
@@ -33,6 +39,7 @@ class ForumThreadScreen extends StatefulWidget {
   final ReplySender? replySender;
   final EditFetcher? editFetcher;
   final EditSaver? editSaver;
+  final WatchSender? watchSender;
   final Future<bool> Function(Uri uri)? urlLauncher;
 
   const ForumThreadScreen({
@@ -46,6 +53,7 @@ class ForumThreadScreen extends StatefulWidget {
     this.replySender,
     this.editFetcher,
     this.editSaver,
+    this.watchSender,
     this.urlLauncher,
   });
 
@@ -55,15 +63,30 @@ class ForumThreadScreen extends StatefulWidget {
 
 class _ForumThreadScreenState extends State<ForumThreadScreen> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _targetPostKey = GlobalKey();
   ThreadPostsPage? _page;
   int _pageNumber = 1;
   bool _loading = true;
+  bool _watched = false;
   String? _error;
+
+  /// The thread's canonical base URL once known; permalink openings
+  /// (/posts/N/ from alerts and bookmarks, /threads/x/post-N from search)
+  /// can't paginate on their own URL.
+  String? _resolvedUrl;
+
+  /// The post a permalink URL targets; the first load scrolls to it.
+  int? _targetPostId;
+  bool _scrolledToTarget = false;
 
   @override
   void initState() {
     super.initState();
     _pageNumber = widget.initialPage;
+    // Both permalink shapes: /posts/N/ (alerts, bookmarks) and
+    // /threads/x/post-N (search results). The leading slash keeps slugs
+    // like "my-post-77-story" from matching.
+    _targetPostId = int.tryParse(RegExp(r'/posts?[/-](\d+)').firstMatch(widget.url)?.group(1) ?? '');
     _load();
   }
 
@@ -80,18 +103,50 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     });
     try {
       final fetch = widget.fetchPosts ?? ForumService.fetchThreadPosts;
-      final page = await fetch(widget.url, page: _pageNumber);
+      final page = await fetch(_resolvedUrl ?? widget.url, page: _pageNumber);
       if (!mounted) return;
       setState(() {
         _page = page;
+        _watched = page.watched;
+        // Permalink fetches land wherever the server redirects them; the
+        // parsed page is the truth for the counter and pagination.
+        _pageNumber = page.currentPage;
+        if (page.threadUrl.isNotEmpty) _resolvedUrl = page.threadUrl;
         _loading = false;
       });
+      _maybeScrollToTarget();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;
       });
+    }
+  }
+
+  /// One-time scroll to the permalink's post after its page first renders.
+  void _maybeScrollToTarget() {
+    if (_targetPostId == null || _scrolledToTarget) return;
+    if (!(_page?.posts.any((post) => post.postId == _targetPostId) ?? false)) return;
+    _scrolledToTarget = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _stepScrollToTarget());
+  }
+
+  /// The list builds lazily, so the target's element doesn't exist until
+  /// its offset is reached: step toward it until it mounts, then align it.
+  Future<void> _stepScrollToTarget() async {
+    while (mounted &&
+        _targetPostKey.currentContext == null &&
+        _scrollController.hasClients &&
+        _scrollController.offset < _scrollController.position.maxScrollExtent) {
+      _scrollController.jumpTo(
+        (_scrollController.offset + 600).clamp(0.0, _scrollController.position.maxScrollExtent),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    final targetContext = _targetPostKey.currentContext;
+    if (targetContext != null && targetContext.mounted) {
+      await Scrollable.ensureVisible(targetContext, duration: Motion.duration, curve: Motion.curve);
     }
   }
 
@@ -114,6 +169,56 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ProfileScreen(url: post.authorUrl!, username: post.author)),
     );
+  }
+
+  /// Optimistically toggles the thread watch (without email notifications),
+  /// reverting on failure. Watched threads are what feed reply alerts, so
+  /// this replaces the old modal-side watch action.
+  Future<void> _toggleWatch() async {
+    HapticFeedback.selectionClick();
+    await _applyWatchChoice(_watched ? WatchChoice.off : WatchChoice.alerts);
+  }
+
+  /// Long-press: the full three-way choice. The site never reports whether
+  /// an existing watch emails (its watch overlay is just an unwatch
+  /// confirm), so a watched thread preselects nothing; re-posting a watch
+  /// mode simply updates the subscription.
+  Future<void> _showWatchOptions() async {
+    if (_page?.watchUrl == null) return;
+
+    HapticFeedback.vibrate();
+    final WatchChoice? current = _watched ? null : WatchChoice.off;
+    final choice = await _WatchOptionsSheet.show(context, current: current);
+    if (choice == null || choice == current || !mounted) return;
+    await _applyWatchChoice(choice);
+  }
+
+  Future<void> _applyWatchChoice(WatchChoice choice) async {
+    final page = _page;
+    final url = page?.watchUrl;
+    if (page == null || url == null) return;
+    if (choice == WatchChoice.off && !_watched) return;
+
+    final bool wasWatched = _watched;
+    setState(() => _watched = choice != WatchChoice.off);
+
+    try {
+      final send =
+          widget.watchSender ?? (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
+      // Bare POST watches without email; email_subscribe=1 adds email (and
+      // updates an existing watch); stop=1 unwatches.
+      final fields = switch (choice) {
+        WatchChoice.off => const {'stop': '1'},
+        WatchChoice.alerts => const <String, String>{},
+        WatchChoice.email => const {'email_subscribe': '1'},
+      };
+      await send(url, page.csrfToken, fields);
+      ForumService.clearCache();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _watched = wasWatched);
+      AppToast.show(context, '$e', error: true);
+    }
   }
 
   Future<void> _react(ForumPost post) async {
@@ -272,12 +377,22 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       children: [
         for (final post in page.posts)
           Padding(
+            key: post.postId == _targetPostId ? _targetPostKey : null,
             padding: const EdgeInsets.only(bottom: 8),
             child: _PostCard(
               post: post,
+              highlighted: post.postId == _targetPostId,
               onOpenLink: _launch,
               fetchReactions: widget.fetchReactions ?? ForumService.fetchReactions,
               onAuthorTap: post.authorUrl == null ? null : () => _openProfile(post),
+              // Watch sits at the OP's top-right so it's reachable without
+              // scrolling the post; the anchor only renders for members.
+              // Tap toggles alerts-only watching, hold picks email mode.
+              watched: _watched,
+              onWatchToggle: page.watchUrl != null && _pageNumber == 1 && identical(post, page.posts.first)
+                  ? _toggleWatch
+                  : null,
+              onWatchLongPress: _showWatchOptions,
               // Writes gate on the reply URL: the quick-reply form only
               // renders for members who can post here. Edit gates on the
               // per-post edit link (own posts only).
@@ -402,6 +517,94 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   }
 }
 
+/// Bottom sheet with the three watch modes; pops the picked [WatchChoice].
+/// A null [current] means "watching, mode unknown" — the site's markup
+/// never distinguishes email from alerts-only watching.
+class _WatchOptionsSheet extends StatelessWidget {
+  final WatchChoice? current;
+
+  const _WatchOptionsSheet({required this.current});
+
+  static Future<WatchChoice?> show(BuildContext context, {required WatchChoice? current}) {
+    return showModalBottomSheet<WatchChoice>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => _WatchOptionsSheet(current: current),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    Widget option(WatchChoice choice, IconData icon, String label, String hint) {
+      final bool selected = choice == current;
+      return InkWell(
+        onTap: () => Navigator.of(context).pop(choice),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+          child: Row(
+            children: [
+              Icon(icon, size: 19, color: selected ? colorScheme.primary : Colors.grey[500]),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: selected ? Colors.white : Colors.grey[300],
+                        fontSize: 13.5,
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                    Text(hint, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                  ],
+                ),
+              ),
+              if (selected) Icon(Icons.check, size: 17, color: colorScheme.primary),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    current == null ? 'Watching this thread' : 'Watch thread',
+                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  if (current == null)
+                    Text(
+                      "The site doesn't report whether emails are on; picking a mode sets it.",
+                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          option(WatchChoice.off, Icons.notifications_off_outlined, 'Not watching', 'No alerts for new replies'),
+          option(WatchChoice.alerts, Icons.notifications_active_outlined, 'Alerts only', 'New replies show in Alerts'),
+          option(WatchChoice.email, Icons.mail_outline, 'Alerts + email', 'Also sends email notifications'),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
 class _PostCard extends StatefulWidget {
   final ForumPost post;
   final void Function(Uri uri) onOpenLink;
@@ -410,6 +613,12 @@ class _PostCard extends StatefulWidget {
   final VoidCallback? onReact;
   final VoidCallback? onQuote;
   final VoidCallback? onEdit;
+  final bool watched;
+  final VoidCallback? onWatchToggle;
+  final VoidCallback? onWatchLongPress;
+
+  /// Marks the post a permalink targeted, so the reader can spot it.
+  final bool highlighted;
 
   const _PostCard({
     required this.post,
@@ -419,6 +628,10 @@ class _PostCard extends StatefulWidget {
     this.onReact,
     this.onQuote,
     this.onEdit,
+    this.watched = false,
+    this.onWatchToggle,
+    this.onWatchLongPress,
+    this.highlighted = false,
   });
 
   @override
@@ -438,6 +651,7 @@ class _PostCardState extends State<_PostCard> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(12),
+        border: widget.highlighted ? Border.all(color: colorScheme.primary.withValues(alpha: 0.45)) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,6 +688,26 @@ class _PostCardState extends State<_PostCard> {
                   ),
                 ),
               ),
+              if (widget.onWatchToggle != null)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.onWatchToggle,
+                  onLongPress: widget.onWatchLongPress,
+                  child: Tooltip(
+                    // Long-press belongs to the options sheet, not the
+                    // tooltip's default trigger.
+                    triggerMode: TooltipTriggerMode.manual,
+                    message: widget.watched ? 'Unwatch thread' : 'Watch thread',
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      child: Icon(
+                        widget.watched ? Icons.notifications_active : Icons.notifications_none,
+                        size: 17,
+                        color: widget.watched ? Theme.of(context).colorScheme.primary : Colors.grey[500],
+                      ),
+                    ),
+                  ),
+                ),
               if (post.number > 0) Text('#${post.number}', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/account.dart';
 import '../models/forum.dart';
 import '../models/thread_page.dart';
 import 'api_service.dart';
@@ -75,11 +76,121 @@ class ForumService {
     );
   }
 
+  // --- Account pages (bookmarks, alerts) ------------------------------------
+
+  static const String bookmarksUrl = 'https://f95zone.to/account/bookmarks';
+  static const String alertsUrl = 'https://f95zone.to/account/alerts';
+  static const String preferencesUrl = 'https://f95zone.to/account/preferences';
+
+  /// Per-session snapshot of the account's alert preferences; reset when
+  /// the session changes.
+  static AlertPreferences? _alertPrefs;
+
+  /// Test hook: forget the per-session preference snapshot.
+  @visibleForTesting
+  static void resetAlertPreferences() => _alertPrefs = null;
+
+  /// The account's alert read-marking preferences, fetched once per
+  /// session (they only change through the site's preferences page).
+  static Future<AlertPreferences> fetchAlertPreferences({
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) return const AlertPreferences();
+    return _alertPrefs ??= parseAlertPreferences(
+      await _fetchHtml(preferencesUrl, client: client, packageInfoLoader: packageInfoLoader),
+    );
+  }
+
+  static Future<BookmarksPage> fetchBookmarks({
+    int page = 1,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockBookmarks(page: page);
+    }
+    final pageUrl = _withQueryPage(bookmarksUrl, page);
+    return _cached(
+      pageUrl,
+      () async => parseBookmarks(await _fetchHtml(pageUrl, client: client, packageInfoLoader: packageInfoLoader)),
+    );
+  }
+
+  static Future<AlertsPage> fetchAlerts({int page = 1, http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
+    if (kIsWeb) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      return createMockAlerts(page: page);
+    }
+    final pageUrl = _withQueryPage(alertsUrl, page);
+    return _cached(
+      pageUrl,
+      () async => parseAlerts(await _fetchHtml(pageUrl, client: client, packageInfoLoader: packageInfoLoader)),
+    );
+  }
+
+  /// Acknowledges the alerts feed the way the site's bell does, then
+  /// drops cached pages so the badge refresh sees the result.
+  ///
+  /// Two server calls make "viewed in the app = read" true. The pop-up GET
+  /// (XHR header is load-bearing — XenForo redirects plain GETs of that
+  /// route to the alerts page, which silently no-ops) clears the site-wide
+  /// bell counter but only marks read the handful of alerts the pop-up
+  /// itself renders. So the rows the app actually displayed are passed in
+  /// [unreadAlertIds] and forced read one by one via /account/alert, which
+  /// marks its alert read on view in every addon version — unless the
+  /// account's "pop-up skips mark read" preference says alerts should stay
+  /// unread until visited.
+  static Future<void> acknowledgeAlerts({
+    List<int> unreadAlertIds = const [],
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      // Per-alert reads go FIRST: the pop-up view flags alerts as viewed,
+      // and the addon's status-change guard treats an already-viewed alert
+      // as a no-op, which would swallow the read marking.
+      if (unreadAlertIds.isNotEmpty) {
+        final prefs = await fetchAlertPreferences(client: client, packageInfoLoader: packageInfoLoader);
+        if (!prefs.popupSkipsMarkRead) {
+          for (final id in unreadAlertIds) {
+            await _fetchHtml(
+              'https://f95zone.to/account/alert?alert_id=$id',
+              client: client,
+              packageInfoLoader: packageInfoLoader,
+            );
+          }
+        }
+      }
+
+      await _fetchHtml(
+        '$alertsUrl-popup',
+        client: client,
+        packageInfoLoader: packageInfoLoader,
+        extraHeaders: const {'X-Requested-With': 'XMLHttpRequest'},
+      );
+    } finally {
+      clearCache();
+    }
+  }
+
   /// XenForo page URLs: `<base>/page-N`, page 1 is the base itself.
   static String _withPage(String url, int page) {
     final base = url.endsWith('/') ? url : '$url/';
     return page <= 1 ? base : '${base}page-$page';
   }
+
+  /// Account routes paginate by query string instead of a /page-N suffix.
+  static String _withQueryPage(String url, int page) => page <= 1 ? url : '$url?page=$page';
+
+  /// Drops cached account feeds (bookmarks, alerts) so their next fetch is
+  /// live; forum and thread pages stay cached. Account feeds change out
+  /// from under the app (a bookmark made seconds ago, alerts arriving
+  /// server-side), so their screens refresh on open.
+  static void invalidateAccountPages() =>
+      _cache.removeWhere((key, _) => key.startsWith(bookmarksUrl) || key.startsWith(alertsUrl));
 
   static Future<T> _cached<T extends Object>(String key, Future<T> Function() load) async {
     final cached = _cache[key];
@@ -92,18 +203,29 @@ class ForumService {
     return value;
   }
 
-  static Future<String> _fetchHtml(String url, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
+  static Future<String> _fetchHtml(
+    String url, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+    Map<String, String> extraHeaders = const {},
+  }) async {
     final http.Client httpClient = client ?? http.Client();
     final bool shouldCloseClient = client == null;
 
     try {
-      final headers = {'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader), 'Accept': 'text/html'};
+      final headers = {
+        'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader),
+        'Accept': 'text/html',
+        ...extraHeaders,
+      };
       final cookies = AuthService.instance.cookieHeader;
       if (cookies != null) headers['Cookie'] = cookies;
 
       final response = await httpClient.get(Uri.parse(url), headers: headers);
       if (response.statusCode != 200) {
-        throw ApiException('Failed to load forum page: ${response.statusCode}');
+        // The path makes multi-request flows (alert acknowledgment)
+        // diagnosable from the surfaced message alone.
+        throw ApiException('Failed to load ${Uri.parse(url).path}: ${response.statusCode}');
       }
       return response.body;
     } on ApiException {
@@ -283,9 +405,13 @@ class ForumService {
   static void clearCache() => _cache.clear();
 
   /// Guest renditions differ from member ones (unread markers, visibility);
-  /// drop everything when the session changes.
+  /// drop everything when the session changes, including the per-session
+  /// preference snapshot.
   static void bindToAuthChanges() {
-    AuthService.instance.addListener(clearCache);
+    AuthService.instance.addListener(() {
+      clearCache();
+      _alertPrefs = null;
+    });
   }
 
   // --- Mock data (web build + widget tests) --------------------------------
@@ -465,6 +591,8 @@ class ForumService {
       totalPages: 42,
       csrfToken: 'mock-csrf',
       replyUrl: 'https://example.com/threads/188349/add-reply',
+      watchUrl: 'https://example.com/threads/188349/watch',
+      threadUrl: 'https://example.com/threads/188349/',
     );
   }
 
@@ -511,6 +639,83 @@ class ForumService {
         ReactionMember(username: 'OnlyHeStandsThere', memberTitle: 'Member', reactionId: 3, date: 'Yesterday'),
         ReactionMember(username: 'quietfan', memberTitle: 'Member', reactionId: 14, date: 'Yesterday'),
       ],
+    );
+  }
+
+  static BookmarksPage createMockBookmarks({int page = 1}) {
+    return BookmarksPage(
+      entries: const [
+        BookmarkEntry(
+          title: 'Mousetrap: Theft & Bondage [v0.1.6p2] [Milkshake++]',
+          url: 'https://example.com/threads/mousetrap.254486/',
+          snippet: 'Overview: Ratalie found herself working off a debt to the local thieves guild after being framed…',
+          author: 'Milkshake++',
+          date: 'Jun 21, 2025',
+          bookmarkUrl: 'https://example.com/posts/16935508/bookmark',
+        ),
+        BookmarkEntry(
+          title: '[Secret Flasher Manaka] Custom Missions 1.2.1',
+          isPost: true,
+          url: 'https://example.com/posts/19803972/',
+          snippet: 'Manaka - Custom missions',
+          author: 'SekiYuri',
+          date: 'Apr 8, 2026',
+          bookmarkUrl: 'https://example.com/posts/19803972/bookmark',
+        ),
+      ],
+      currentPage: page,
+      totalPages: 1,
+      csrfToken: 'mock-csrf',
+    );
+  }
+
+  static AlertsPage createMockAlerts({int page = 1}) {
+    return AlertsPage(
+      groups: const [
+        AlertGroup(
+          title: 'Today',
+          alerts: [
+            AlertEntry(
+              alertId: 91,
+              username: 'TMakuboss',
+              action: 'replied to the thread',
+              labels: ['Unity', 'Completed'],
+              title: "Mage Kanade's Futanari Dungeon Quest [Final] [Dieselmine]",
+              url: 'https://example.com/posts/20969203/',
+              time: '13 minutes ago',
+              unread: true,
+            ),
+            AlertEntry(
+              alertId: 92,
+              username: 'CrisspyFriess',
+              action: 'replied to the thread',
+              labels: ['Others'],
+              title: 'Crisis Point: Extinction [v0.48.1] [Anon42]',
+              url: 'https://example.com/posts/20966169/',
+              time: 'Today at 12:37 PM',
+              unread: true,
+            ),
+          ],
+        ),
+        AlertGroup(
+          title: 'Yesterday',
+          alerts: [
+            AlertEntry(
+              alertId: 93,
+              username: 'Mihawk_80',
+              action: 'replied to the thread',
+              labels: ['VN', "Ren'Py", 'Abandoned'],
+              title: 'One Lewd World [v0.287] [Zelltin]',
+              url: 'https://example.com/posts/20964484/',
+              time: 'Yesterday at 9:14 PM',
+            ),
+          ],
+        ),
+      ],
+      currentPage: page,
+      totalPages: 1,
+      csrfToken: 'mock-csrf',
+      badgeCount: 2,
     );
   }
 }

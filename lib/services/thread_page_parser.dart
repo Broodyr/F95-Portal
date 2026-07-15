@@ -257,35 +257,22 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
   );
 }
 
-/// Extracts the CSRF token plus the react/watch endpoints, which XenForo
-/// only renders for logged-in sessions.
+/// Extracts the CSRF token plus the first post's bookmark endpoint, which
+/// XenForo only renders for logged-in sessions.
 ThreadActions? _parseActions(Document document, Element post) {
   final csrf = document.querySelector('html')?.attributes['data-csrf'];
   if (csrf == null || csrf.isEmpty) return null;
 
-  String? reactUrl;
-  bool liked = false;
   for (final anchor in post.querySelectorAll('a')) {
-    final href = anchor.attributes['href'] ?? '';
-    if (href.contains('/react?reaction_id=')) {
-      reactUrl = _absoluteUrl(href);
-      liked = anchor.classes.contains('has-reaction');
-      break;
+    if (anchor.attributes['data-xf-click'] == 'bookmark-click') {
+      return ThreadActions(
+        csrfToken: csrf,
+        bookmarkUrl: _absoluteUrl(anchor.attributes['href'] ?? ''),
+        bookmarked: anchor.classes.contains('is-bookmarked'),
+      );
     }
   }
-
-  String? watchUrl;
-  bool watched = false;
-  for (final anchor in document.querySelectorAll('a')) {
-    if (anchor.attributes.containsKey('data-sk-watch')) {
-      watchUrl = _absoluteUrl(anchor.attributes['href'] ?? '');
-      watched = _collapse(anchor.text).toLowerCase() == 'unwatch';
-      break;
-    }
-  }
-
-  if (reactUrl == null && watchUrl == null) return null;
-  return ThreadActions(csrfToken: csrf, reactUrl: reactUrl, liked: liked, watchUrl: watchUrl, watched: watched);
+  return null;
 }
 
 List<DownloadLink> _parseAttachments(Element post) {

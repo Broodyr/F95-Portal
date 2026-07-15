@@ -44,23 +44,15 @@ class ThreadPage {
   }
 }
 
-/// XenForo CSRF token plus the first post's react endpoint and the thread's
-/// watch endpoint, with the states the page reported.
+/// XenForo CSRF token plus the first post's bookmark endpoint, with the
+/// state the page reported.
 @immutable
 class ThreadActions {
   final String csrfToken;
-  final String? reactUrl;
-  final bool liked;
-  final String? watchUrl;
-  final bool watched;
+  final String bookmarkUrl;
+  final bool bookmarked;
 
-  const ThreadActions({
-    required this.csrfToken,
-    this.reactUrl,
-    this.liked = false,
-    this.watchUrl,
-    this.watched = false,
-  });
+  const ThreadActions({required this.csrfToken, required this.bookmarkUrl, this.bookmarked = false});
 }
 
 @immutable

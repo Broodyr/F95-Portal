@@ -116,12 +116,12 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
   }
 
   void _openResult(ForumSearchResult result) {
-    // Result URLs carry a /post-N permalink; the viewer wants the thread.
-    final threadUrl = result.url.replaceFirst(RegExp(r'post-\d+/?$'), '');
+    // Result URLs carry a /post-N permalink; the viewer resolves it to the
+    // right page and scrolls to the matched post.
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ForumThreadScreen(
-          url: threadUrl,
+          url: result.url,
           title: result.title,
           fetchPosts: widget.fetchThreadPosts,
           fetchReactions: widget.fetchReactions,

@@ -91,8 +91,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   ThreadPage? _page;
   bool _loadingPage = true;
   String? _pageError;
-  bool _liked = false;
-  bool _watched = false;
+  bool _bookmarked = false;
   bool _overviewExpanded = false;
   final Set<int> _expandedSpoilers = {};
 
@@ -142,8 +141,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
       if (!mounted) return;
       setState(() {
         _page = page;
-        _liked = page.actions?.liked ?? false;
-        _watched = page.actions?.watched ?? false;
+        _bookmarked = page.actions?.bookmarked ?? false;
         _loadingPage = false;
       });
     } catch (e) {
@@ -194,31 +192,31 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
     }
   }
 
-  /// Optimistically toggles like/watch, reverting on failure. The page cache
-  /// is invalidated so a reopened modal refetches the real state.
-  Future<void> _toggleAction({required bool isLike}) async {
+  /// Optimistically toggles the bookmark, reverting on failure. The page
+  /// cache is invalidated so a reopened modal refetches the real state.
+  Future<void> _toggleBookmark() async {
     final actions = _page?.actions;
-    final url = isLike ? actions?.reactUrl : actions?.watchUrl;
-    if (actions == null || url == null) return;
+    if (actions == null) return;
 
     if (!AuthService.instance.isLoggedIn) {
-      AppToast.show(context, 'Sign in from the Profile tab to like and bookmark threads.');
+      AppToast.show(context, 'Sign in from the Profile tab to bookmark threads.');
       return;
     }
 
     HapticFeedback.selectionClick();
-    final bool wasActive = isLike ? _liked : _watched;
-    setState(() => isLike ? _liked = !wasActive : _watched = !wasActive);
+    final bool wasBookmarked = _bookmarked;
+    setState(() => _bookmarked = !wasBookmarked);
 
     try {
       final send =
           widget.actionSender ?? (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
-      // React toggles on its own; watch needs stop=1 to unwatch.
-      await send(url, actions.csrfToken, !isLike && wasActive ? const {'stop': '1'} : const {});
+      // Bookmarking posts plain; removal needs delete=1 (the site's tools
+      // menu confirms deletes through the same endpoint with ?delete=1).
+      await send(actions.bookmarkUrl, actions.csrfToken, wasBookmarked ? const {'delete': '1'} : const {});
       ThreadPageService.invalidate(thread.threadId);
     } catch (e) {
       if (!mounted) return;
-      setState(() => isLike ? _liked = wasActive : _watched = wasActive);
+      setState(() => _bookmarked = wasBookmarked);
       AppToast.show(context, '$e', error: true);
     }
   }
@@ -320,27 +318,15 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                                   label: const Text('Open thread'),
                                 ),
                               ),
-                              if (_page?.actions?.reactUrl != null) ...[
+                              if (_page?.actions != null) ...[
                                 const SizedBox(width: 8),
                                 IconButton.outlined(
-                                  onPressed: () => _toggleAction(isLike: true),
-                                  tooltip: _liked ? 'Unlike' : 'Like',
+                                  onPressed: _toggleBookmark,
+                                  tooltip: _bookmarked ? 'Remove bookmark' : 'Bookmark',
                                   icon: Icon(
-                                    _liked ? Icons.favorite : Icons.favorite_border,
+                                    _bookmarked ? Icons.bookmark : Icons.bookmark_border,
                                     size: 20,
-                                    color: _liked ? colorScheme.primary : null,
-                                  ),
-                                ),
-                              ],
-                              if (_page?.actions?.watchUrl != null) ...[
-                                const SizedBox(width: 8),
-                                IconButton.outlined(
-                                  onPressed: () => _toggleAction(isLike: false),
-                                  tooltip: _watched ? 'Remove bookmark' : 'Bookmark',
-                                  icon: Icon(
-                                    _watched ? Icons.bookmark : Icons.bookmark_border,
-                                    size: 20,
-                                    color: _watched ? colorScheme.primary : null,
+                                    color: _bookmarked ? colorScheme.primary : null,
                                   ),
                                 ),
                               ],

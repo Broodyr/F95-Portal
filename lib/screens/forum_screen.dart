@@ -1,9 +1,15 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/forum.dart';
+import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../widgets/forum_node_row.dart';
 import '../widgets/reactions_sheet.dart';
+import 'alerts_screen.dart';
+import 'bookmarks_screen.dart';
 import 'forum_search_screen.dart';
 import 'forum_thread_screen.dart';
 import 'forum_threads_screen.dart';
@@ -23,6 +29,10 @@ class ForumScreen extends StatefulWidget {
   final ReplySender? replySender;
   final ForumSearcher? searcher;
   final ForumSearchPager? searchPager;
+  final FetchBookmarks? fetchBookmarks;
+  final BookmarkDeleter? bookmarkDeleter;
+  final FetchAlerts? fetchAlerts;
+  final AlertsAcknowledger? alertsAcknowledger;
 
   const ForumScreen({
     super.key,
@@ -35,21 +45,74 @@ class ForumScreen extends StatefulWidget {
     this.replySender,
     this.searcher,
     this.searchPager,
+    this.fetchBookmarks,
+    this.bookmarkDeleter,
+    this.fetchAlerts,
+    this.alertsAcknowledger,
   });
 
   @override
   State<ForumScreen> createState() => _ForumScreenState();
 }
 
-class _ForumScreenState extends State<ForumScreen> {
+class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
+  /// Alerts only exist server-side, so a slow foreground poll keeps the
+  /// bell honest during long sessions; login and app-resume cover the
+  /// moments that usually matter.
+  static const Duration _alertPollInterval = Duration(minutes: 5);
+
   ForumIndex? _index;
   bool _loading = true;
   String? _error;
+  int _unreadAlerts = 0;
+  Timer? _alertPollTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _refreshAlertCount();
+    AuthService.instance.addListener(_onAuthChanged);
+    WidgetsBinding.instance.addObserver(this);
+    _alertPollTimer = Timer.periodic(_alertPollInterval, (_) => _refreshAlertCount(fresh: true));
+  }
+
+  @override
+  void dispose() {
+    _alertPollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    AuthService.instance.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
+  void _onAuthChanged() {
+    if (!mounted) return;
+    if (AuthService.instance.isLoggedIn) {
+      _refreshAlertCount(fresh: true);
+    } else {
+      setState(() => _unreadAlerts = 0);
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshAlertCount(fresh: true);
+  }
+
+  /// Updates the bell badge from the alerts feed's first page; guests have
+  /// no feed, and failures just leave the badge hidden.
+  Future<void> _refreshAlertCount({bool fresh = false}) async {
+    if (!kIsWeb && !AuthService.instance.isLoggedIn) return;
+    try {
+      if (fresh) ForumService.invalidateAccountPages();
+      final fetch = widget.fetchAlerts ?? ForumService.fetchAlerts;
+      final alerts = await fetch(page: 1);
+      // The server's own counter, not our star count: the stars mean
+      // "unread or new" and drift from what the site's bell displays.
+      if (mounted) setState(() => _unreadAlerts = alerts.badgeCount);
+    } catch (_) {
+      // Badge only; the Alerts screen surfaces its own errors.
+    }
   }
 
   Future<void> _load() async {
@@ -106,10 +169,50 @@ class _ForumScreenState extends State<ForumScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text('Forum', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Forum',
+                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(width: 8),
                   Text('f95zone.to', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
                   const Spacer(),
+                  IconButton(
+                    tooltip: 'Bookmarks',
+                    icon: Icon(Icons.bookmark_border, size: 22, color: Colors.grey[400]),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BookmarksScreen(
+                          fetchBookmarks: widget.fetchBookmarks,
+                          bookmarkDeleter: widget.bookmarkDeleter,
+                          fetchThreadPosts: widget.fetchThreadPosts,
+                          fetchReactions: widget.fetchReactions,
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Alerts',
+                    icon: Badge(
+                      isLabelVisible: _unreadAlerts > 0,
+                      label: Text(_unreadAlerts > 99 ? '99+' : '$_unreadAlerts'),
+                      backgroundColor: colorScheme.primary,
+                      child: Icon(Icons.notifications_none, size: 22, color: Colors.grey[400]),
+                    ),
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => AlertsScreen(
+                            fetchAlerts: widget.fetchAlerts,
+                            alertsAcknowledger: widget.alertsAcknowledger,
+                            fetchThreadPosts: widget.fetchThreadPosts,
+                            fetchReactions: widget.fetchReactions,
+                          ),
+                        ),
+                      );
+                      // Reading or mark-all-read changes the count.
+                      if (mounted) await _refreshAlertCount();
+                    },
+                  ),
                   IconButton(
                     tooltip: 'Search the forum',
                     icon: Icon(Icons.search, size: 22, color: Colors.grey[400]),
@@ -157,7 +260,7 @@ class _ForumScreenState extends State<ForumScreen> {
 
     final sections = [
       for (final category in index.categories)
-        (category: category, forums: category.forums.where((f) => !f.isLink).toList())
+        (category: category, forums: category.forums.where((f) => !f.isLink).toList()),
     ].where((s) => s.forums.isNotEmpty).toList();
 
     return RefreshIndicator(

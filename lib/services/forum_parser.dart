@@ -1,6 +1,7 @@
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
 
+import '../models/account.dart';
 import '../models/forum.dart';
 import 'thread_page_parser.dart' show parseRichContent;
 
@@ -88,6 +89,14 @@ ThreadPostsPage parseThreadPosts(String htmlSource) {
   // only renders for members who can post, so its absence gates reply UI.
   final replyAction = document.querySelector('form.js-quickReply')?.attributes['action'];
 
+  // Watch is a member-only anchor; its live label tells the current state.
+  final watchAnchor = document.querySelector('a[data-sk-watch]');
+  final watchHref = watchAnchor?.attributes['href'];
+
+  // The canonical link names the true thread page even when this HTML was
+  // reached through a post-permalink redirect.
+  final canonical = document.querySelector('link[rel="canonical"]')?.attributes['href'] ?? '';
+
   return ThreadPostsPage(
     title: _clean(h1?.text ?? ''),
     posts: [for (final post in document.querySelectorAll('article.message--post')) _parsePost(post)],
@@ -95,6 +104,146 @@ ThreadPostsPage parseThreadPosts(String htmlSource) {
     totalPages: totalPages,
     csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
     replyUrl: replyAction == null ? null : _absoluteUrl(replyAction),
+    watchUrl: watchHref == null ? null : _absoluteUrl(watchHref),
+    watched: watchAnchor != null && _clean(watchAnchor.text).toLowerCase() == 'unwatch',
+    threadUrl: canonical.isEmpty ? '' : _absoluteUrl(canonical.replaceFirst(RegExp(r'page-\d+/?$'), '')),
+  );
+}
+
+/// Reads the alert read-marking checkboxes from the account preferences
+/// page. Missing markup reads as unchecked, matching both the stock
+/// behavior and the f95 default.
+AlertPreferences parseAlertPreferences(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+
+  bool checked(String option) {
+    for (final input in document.querySelectorAll('input[type="checkbox"]')) {
+      if (input.attributes['name'] == 'option[$option]') return input.attributes.containsKey('checked');
+    }
+    return false;
+  }
+
+  return AlertPreferences(
+    popupSkipsMarkRead: checked('sv_alerts_popup_skips_mark_read'),
+    pageSkipsMarkRead: checked('sv_alerts_page_skips_mark_read'),
+  );
+}
+
+/// Parses the account bookmarks page (`/account/bookmarks`).
+BookmarksPage parseBookmarks(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final (currentPage, totalPages) = _parsePageNav(document);
+  final titlePattern = RegExp(r"^(Post in thread|Thread) '(.*)'$");
+
+  final entries = <BookmarkEntry>[];
+  for (final row in document.querySelectorAll('.block-row .contentRow')) {
+    final titleLink = row.querySelector('.contentRow-title a[href]');
+    if (titleLink == null) continue;
+
+    // Titles render as "Thread '…'" or "Post in thread '…'"; only the
+    // inner title is wanted, the wrapper just tells the bookmark kind.
+    final rawTitle = _clean(titleLink.text);
+    final titleMatch = titlePattern.firstMatch(rawTitle);
+
+    // The row's tools menu holds the bookmark endpoint (its Delete variant
+    // is the same URL with ?delete=1).
+    String bookmarkUrl = '';
+    for (final anchor in row.querySelectorAll('a[href]')) {
+      final href = anchor.attributes['href'] ?? '';
+      if (href.endsWith('/bookmark')) {
+        bookmarkUrl = _absoluteUrl(href);
+        break;
+      }
+    }
+
+    final avatarSrc = row.querySelector('.contentRow-figure img')?.attributes['src'];
+    entries.add(
+      BookmarkEntry(
+        title: titleMatch?.group(2) ?? rawTitle,
+        isPost: titleMatch?.group(1) == 'Post in thread',
+        url: _absoluteUrl(titleLink.attributes['href'] ?? ''),
+        snippet: _clean(row.querySelector('.contentRow-snippet')?.text ?? ''),
+        author: _clean(row.querySelector('.contentRow-minor .username')?.text ?? ''),
+        avatarUrl: avatarSrc == null ? null : _absoluteUrl(avatarSrc),
+        date: _clean(row.querySelector('.contentRow-minor time')?.text ?? ''),
+        bookmarkUrl: bookmarkUrl,
+      ),
+    );
+  }
+
+  return BookmarksPage(
+    entries: entries,
+    currentPage: currentPage,
+    totalPages: totalPages,
+    csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
+  );
+}
+
+/// Parses the account alerts page (`/account/alerts`) into its date groups.
+AlertsPage parseAlerts(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final (currentPage, totalPages) = _parsePageNav(document);
+
+  // Each date header ("Today", "Yesterday", "Friday") shares a list item
+  // with its own inner list of alert rows.
+  final groups = <AlertGroup>[];
+  for (final header in document.querySelectorAll('h2.block-formSectionHeader')) {
+    final rows = header.parent?.querySelectorAll('li[data-alert-id]') ?? const <Element>[];
+    if (rows.isEmpty) continue;
+    groups.add(AlertGroup(title: _clean(header.text), alerts: [for (final row in rows) _parseAlertRow(row)]));
+  }
+
+  // Tolerate a flat page without date headers.
+  if (groups.isEmpty) {
+    final rows = document.querySelectorAll('li[data-alert-id]');
+    if (rows.isNotEmpty) groups.add(AlertGroup(alerts: [for (final row in rows) _parseAlertRow(row)]));
+  }
+
+  return AlertsPage(
+    groups: groups,
+    currentPage: currentPage,
+    totalPages: totalPages,
+    csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
+    // The nav bell's server-rendered counter; the app's bell mirrors it.
+    // f95 renders the exact number ("69"), but tolerate capped forms
+    // ("10+") that other XenForo skins emit.
+    badgeCount: int.tryParse(
+          RegExp(r'\d+')
+                  .firstMatch(document.querySelector('.js-badge--alerts')?.attributes['data-badge'] ?? '')
+                  ?.group(0) ??
+              '',
+        ) ??
+        0,
+  );
+}
+
+AlertEntry _parseAlertRow(Element row) {
+  final main = row.querySelector('.contentRow-main');
+  final content = main?.querySelector('a.fauxBlockLink-blockLink');
+
+  // The action sentence is the loose text between the actor's username
+  // anchor and the content link ("replied to the thread").
+  String action = '';
+  if (main != null) {
+    final buffer = StringBuffer();
+    for (final node in main.nodes) {
+      if (node is Element && (node == content || node.querySelector('a.fauxBlockLink-blockLink') != null)) break;
+      if (node is Text) buffer.write(node.text);
+    }
+    action = _clean(buffer.toString());
+  }
+
+  final avatarSrc = row.querySelector('.contentRow-figure img')?.attributes['src'];
+  return AlertEntry(
+    alertId: int.tryParse(row.attributes['data-alert-id'] ?? '') ?? 0,
+    username: _clean(main?.querySelector('a.username')?.text ?? ''),
+    avatarUrl: avatarSrc == null ? null : _absoluteUrl(avatarSrc),
+    action: action,
+    labels: content == null ? const [] : liftTitlePrefixes(content),
+    title: _clean(content?.text ?? ''),
+    url: _absoluteUrl(content?.attributes['href'] ?? ''),
+    time: _clean(row.querySelector('time')?.text ?? ''),
+    unread: row.querySelector('.user-alert--newIcon') != null,
   );
 }
 

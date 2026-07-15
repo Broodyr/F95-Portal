@@ -1,5 +1,9 @@
+import 'package:f95_portal/models/account.dart';
 import 'package:f95_portal/models/forum.dart';
+import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/screens/alerts_screen.dart';
+import 'package:f95_portal/screens/bookmarks_screen.dart';
 import 'package:f95_portal/screens/forum_screen.dart';
 import 'package:f95_portal/screens/forum_search_screen.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
@@ -10,6 +14,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_cookie_storage.dart';
+
+/// Swaps in a signed-in in-memory auth session for one test.
+Future<void> signIn() async {
+  final previousAuth = AuthService.instance;
+  addTearDown(() => AuthService.instance = previousAuth);
+  AuthService.instance = AuthService(InMemoryCookieStorage());
+  await AuthService.instance.saveCookies({'xf_user': 'tok'});
+}
 
 /// The whole forum stack pumped with the service's mock data, so the tests
 /// walk directory → thread list → thread viewer → reactions sheet offline.
@@ -23,6 +35,10 @@ Future<void> pumpForum(
   ThreadPoster? threadPoster,
   ForumSearcher? searcher,
   ForumSearchPager? searchPager,
+  FetchBookmarks? fetchBookmarks,
+  BookmarkDeleter? bookmarkDeleter,
+  FetchAlerts? fetchAlerts,
+  AlertsAcknowledger? alertsAcknowledger,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -38,6 +54,10 @@ Future<void> pumpForum(
         searcher: searcher ?? (keywords, {titleOnly = false, user = '', order = 'relevance'}) async =>
             ForumService.createMockSearchPage(),
         searchPager: searchPager ?? (url, page) async => ForumService.createMockSearchPage(page: page),
+        fetchBookmarks: fetchBookmarks ?? ({page = 1}) async => ForumService.createMockBookmarks(page: page),
+        bookmarkDeleter: bookmarkDeleter,
+        fetchAlerts: fetchAlerts ?? ({page = 1}) async => ForumService.createMockAlerts(page: page),
+        alertsAcknowledger: alertsAcknowledger ?? (ids) async {},
       ),
     ),
   );
@@ -243,6 +263,204 @@ void main() {
     expect(find.text('React'), findsNothing);
     expect(find.text('Quote'), findsNothing);
     expect(find.byTooltip('Reply'), findsNothing);
+    // Watch gates on its member-only anchor, absent from guest pages.
+    expect(find.byTooltip('Watch thread'), findsNothing);
+  });
+
+  testWidgets('a post permalink lands on its real page, scrolls to the post, and paginates', (tester) async {
+    final fetched = <(String, int)>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/posts/508/',
+          title: 'Hidden gems',
+          // The server redirects post permalinks to their thread page; the
+          // fake lands page-3 content for the permalink fetch.
+          fetchPosts: (url, {page = 1}) async {
+            fetched.add((url, page));
+            return ThreadPostsPage(
+              title: 'Hidden gems',
+              currentPage: url.contains('/posts/') ? 3 : page,
+              totalPages: 5,
+              threadUrl: 'https://example.com/threads/hidden-gems.42/',
+              posts: [
+                for (int i = 1; i <= 12; i++)
+                  ForumPost(
+                    postId: 500 + i,
+                    number: i,
+                    author: 'Author$i',
+                    blocks: [
+                      ForumPostBlock(
+                        kind: PostBlockKind.rich,
+                        pieces: [
+                          for (int line = 0; line < 4; line++) ...[
+                            RichPiece.text('Post $i body line $line'),
+                            RichPiece.newline(),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+              ],
+            );
+          },
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The counter reflects the page the server actually served.
+    expect(find.text('page 3 of 5'), findsOneWidget);
+
+    // The list scrolled the targeted post into view.
+    expect(find.text('Author8').hitTestable(), findsOneWidget);
+    expect(find.text('Author1').hitTestable(), findsNothing);
+
+    // Pagination builds on the canonical thread URL, not the permalink.
+    await tester.scrollUntilVisible(find.text('4'), 200);
+    await tester.ensureVisible(find.text('4'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('4'));
+    await tester.pumpAndSettle();
+
+    expect(fetched.last, ('https://example.com/threads/hidden-gems.42/', 4));
+    expect(find.text('page 4 of 5'), findsOneWidget);
+  });
+
+  testWidgets('the OP watch toggle posts the watch action and toggles state', (tester) async {
+    final sent = <(String, String, Map<String, String>)>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/188349/',
+          title: 'Hidden gems',
+          fetchPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+          watchSender: (url, csrf, fields) async => sent.add((url, csrf, fields)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Only the OP carries the toggle, at the top of the thread.
+    expect(find.byTooltip('Watch thread'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Watch thread'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.notifications_active), findsOneWidget);
+    expect(sent.single.$1, 'https://example.com/threads/188349/watch');
+    expect(sent.single.$2, 'mock-csrf');
+    expect(sent.single.$3, isEmpty);
+
+    // Unwatching sends stop=1.
+    await tester.tap(find.byTooltip('Unwatch thread'));
+    await tester.pumpAndSettle();
+    expect(sent.last.$3, {'stop': '1'});
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+  });
+
+  testWidgets('long-pressing the bell offers the email watch mode', (tester) async {
+    final sent = <(String, String, Map<String, String>)>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/188349/',
+          title: 'Hidden gems',
+          fetchPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+          watchSender: (url, csrf, fields) async => sent.add((url, csrf, fields)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byTooltip('Watch thread'));
+    await tester.pumpAndSettle();
+
+    // Not watching, so Off is the highlighted mode.
+    expect(find.text('Watch thread'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('Not watching')).style?.fontWeight, FontWeight.w600);
+    expect(find.byIcon(Icons.check), findsOneWidget);
+
+    await tester.tap(find.text('Alerts + email'));
+    await tester.pumpAndSettle();
+
+    expect(sent.single.$1, 'https://example.com/threads/188349/watch');
+    expect(sent.single.$3, {'email_subscribe': '1'});
+    expect(find.byIcon(Icons.notifications_active), findsOneWidget);
+  });
+
+  testWidgets('a watched thread preselects no mode; picking one posts it', (tester) async {
+    final sent = <Map<String, String>>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/188349/',
+          title: 'Hidden gems',
+          fetchPosts: (url, {page = 1}) async => const ThreadPostsPage(
+            title: 'Hidden gems',
+            csrfToken: 'mock-csrf',
+            watchUrl: 'https://example.com/threads/188349/watch',
+            watched: true,
+            posts: [ForumPost(postId: 9001, number: 1, author: 'DarkVault')],
+          ),
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+          watchSender: (url, csrf, fields) async => sent.add(fields),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byTooltip('Unwatch thread'));
+    await tester.pumpAndSettle();
+
+    // The site's markup never says whether an existing watch emails, so
+    // nothing is highlighted and the header says as much.
+    expect(find.text('Watching this thread'), findsOneWidget);
+    expect(find.byIcon(Icons.check), findsNothing);
+
+    // Picking a watch mode re-posts it (updates the subscription).
+    await tester.tap(find.text('Alerts + email'));
+    await tester.pumpAndSettle();
+    expect(sent, [
+      {'email_subscribe': '1'},
+    ]);
+    expect(find.byIcon(Icons.notifications_active), findsOneWidget);
+
+    await tester.longPress(find.byTooltip('Unwatch thread'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Not watching'));
+    await tester.pumpAndSettle();
+
+    expect(sent.last, {'stop': '1'});
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+  });
+
+  testWidgets('a failed watch toggle reverts the optimistic state', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/188349/',
+          title: 'Hidden gems',
+          fetchPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+          watchSender: (url, csrf, fields) async => throw Exception('offline'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Watch thread'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+    expect(find.byTooltip('Watch thread'), findsOneWidget);
   });
 
   testWidgets('the new-thread FAB posts a titled thread', (tester) async {
@@ -317,10 +535,11 @@ void main() {
     expect(find.textContaining('Corruption of Champions II'), findsOneWidget);
     expect(find.textContaining('might make the player feel powerful'), findsOneWidget);
 
-    // Opening a result strips the /post-N permalink for the viewer fetch.
+    // Opening a result keeps the /post-N permalink so the viewer lands on
+    // the matched post's page and scrolls to it.
     await tester.tap(find.textContaining('Corruption of Champions II'));
     await tester.pumpAndSettle();
-    expect(openedThreads, ['https://example.com/threads/coc2.11371/']);
+    expect(openedThreads, ['https://example.com/threads/coc2.11371/post-20920001']);
   });
 
   testWidgets('Edit fetches the post source, saves, and reloads', (tester) async {
@@ -398,6 +617,257 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('page 42 of 42'), findsOneWidget);
+  });
+
+  testWidgets('forum header opens bookmarks; the bell badges unread alerts and opens the feed', (tester) async {
+    await signIn();
+    await pumpForum(tester);
+
+    // Two mock alerts are unread.
+    expect(find.text('2'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Bookmarks'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BookmarksScreen), findsOneWidget);
+    expect(find.textContaining('Mousetrap'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Alerts'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertsScreen), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
+  });
+
+  testWidgets('the bell badge appears on sign-in without a restart', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+
+    await pumpForum(tester);
+    expect(find.text('2'), findsNothing);
+
+    // Signing in notifies the screen; no rebuild or restart involved.
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+    await tester.pumpAndSettle();
+    expect(find.text('2'), findsOneWidget);
+
+    // Signing out clears it again.
+    await AuthService.instance.logout();
+    await tester.pumpAndSettle();
+    expect(find.text('2'), findsNothing);
+  });
+
+  testWidgets('the bell badge repolls while the app stays open', (tester) async {
+    await signIn();
+    int calls = 0;
+    await pumpForum(
+      tester,
+      fetchAlerts: ({page = 1}) async {
+        calls++;
+        return AlertsPage(badgeCount: calls == 1 ? 1 : 3);
+      },
+    );
+
+    expect(find.text('1'), findsOneWidget);
+
+    // The 5-minute poll picks up alerts that arrived server-side.
+    await tester.pump(const Duration(minutes: 5));
+    await tester.pumpAndSettle();
+    expect(find.text('3'), findsOneWidget);
+
+    // Dispose the screen so the poll timer cancels before the test ends.
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('the bell badge caps its display at 99+', (tester) async {
+    await signIn();
+    await pumpForum(tester, fetchAlerts: ({page = 1}) async => const AlertsPage(badgeCount: 137));
+
+    expect(find.text('99+'), findsOneWidget);
+    expect(find.text('137'), findsNothing);
+  });
+
+  testWidgets('pull-to-refresh reloads the bookmarks list', (tester) async {
+    await signIn();
+    int fetches = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: BookmarksScreen(
+          fetchBookmarks: ({page = 1}) async {
+            fetches++;
+            return ForumService.createMockBookmarks(page: page);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(fetches, 1);
+
+    await tester.fling(find.textContaining('Mousetrap'), const Offset(0, 300), 1000);
+    await tester.pumpAndSettle();
+
+    expect(fetches, 2);
+    expect(find.textContaining('Mousetrap'), findsOneWidget);
+  });
+
+  testWidgets('bookmarks list renders, filters by kind, and opens the viewer', (tester) async {
+    await signIn();
+    final openedThreads = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: BookmarksScreen(
+          fetchBookmarks: ({page = 1}) async => ForumService.createMockBookmarks(page: page),
+          fetchThreadPosts: (url, {page = 1}) async {
+            openedThreads.add(url);
+            return ForumService.createMockThreadPosts(page: page);
+          },
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Mousetrap'), findsOneWidget);
+    expect(find.textContaining('Secret Flasher Manaka'), findsOneWidget);
+    expect(find.text('THREAD'), findsOneWidget);
+    expect(find.text('POST'), findsOneWidget);
+
+    // Kind filter narrows the list client-side.
+    await tester.tap(find.text('Posts'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Mousetrap'), findsNothing);
+    expect(find.textContaining('Secret Flasher Manaka'), findsOneWidget);
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('Mousetrap'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ForumThreadScreen), findsOneWidget);
+    expect(openedThreads, ['https://example.com/threads/mousetrap.254486/']);
+  });
+
+  testWidgets('removing a bookmark posts delete=1 and drops the row', (tester) async {
+    await signIn();
+    final deleted = <(String, String)>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: BookmarksScreen(
+          fetchBookmarks: ({page = 1}) async => ForumService.createMockBookmarks(page: page),
+          bookmarkDeleter: (url, csrf) async => deleted.add((url, csrf)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Bookmark tools').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove bookmark'));
+    await tester.pumpAndSettle();
+
+    expect(deleted, [('https://example.com/posts/16935508/bookmark', 'mock-csrf')]);
+    expect(find.textContaining('Mousetrap'), findsNothing);
+    expect(find.textContaining('Secret Flasher Manaka'), findsOneWidget);
+  });
+
+  testWidgets('a failed bookmark delete restores the row with an error toast', (tester) async {
+    await signIn();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: BookmarksScreen(
+          fetchBookmarks: ({page = 1}) async => ForumService.createMockBookmarks(page: page),
+          bookmarkDeleter: (url, csrf) async => throw Exception('offline'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Bookmark tools').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove bookmark'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Mousetrap'), findsOneWidget);
+    expect(find.textContaining('offline'), findsOneWidget);
+  });
+
+  testWidgets('alerts feed renders date groups, acknowledges the bell, and opens targets', (tester) async {
+    await signIn();
+    final openedThreads = <String>[];
+    final acknowledged = <List<int>>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: AlertsScreen(
+          fetchAlerts: ({page = 1}) async => ForumService.createMockAlerts(page: page),
+          alertsAcknowledger: (ids) async => acknowledged.add(ids),
+          fetchThreadPosts: (url, {page = 1}) async {
+            openedThreads.add(url);
+            return ForumService.createMockThreadPosts(page: page);
+          },
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.text('Yesterday'), findsOneWidget);
+    expect(find.textContaining('TMakuboss'), findsOneWidget);
+    expect(find.text('Unity'), findsOneWidget);
+    expect(find.textContaining('Mage Kanade'), findsOneWidget);
+
+    // Opening the feed acknowledged it server-side with the displayed
+    // unread rows, while this visit keeps its unread tints (the fetched
+    // state still says unread).
+    expect(acknowledged, [
+      [91, 92],
+    ]);
+    expect(find.byTooltip('Mark all read'), findsNothing);
+
+    await tester.tap(find.textContaining('TMakuboss'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ForumThreadScreen), findsOneWidget);
+    expect(openedThreads, ['https://example.com/posts/20969203/']);
+  });
+
+  testWidgets('a failed alerts acknowledgment surfaces as an error toast', (tester) async {
+    await signIn();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: AlertsScreen(
+          fetchAlerts: ({page = 1}) async => ForumService.createMockAlerts(page: page),
+          alertsAcknowledger: (ids) async => throw Exception('Action failed (HTTP 403)'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The feed still renders; the stuck read state is called out instead
+    // of failing silently.
+    expect(find.text('Today'), findsOneWidget);
+    expect(find.textContaining("Couldn't mark alerts read"), findsOneWidget);
+    expect(find.textContaining('HTTP 403'), findsOneWidget);
+  });
+
+  testWidgets('bookmarks and alerts prompt guests to sign in', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+
+    await tester.pumpWidget(const MaterialApp(home: BookmarksScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Bookmarks require an account'), findsOneWidget);
+
+    await tester.pumpWidget(const MaterialApp(home: AlertsScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Alerts require an account'), findsOneWidget);
   });
 
   testWidgets('reaction chip opens the sheet; pills filter members', (tester) async {

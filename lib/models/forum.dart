@@ -211,6 +211,15 @@ class ThreadPostsPage {
   /// for a guest (or the thread is locked), which is the posting gate.
   final String? replyUrl;
 
+  /// The thread's watch endpoint; XenForo renders it only for members.
+  final String? watchUrl;
+  final bool watched;
+
+  /// The thread's base URL from the canonical link (page suffix stripped).
+  /// Post-permalink fetches (/posts/N/) redirect to a thread page, and
+  /// pagination must build on this instead of the permalink.
+  final String threadUrl;
+
   const ThreadPostsPage({
     this.title = '',
     this.posts = const [],
@@ -218,6 +227,9 @@ class ThreadPostsPage {
     this.totalPages = 1,
     this.csrfToken = '',
     this.replyUrl,
+    this.watchUrl,
+    this.watched = false,
+    this.threadUrl = '',
   });
 }
 

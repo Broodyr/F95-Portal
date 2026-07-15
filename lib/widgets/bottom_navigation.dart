@@ -51,37 +51,46 @@ class CustomBottomNavigation extends StatelessWidget {
                       BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 32, offset: const Offset(0, 8)),
                     ],
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Browse covers games/comics/animations/assets, so a
-                      // category-neutral compass beats the old gamepad; the
-                      // search FAB keeps the magnifier.
-                      _buildNavItem(
-                        icon: Icons.explore_outlined,
-                        activeIcon: Icons.explore,
-                        index: 0,
-                        isActive: currentIndex == 0,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.forum_outlined,
-                        activeIcon: Icons.forum,
-                        index: 1,
-                        isActive: currentIndex == 1,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.settings_outlined,
-                        activeIcon: Icons.settings,
-                        index: 2,
-                        isActive: currentIndex == 2,
-                      ),
-                      _buildNavItem(
-                        icon: Icons.person_outline,
-                        activeIcon: Icons.person,
-                        index: 3,
-                        isActive: currentIndex == 3,
-                      ),
-                    ],
+                  // The web build's first frame can lay out at a sliver of
+                  // the real window width before it settles; skip the items
+                  // for such frames instead of overflowing (the four 40px
+                  // items need 160px).
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      if (constraints.maxWidth < 160) return const SizedBox();
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // Browse covers games/comics/animations/assets, so a
+                          // category-neutral compass beats the old gamepad; the
+                          // search FAB keeps the magnifier.
+                          _buildNavItem(
+                            icon: Icons.explore_outlined,
+                            activeIcon: Icons.explore,
+                            index: 0,
+                            isActive: currentIndex == 0,
+                          ),
+                          _buildNavItem(
+                            icon: Icons.forum_outlined,
+                            activeIcon: Icons.forum,
+                            index: 1,
+                            isActive: currentIndex == 1,
+                          ),
+                          _buildNavItem(
+                            icon: Icons.settings_outlined,
+                            activeIcon: Icons.settings,
+                            index: 2,
+                            isActive: currentIndex == 2,
+                          ),
+                          _buildNavItem(
+                            icon: Icons.person_outline,
+                            activeIcon: Icons.person,
+                            index: 3,
+                            isActive: currentIndex == 3,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),

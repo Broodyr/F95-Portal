@@ -181,11 +181,7 @@ class ThreadPageService {
         ],
       ),
       attachments: const [DownloadLink(host: 'mock-2026.torrent', url: 'https://attachments.f95zone.to/mock.torrent')],
-      actions: const ThreadActions(
-        csrfToken: 'mock-csrf',
-        reactUrl: 'https://example.com/posts/1/react?reaction_id=1',
-        watchUrl: 'https://example.com/threads/1/watch',
-      ),
+      actions: const ThreadActions(csrfToken: 'mock-csrf', bookmarkUrl: 'https://example.com/posts/1/bookmark'),
     );
   }
 }

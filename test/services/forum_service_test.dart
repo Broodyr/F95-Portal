@@ -16,7 +16,10 @@ PackageInfo _packageInfo() =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(ForumService.clearCache);
+  setUp(() {
+    ForumService.clearCache();
+    ForumService.resetAlertPreferences();
+  });
 
   test('fetches, parses, and caches the forum index', () async {
     final fixture = File('test/fixtures/forum_home.htm').readAsStringSync();
@@ -73,6 +76,102 @@ void main() {
       packageInfoLoader: () async => _packageInfo(),
     );
     expect(overlay.tabs.first.count, 12837);
+  });
+
+  test('acknowledging alerts fires the pop-up as XHR and forces displayed rows read', () async {
+    // Without the XHR header XenForo redirects the pop-up route to the
+    // alerts PAGE, whose skip-mark-read preference silently no-ops the
+    // whole acknowledgment. The pop-up also only marks read what it
+    // renders itself, so the displayed unread rows are forced via the
+    // per-alert route — gated on the account's pop-up preference, which is
+    // fetched once per session.
+    final alertsFixture = File('test/fixtures/account_alerts.htm').readAsStringSync();
+    final urls = <String>[];
+    String? xhrHeader;
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      if (request.url.path.endsWith('alerts-popup')) {
+        xhrHeader = request.headers['X-Requested-With'];
+        return http.Response('<div>popup</div>', 200);
+      }
+      if (request.url.path.endsWith('preferences')) {
+        return http.Response('<input type="checkbox" name="option[sv_alerts_popup_skips_mark_read]" />', 200);
+      }
+      if (request.url.queryParameters.containsKey('alert_id')) return http.Response('ok', 200);
+      return http.Response.bytes(alertsFixture.codeUnits, 200);
+    });
+    Future<void> acknowledge(List<int> ids) => ForumService.acknowledgeAlerts(
+      unreadAlertIds: ids,
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    await ForumService.fetchAlerts(client: client, packageInfoLoader: () async => _packageInfo());
+    await acknowledge([91, 92]);
+    // The cache was dropped, so the next fetch hits the network again;
+    // the preference snapshot survives (second acknowledge skips it).
+    await ForumService.fetchAlerts(client: client, packageInfoLoader: () async => _packageInfo());
+    await acknowledge([93]);
+
+    // Per-alert reads run BEFORE the pop-up: the pop-up flags alerts as
+    // viewed, and the addon skips status changes on already-viewed alerts.
+    expect(urls, [
+      'https://f95zone.to/account/alerts',
+      'https://f95zone.to/account/preferences',
+      'https://f95zone.to/account/alert?alert_id=91',
+      'https://f95zone.to/account/alert?alert_id=92',
+      'https://f95zone.to/account/alerts-popup',
+      'https://f95zone.to/account/alerts',
+      'https://f95zone.to/account/alert?alert_id=93',
+      'https://f95zone.to/account/alerts-popup',
+    ]);
+    expect(xhrHeader, 'XMLHttpRequest');
+  });
+
+  test('a checked pop-up-skips-mark-read preference blocks the per-alert marking', () async {
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      if (request.url.path.endsWith('preferences')) {
+        return http.Response(
+          '<input type="checkbox" name="option[sv_alerts_popup_skips_mark_read]" checked="checked" />',
+          200,
+        );
+      }
+      return http.Response('ok', 200);
+    });
+
+    await ForumService.acknowledgeAlerts(
+      unreadAlertIds: [91, 92],
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    // Preference read, pop-up fired, but no per-alert forcing: the user
+    // asked for alerts to stay unread until visited.
+    expect(urls, ['https://f95zone.to/account/preferences', 'https://f95zone.to/account/alerts-popup']);
+  });
+
+  test('invalidateAccountPages drops account feeds but keeps forum pages cached', () async {
+    final index = File('test/fixtures/forum_home.htm').readAsStringSync();
+    final bookmarks = File('test/fixtures/account_bookmarks.htm').readAsStringSync();
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      final body = request.url.path.contains('bookmarks') ? bookmarks : index;
+      return http.Response.bytes(body.codeUnits, 200);
+    });
+    Future<void> fetchBoth() async {
+      await ForumService.fetchIndex(client: client, packageInfoLoader: () async => _packageInfo());
+      await ForumService.fetchBookmarks(client: client, packageInfoLoader: () async => _packageInfo());
+    }
+
+    await fetchBoth();
+    ForumService.invalidateAccountPages();
+    await fetchBoth();
+
+    // The index stayed cached; only the bookmarks feed refetched.
+    expect(urls, [ForumService.indexUrl, ForumService.bookmarksUrl, ForumService.bookmarksUrl]);
   });
 
   test('signing in clears the cache', () async {

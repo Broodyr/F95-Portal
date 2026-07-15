@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:f95_portal/models/account.dart';
 import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/services/forum_parser.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -107,6 +108,12 @@ void main() {
       expect(page.posts, hasLength(20));
     });
 
+    test('resolves the thread base URL from the canonical link', () {
+      // Post-permalink fetches (/posts/N/) redirect to a thread page;
+      // pagination must build on this URL, with the page suffix stripped.
+      expect(page.threadUrl, 'https://f95zone.to/threads/bubbles-and-babes-v0-162-bubbles-and-babes.207754/');
+    });
+
     test('parses post attribution', () {
       final post = page.posts.first;
       expect(post.postId, 13720617);
@@ -132,6 +139,17 @@ void main() {
       );
     });
 
+    test('parses the thread watch endpoint and state', () {
+      expect(page.watchUrl, 'https://f95zone.to/threads/bubbles-and-babes-v0-162-bubbles-and-babes.207754/watch');
+      expect(page.watched, isFalse);
+    });
+
+    test('a watched thread reports its state from the Unwatch label', () {
+      final watched = parseThreadPosts(fixture('thread_godot_beguiled.htm'));
+      expect(watched.watchUrl, 'https://f95zone.to/threads/beguiled-v0-2-2-bad-bucket.297385/watch');
+      expect(watched.watched, isTrue);
+    });
+
     test('parses the reaction summary on the OP', () {
       final dik = parseThreadPosts(fixture('thread_renpy_being_a_dik.htm'));
       expect(dik.posts, hasLength(20));
@@ -146,6 +164,120 @@ void main() {
       expect(reactions!.topReactionIds, [1, 14, 12]);
       expect(reactions.count, 12837);
       expect(reactions.url, 'https://f95zone.to/posts/1565686/reactions');
+    });
+  });
+
+  group('parseBookmarks', () {
+    late BookmarksPage page;
+
+    setUpAll(() => page = parseBookmarks(fixture('account_bookmarks.htm')));
+
+    test('parses every bookmark row with the page CSRF', () {
+      expect(page.entries, hasLength(2));
+      expect(page.csrfToken, isNotEmpty);
+      expect(page.currentPage, 1);
+      expect(page.totalPages, 1);
+    });
+
+    test('post bookmarks lift the inner title and carry the tools endpoint', () {
+      final post = page.entries.first;
+      expect(post.isPost, isTrue);
+      expect(post.title, '[Secret Flasher Manaka] Custom Missions 1.2.1 & Version 2.2.1');
+      expect(post.url, 'https://f95zone.to/posts/19803972/');
+      expect(post.snippet, 'Manaka - Custom missions');
+      expect(post.author, 'SekiYuri');
+      expect(post.date, 'Apr 8, 2026');
+      expect(post.bookmarkUrl, 'https://f95zone.to/posts/19803972/bookmark');
+    });
+
+    test('thread bookmarks resolve to the thread URL', () {
+      final thread = page.entries[1];
+      expect(thread.isPost, isFalse);
+      expect(thread.title, 'Mousetrap: Theft & Bondage [v0.1.6p2] [Milkshake++]');
+      expect(thread.url, 'https://f95zone.to/threads/mousetrap-theft-bondage-v0-1-6p2-milkshake.254486/');
+      expect(thread.snippet, contains('Ratalie found herself'));
+      expect(thread.author, 'Milkshake++');
+      expect(thread.bookmarkUrl, 'https://f95zone.to/posts/16935508/bookmark');
+    });
+  });
+
+  group('parseAlerts', () {
+    late AlertsPage page;
+
+    setUpAll(() => page = parseAlerts(fixture('account_alerts.htm')));
+
+    test('groups alerts under their date headers', () {
+      expect([for (final group in page.groups) group.title], ['Today', 'Yesterday', 'Friday']);
+      expect(page.groups.fold<int>(0, (n, g) => n + g.alerts.length), 10);
+      expect(page.currentPage, 1);
+      expect(page.totalPages, 17);
+      // Needed to POST the mark-read action.
+      expect(page.csrfToken, '1783912232,9d248ff0e3701055def2de9cbe5e0dd0');
+      // The nav bell counter: 0 in the fixture even though rows carry
+      // unread stars — viewed and read are separate states.
+      expect(page.badgeCount, 0);
+    });
+
+    test('the bell badge count comes from the nav data-badge', () {
+      AlertsPage withBadge(String badge) => parseAlerts('''
+        <a href="/account/alerts" class="p-navgroup-link js-badge--alerts badgeContainer" data-badge="$badge"></a>
+        <ol class="listPlain"><li>
+          <h2 class="block-formSectionHeader">Today</h2>
+          <ol class="listPlain"><li data-alert-id="5" class="block-row">
+            <div class="contentRow user-alert"><div class="contentRow-main">
+              <a href="/members/a.9/" class="username">A</a> replied to
+              <a href="/posts/8/" class="fauxBlockLink-blockLink">Hello</a>.
+            </div></div>
+          </li></ol>
+        </li></ol>
+      ''');
+
+      expect(withBadge('4').badgeCount, 4);
+      // f95 renders exact counts uncapped (the bookmarks fixture carries
+      // data-badge="69"), but capped skin variants must still parse.
+      expect(withBadge('137').badgeCount, 137);
+      expect(withBadge('10+').badgeCount, 10);
+    });
+
+    test('parses actor, action, labels, bare title, and unread state', () {
+      final first = page.groups.first.alerts.first;
+      expect(first.alertId, 2047223592);
+      expect(first.username, 'TMakuboss');
+      expect(first.action, 'replied to the thread');
+      expect(first.labels, ['Unity', 'Completed']);
+      expect(first.title, "Mage Kanade's Futanari Dungeon Quest [Final] [Dieselmine]");
+      expect(first.url, 'https://f95zone.to/posts/20969203/');
+      expect(first.time, '13 minutes ago');
+      expect(first.unread, isTrue);
+    });
+
+    test('counts unread alerts across groups', () {
+      expect(page.unreadCount, greaterThan(0));
+      expect(page.unreadCount, lessThanOrEqualTo(10));
+    });
+  });
+
+  group('parseAlertPreferences', () {
+    test('reads the live preferences page', () {
+      final prefs = parseAlertPreferences(fixture('account_preferences.htm'));
+      // The f95 defaults: the pop-up marks alerts read, the page doesn't.
+      expect(prefs.popupSkipsMarkRead, isFalse);
+      expect(prefs.pageSkipsMarkRead, isTrue);
+    });
+
+    test('reads the checked state of both skip-mark-read checkboxes', () {
+      final prefs = parseAlertPreferences('''
+        <label><input type="checkbox" name="option[sv_alerts_popup_skips_mark_read]" value="1" /> popup</label>
+        <label><input type="checkbox" name="option[sv_alerts_page_skips_mark_read]" value="1" checked="checked" /> page</label>
+      ''');
+      expect(prefs.popupSkipsMarkRead, isFalse);
+      expect(prefs.pageSkipsMarkRead, isTrue);
+    });
+
+    test('missing markup reads as unchecked, the f95 default', () {
+      final prefs = parseAlertPreferences('<html><body><p>login required</p></body></html>');
+      expect(prefs.popupSkipsMarkRead, isFalse);
+      expect(prefs.pageSkipsMarkRead, isFalse);
     });
   });
 
@@ -172,6 +304,57 @@ void main() {
       expect(page.subforums.single.lastPost?.url, 'https://f95zone.to/threads/hi.1/unread');
       expect(page.threads.single.url, 'https://f95zone.to/threads/some-thread.42/');
       expect(page.threads.single.authorAvatarUrl, 'https://f95zone.to/data/avatars/s/0/92.jpg');
+    });
+
+    test('bookmark and alert URLs are absolutized', () {
+      final bookmarks = parseBookmarks('''
+        <li class="block-row">
+          <div class="contentRow">
+            <div class="contentRow-main">
+              <div class="contentRow-extra">
+                <a href="/posts/7/bookmark">Edit</a>
+                <a href="/posts/7/bookmark?delete=1">Delete</a>
+              </div>
+              <div class="contentRow-title"><a href="/posts/7/">Post in thread 'Hi'</a></div>
+            </div>
+          </div>
+        </li>
+      ''');
+      expect(bookmarks.entries.single.url, 'https://f95zone.to/posts/7/');
+      expect(bookmarks.entries.single.bookmarkUrl, 'https://f95zone.to/posts/7/bookmark');
+
+      final alerts = parseAlerts('''
+        <ol class="listPlain"><li>
+          <h2 class="block-formSectionHeader">Today</h2>
+          <ol class="listPlain">
+            <li data-alert-id="5" class="block-row">
+              <div class="contentRow user-alert"><div class="contentRow-main">
+                <a href="/members/a.9/" class="username">A</a> reacted to your message
+                <a href="/posts/8/" class="fauxBlockLink-blockLink">Hello there</a>.
+              </div></div>
+            </li>
+          </ol>
+        </li></ol>
+      ''');
+      final alert = alerts.groups.single.alerts.single;
+      expect(alert.url, 'https://f95zone.to/posts/8/');
+      expect(alert.action, 'reacted to your message');
+      expect(alert.title, 'Hello there');
+      expect(alert.unread, isFalse);
+    });
+
+    test('watch URL is absolutized and the Unwatch label marks state', () {
+      final page = parseThreadPosts('''
+        <a href="/threads/9/watch" data-sk-watch="Watch" data-sk-unwatch="Unwatch">
+          <span class="button-text">Unwatch</span>
+        </a>
+        <article class="message message--post" data-content="post-7">
+          <div class="message-body"><div class="bbWrapper">hello</div></div>
+        </article>
+      ''');
+
+      expect(page.watchUrl, 'https://f95zone.to/threads/9/watch');
+      expect(page.watched, isTrue);
     });
 
     test('post reaction and avatar URLs are absolutized', () {

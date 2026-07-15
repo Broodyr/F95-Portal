@@ -114,13 +114,11 @@ void main() {
       expect(notes.rich.any((p) => p.imageUrl != null), isTrue);
     });
 
-    test('extracts the logged-in like/watch endpoints and state', () {
+    test('extracts the logged-in bookmark endpoint and state from the OP', () {
       final actions = page.actions!;
       expect(actions.csrfToken, isNotEmpty);
-      expect(actions.reactUrl, contains('/posts/13719651/react?reaction_id=1'));
-      expect(actions.liked, isFalse);
-      expect(actions.watchUrl, endsWith('/watch'));
-      expect(actions.watched, isFalse);
+      expect(actions.bookmarkUrl, 'https://f95zone.to/posts/13719651/bookmark');
+      expect(actions.bookmarked, isFalse);
     });
   });
 
@@ -193,6 +191,41 @@ void main() {
     test('spoilers carry tappable links in their rich content', () {
       final android = page.spoilers.firstWhere((s) => s.title == 'Something Unlimited Android');
       expect(android.rich.any((p) => p.url != null), isTrue);
+    });
+  });
+
+  group('parseThreadPage bookmark action', () {
+    // Live pages serve relative hrefs (saved fixtures absolutize them), and
+    // an existing bookmark renders with the is-bookmarked class.
+    ThreadPage synthetic({required String anchor}) => parseThreadPage('''
+      <html data-csrf="tok,en"><body>
+        <article class="message--post">
+          <div class="bbWrapper">Overview: hello</div>
+          $anchor
+        </article>
+      </body></html>
+    ''', threadId: 9);
+
+    test('relative bookmark href is absolutized', () {
+      final page = synthetic(
+        anchor: '<a href="/posts/99/bookmark" class="bookmarkLink" data-xf-click="bookmark-click">Add bookmark</a>',
+      );
+      expect(page.actions!.bookmarkUrl, 'https://f95zone.to/posts/99/bookmark');
+      expect(page.actions!.bookmarked, isFalse);
+      expect(page.actions!.csrfToken, 'tok,en');
+    });
+
+    test('is-bookmarked class marks an existing bookmark', () {
+      final page = synthetic(
+        anchor:
+            '<a href="/posts/99/bookmark" class="bookmarkLink is-bookmarked" data-xf-click="bookmark-click">Edit bookmark</a>',
+      );
+      expect(page.actions!.bookmarked, isTrue);
+    });
+
+    test('guest pages without a bookmark link yield no actions', () {
+      final page = synthetic(anchor: '');
+      expect(page.actions, isNull);
     });
   });
 

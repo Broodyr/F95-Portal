@@ -319,7 +319,7 @@ void main() {
     expect(find.textContaining('Fixed things'), findsNothing);
   });
 
-  testWidgets('like and bookmark post the XenForo actions and toggle state', (tester) async {
+  testWidgets('bookmark posts the XenForo bookmark action and toggles state', (tester) async {
     final previousAuth = AuthService.instance;
     addTearDown(() => AuthService.instance = previousAuth);
     AuthService.instance = AuthService(InMemoryCookieStorage());
@@ -332,26 +332,26 @@ void main() {
       actionSender: (url, csrf, fields) async => sent.add((url, csrf, fields)),
     );
 
-    await tester.scrollUntilVisible(find.byTooltip('Like'), 150);
-    await tester.ensureVisible(find.byTooltip('Like'));
+    await tester.scrollUntilVisible(find.byTooltip('Bookmark'), 150);
+    await tester.ensureVisible(find.byTooltip('Bookmark'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Like'));
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.favorite), findsOneWidget);
-    expect(sent.last.$1, 'https://example.com/posts/1/react?reaction_id=1');
-    expect(sent.last.$2, 'mock-csrf');
-    expect(sent.last.$3, isEmpty);
+    // The old Like button is gone: reacting happens inside the thread viewer.
+    expect(find.byTooltip('Like'), findsNothing);
+    expect(find.byIcon(Icons.favorite_border), findsNothing);
 
     await tester.tap(find.byTooltip('Bookmark'));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.bookmark), findsOneWidget);
-    expect(sent.last.$1, 'https://example.com/threads/1/watch');
+    expect(sent.last.$1, 'https://example.com/posts/1/bookmark');
+    expect(sent.last.$2, 'mock-csrf');
+    expect(sent.last.$3, isEmpty);
 
-    // Unbookmarking sends stop=1.
+    // Removing a bookmark posts delete=1 to the same endpoint.
     await tester.tap(find.byTooltip('Remove bookmark'));
     await tester.pumpAndSettle();
-    expect(sent.last.$3, {'stop': '1'});
+    expect(sent.last.$1, 'https://example.com/posts/1/bookmark');
+    expect(sent.last.$3, {'delete': '1'});
     expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
   });
 
@@ -367,13 +367,13 @@ void main() {
       actionSender: (url, csrf, fields) async => throw Exception('offline'),
     );
 
-    await tester.scrollUntilVisible(find.byTooltip('Like'), 150);
-    await tester.ensureVisible(find.byTooltip('Like'));
+    await tester.scrollUntilVisible(find.byTooltip('Bookmark'), 150);
+    await tester.ensureVisible(find.byTooltip('Bookmark'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Like'));
+    await tester.tap(find.byTooltip('Bookmark'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
   });
 
   testWidgets('logged-out taps prompt for sign-in instead of posting', (tester) async {
@@ -388,15 +388,15 @@ void main() {
       actionSender: (url, csrf, fields) async => sent.add(url),
     );
 
-    await tester.scrollUntilVisible(find.byTooltip('Like'), 150);
-    await tester.ensureVisible(find.byTooltip('Like'));
+    await tester.scrollUntilVisible(find.byTooltip('Bookmark'), 150);
+    await tester.ensureVisible(find.byTooltip('Bookmark'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Like'));
+    await tester.tap(find.byTooltip('Bookmark'));
     await tester.pumpAndSettle();
 
     expect(sent, isEmpty);
     expect(find.textContaining('Sign in from the Profile tab'), findsOneWidget);
-    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
   });
 
   testWidgets('logged out with no downloads shows a sign-in notice under Downloads', (tester) async {
