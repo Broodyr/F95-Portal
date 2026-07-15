@@ -708,7 +708,26 @@ class _PostCardState extends State<_PostCard> {
                     ),
                   ),
                 ),
-              if (post.number > 0) Text('#${post.number}', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+              if (post.number > 0)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: 'https://f95zone.to/posts/${post.postId}/'));
+                    AppToast.show(context, 'Permalink copied');
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text(
+                      '#${post.number}',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 11,
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 8),
