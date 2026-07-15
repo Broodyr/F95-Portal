@@ -62,6 +62,48 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
 
   void _onPointerCountChanged(int delta) {
     setState(() => _pointerCount = (_pointerCount + delta).clamp(0, 10));
+    _edgeDragAccum = 0;
+    _edgeFlipTriggered = false;
+  }
+
+  /// Horizontal drag accumulated while the zoomed image is already pinned
+  /// against a side edge; a significant pull past the edge flips the page,
+  /// while small pan overshoots stay on the current image.
+  double _edgeDragAccum = 0;
+  bool _edgeFlipTriggered = false;
+  static const double _edgeFlipThreshold = 110;
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (!_zoomed || _pointerCount != 1 || _edgeFlipTriggered) return;
+    final dx = event.delta.dx;
+    if (dx == 0) return;
+
+    // Pan bounds for a constrained InteractiveViewer: translation.x runs
+    // from 0 (left edge visible) to width * (1 - scale) (right edge).
+    final scale = _transformation.value.getMaxScaleOnAxis();
+    final tx = _transformation.value.getTranslation().x;
+    final width = MediaQuery.of(context).size.width;
+    const slop = 1.0;
+    final atLeftEdge = tx >= -slop;
+    final atRightEdge = tx <= width * (1 - scale) + slop;
+
+    if (dx > 0 && atLeftEdge && _index > 0) {
+      _edgeDragAccum = (_edgeDragAccum > 0 ? _edgeDragAccum : 0) + dx;
+    } else if (dx < 0 && atRightEdge && _index < widget.urls.length - 1) {
+      _edgeDragAccum = (_edgeDragAccum < 0 ? _edgeDragAccum : 0) + dx;
+    } else {
+      _edgeDragAccum = 0;
+      return;
+    }
+
+    if (_edgeDragAccum.abs() > _edgeFlipThreshold) {
+      _edgeFlipTriggered = true;
+      _pageController.animateToPage(
+        _index + (_edgeDragAccum > 0 ? -1 : 1),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   /// Double tap toggles between fit and 2.5x zoom centered on the tap point.
@@ -82,14 +124,53 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text('${_index + 1} / ${widget.urls.length}', style: const TextStyle(fontSize: 16)),
+      body: Stack(
+        children: [
+          Positioned.fill(child: _buildPager()),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 12,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+          if (widget.urls.length > 1)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${_index + 1} / ${widget.urls.length}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
-      body: Listener(
+    );
+  }
+
+  Widget _buildPager() {
+    return Listener(
         onPointerDown: (_) => _onPointerCountChanged(1),
-        onPointerUp: (_) => _onPointerCountChanged(-1),
+        onPointerMove: _onPointerMove,
+      onPointerUp: (_) => _onPointerCountChanged(-1),
         onPointerCancel: (_) => _onPointerCountChanged(-1),
         child: PageView.builder(
           controller: _pageController,
@@ -122,7 +203,6 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
             );
           },
         ),
-      ),
     );
   }
 }
