@@ -90,6 +90,9 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
                       child: CachedNetworkImage(
                         imageUrl: imageUrl,
                         fit: BoxFit.contain,
+                        // Decode at the 180-logical-px render height, not
+                        // source size; some posts inline dozens of images.
+                        memCacheHeight: (180 * MediaQuery.devicePixelRatioOf(context)).round(),
                         placeholder: (context, url) =>
                             Container(width: 120, height: 80, color: const Color(0xFF2A2A2A)),
                         errorWidget: (context, url, error) => Container(

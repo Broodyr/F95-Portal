@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import 'sfw_blur.dart';
 
@@ -7,6 +8,16 @@ import 'sfw_blur.dart';
 class ScreenshotGallery extends StatefulWidget {
   final List<String> urls;
   final int initialIndex;
+
+  /// Fetches one image's bytes into the disk cache without decoding it
+  /// (swappable so tests don't touch the real cache manager). Decoding all
+  /// images up front is what used to freeze the UI for seconds; bytes-only
+  /// prefetch keeps swipes fast while only the visible page ever decodes.
+  static Future<void> Function(String url) downloadBytes = _downloadToCache;
+
+  static Future<void> _downloadToCache(String url) async {
+    await DefaultCacheManager().getSingleFile(url);
+  }
 
   const ScreenshotGallery({super.key, required this.urls, this.initialIndex = 0});
 
@@ -38,25 +49,27 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   /// one-finger drag pans the image instead of changing pages.
   bool get _pageSwipingDisabled => _pointerCount >= 2 || _zoomed;
 
-  bool _precached = false;
-
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
     _transformation.addListener(_onTransformationChanged);
+    _prefetchBytes();
   }
 
-  /// HD images are only fetched once the viewer opens; start them all now so
-  /// swiping to the neighbors doesn't wait on the network.
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_precached) return;
-    _precached = true;
-    for (final url in widget.urls) {
-      precacheImage(CachedNetworkImageProvider(url), context, onError: (error, stackTrace) {});
+  /// HD images are only fetched once the viewer opens; start downloading
+  /// them all now (nearest to the opened image first) so swiping doesn't
+  /// wait on the network. Bytes only — never decode ahead of display.
+  void _prefetchBytes() {
+    final order = List.generate(widget.urls.length, (i) => i)
+      ..sort((a, b) {
+        final byDistance = (a - widget.initialIndex).abs().compareTo((b - widget.initialIndex).abs());
+        // Ties favor the higher index: forward is the likelier swipe.
+        return byDistance != 0 ? byDistance : b.compareTo(a);
+      });
+    for (final i in order) {
+      ScreenshotGallery.downloadBytes(widget.urls[i]).catchError((Object _) {});
     }
   }
 

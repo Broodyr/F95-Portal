@@ -902,6 +902,8 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
             child: CachedNetworkImage(
               imageUrl: thread.screens[index],
               fit: BoxFit.cover,
+              // Decode at the 150-logical-px render size, not source size.
+              memCacheWidth: (150 * MediaQuery.devicePixelRatioOf(context)).round(),
               placeholder: (context, url) => Container(color: const Color(0xFF2A2A2A)),
               errorWidget: (context, url, error) => Container(
                 color: const Color(0xFF2A2A2A),

@@ -79,7 +79,10 @@ class ThreadCard extends StatelessWidget {
                           // main CoverImage is using to overflow.
                           alignment: Alignment.topCenter,
                           maxHeight: double.infinity,
-                          child: Transform.scale(scaleY: -1, child: CoverImage(imageUrl: thread.cover)),
+                          child: Transform.scale(
+                            scaleY: -1,
+                            child: CoverImage(imageUrl: thread.cover, upgradeToHd: false),
+                          ),
                         ),
                       ),
                     ),

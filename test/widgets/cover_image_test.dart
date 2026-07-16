@@ -30,6 +30,22 @@ void main() {
     expect(imageUrls(tester).toList(), [hd]);
   });
 
+  testWidgets('skips the HD upgrade when upgradeToHd is false (reflection copy)', (tester) async {
+    await pumpTestApp(tester, const CoverImage(imageUrl: preview, upgradeToHd: false));
+    await tester.pumpAndSettle();
+
+    expect(imageUrls(tester).toList(), [preview]);
+  });
+
+  testWidgets('decodes at the display width instead of the source size', (tester) async {
+    await pumpTestApp(tester, const CoverImage(imageUrl: preview));
+    await tester.pump();
+
+    final image = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage).first);
+    expect(image.memCacheWidth, isNotNull);
+    expect(image.memCacheWidth, greaterThan(0));
+  });
+
   testWidgets('shows the plain placeholder without a URL', (tester) async {
     await pumpTestApp(tester, const CoverImage(imageUrl: null));
     await tester.pump();

@@ -6,6 +6,33 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('downloads every image on open, nearest to the opened one first', (tester) async {
+    final fetched = <String>[];
+    final original = ScreenshotGallery.downloadBytes;
+    ScreenshotGallery.downloadBytes = (url) async => fetched.add(url);
+    addTearDown(() => ScreenshotGallery.downloadBytes = original);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ScreenshotGallery(
+          urls: ['https://example.com/a.png', 'https://example.com/b.png', 'https://example.com/c.png', 'https://example.com/d.png'],
+          initialIndex: 2,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(fetched, [
+      'https://example.com/c.png',
+      'https://example.com/d.png',
+      'https://example.com/b.png',
+      'https://example.com/a.png',
+    ]);
+
+    // Let cached_network_image's internal timers expire before teardown.
+    await tester.pump(const Duration(minutes: 1));
+  });
+
   Future<void> pumpGallery(WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(home: ScreenshotGallery(urls: ['https://example.com/a.png', 'https://example.com/b.png'])),
