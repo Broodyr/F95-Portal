@@ -148,7 +148,7 @@ class SettingsScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Glass effects', style: TextStyle(color: Colors.white, fontSize: 15)),
                   subtitle: Text(
-                    'Backdrop blur on sheets, nav bar, and overlays; disable if animations lag',
+                    'Backdrop blur on sheets, nav bar, overlays, and card reflections; disable if animations lag',
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
                   activeTrackColor: colorScheme.primary,

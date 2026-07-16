@@ -1,13 +1,15 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+
 import '../models/search_category.dart';
 import '../models/thread_summary.dart';
 import '../utils/formatters.dart';
 import 'cover_image.dart';
 import 'engine_tag.dart';
-import 'version_pill.dart';
+import 'glass_aware.dart';
 import 'metadata_row.dart';
+import 'version_pill.dart';
 
 class ThreadCard extends StatelessWidget {
   final ThreadSummary thread;
@@ -57,7 +59,6 @@ class ThreadCard extends StatelessWidget {
                     isOnhold: thread.isOnhold,
                   ),
                 ),
-
               ],
             ),
 
@@ -87,7 +88,9 @@ class ThreadCard extends StatelessWidget {
                       ),
                     ),
 
-                    // Cover image filter layer
+                    // Cover image filter layer. With glass effects off the
+                    // backdrop blur is skipped (it re-blurs every frame of
+                    // animated covers) and a darker scrim stands in for it.
                     Positioned(
                       top: -1,
                       left: -1,
@@ -98,37 +101,36 @@ class ThreadCard extends StatelessWidget {
                           bottomLeft: Radius.circular(11.0),
                           bottomRight: Radius.circular(11.0),
                         ),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 2),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: const BorderRadius.only(
-                                bottomLeft: Radius.circular(11.0),
-                                bottomRight: Radius.circular(11.0),
+                        child: GlassAware(
+                          builder: (context, glass) {
+                            final scrim = Container(
+                              decoration: BoxDecoration(
+                                borderRadius: const BorderRadius.only(
+                                  bottomLeft: Radius.circular(11.0),
+                                  bottomRight: Radius.circular(11.0),
+                                ),
+                                border: const Border(top: BorderSide(color: Color.fromARGB(127, 0, 0, 0), width: 1)),
+                                gradient: RadialGradient(
+                                  center: const Alignment(0, -1),
+                                  radius: 4,
+                                  colors: glass
+                                      ? [
+                                          Colors.black.withValues(alpha: 0.4),
+                                          Colors.black.withValues(alpha: 0.75),
+                                          Colors.black.withValues(alpha: 1),
+                                        ]
+                                      : [
+                                          Colors.black.withValues(alpha: 0.8),
+                                          Colors.black.withValues(alpha: 0.9),
+                                          Colors.black.withValues(alpha: 1),
+                                        ],
+                                  stops: const [0, 0.4, 0.8],
+                                ),
                               ),
-                              border: const Border(top: BorderSide(color: Color.fromARGB(127, 0, 0, 0), width: 1)),
-                              // gradient: LinearGradient(
-                              //   begin: Alignment.topCenter,
-                              //   end: Alignment(0.0, 0.4),
-                              //   colors: [
-                              //     Colors.black.withValues(alpha: 0),
-                              //     Colors.black.withValues(alpha: 0.8),
-                              //     Colors.black.withValues(alpha: 1),
-                              //   ],
-                              //   stops: [0.0, 0.4, 0.7],
-                              // ),
-                              gradient: RadialGradient(
-                                center: Alignment(0, -1),
-                                radius: 4,
-                                colors: [
-                                  Colors.black.withValues(alpha: 0.4),
-                                  Colors.black.withValues(alpha: 0.75),
-                                  Colors.black.withValues(alpha: 1),
-                                ],
-                                stops: [0, 0.4, 0.8],
-                              ),
-                            ),
-                          ),
+                            );
+                            if (!glass) return scrim;
+                            return BackdropFilter(filter: ImageFilter.blur(sigmaX: 6, sigmaY: 2), child: scrim);
+                          },
                         ),
                       ),
                     ),
