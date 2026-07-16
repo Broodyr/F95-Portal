@@ -93,29 +93,36 @@ class _CoverImageState extends State<CoverImage> {
     );
   }
 
-  /// The API serves low-quality preview covers; load the HD variant with the
-  /// preview standing in while it downloads (and staying if HD fails).
+  /// The API serves low-quality preview covers. The preview keeps its own
+  /// permanent layer — adding the HD overlay later must not disturb its
+  /// element (an in-place URL swap restarts loading and the preview loses
+  /// the race, leaving bare placeholders during fast scrolls). The HD layer
+  /// is transparent until decoded, then fades in on top; if it fails, the
+  /// preview simply stays.
   Widget _buildImage(String url, int decodeWidth) {
     final hd = _hdUrl;
-    if (hd == null || !_wantHd) {
-      return _lowResImage(url, decodeWidth);
-    }
-    return RemoteImage(
-      url: hd,
-      fit: BoxFit.cover,
-      decodeWidth: decodeWidth,
-      onLoaded: () => CoverImage._hdLoaded.add(hd),
-      placeholder: (context) => _lowResImage(url, decodeWidth),
-      errorWidget: (context) => _lowResImage(url, decodeWidth),
-    );
-  }
-
-  Widget _lowResImage(String url, int decodeWidth) {
-    return RemoteImage(
+    final lowRes = RemoteImage(
       url: url,
       fit: BoxFit.cover,
       decodeWidth: decodeWidth,
       placeholder: (context) => _buildPlaceholder(),
+    );
+    if (hd == null) return lowRes;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        lowRes,
+        if (_wantHd)
+          Positioned.fill(
+            child: RemoteImage(
+              url: hd,
+              fit: BoxFit.cover,
+              decodeWidth: decodeWidth,
+              onLoaded: () => CoverImage._hdLoaded.add(hd),
+              errorWidget: (context) => const SizedBox.shrink(),
+            ),
+          ),
+      ],
     );
   }
 

@@ -35,6 +35,21 @@ void main() {
     expect(imageUrls(tester).toList(), [hd]);
   });
 
+  testWidgets('the preview layer keeps its element when the HD overlay appears', (tester) async {
+    await pumpTestApp(tester, const CoverImage(imageUrl: preview));
+    await tester.pump();
+
+    previewFinder() => find.byWidgetPredicate((w) => w is RemoteImage && w.url == preview);
+    final stateBefore = tester.state(previewFinder());
+
+    await tester.pump(CoverImage.hdUpgradeDelay + const Duration(milliseconds: 50));
+
+    // Same State object: the HD flip must not restart the preview's
+    // loading pipeline (that's what left bare placeholders mid-scroll).
+    expect(tester.state(previewFinder()), same(stateBefore));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('skips the HD upgrade when upgradeToHd is false (reflection copy)', (tester) async {
     await pumpTestApp(tester, const CoverImage(imageUrl: preview, upgradeToHd: false));
     await tester.pumpAndSettle();

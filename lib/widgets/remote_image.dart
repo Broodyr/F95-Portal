@@ -13,7 +13,9 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 /// bundled dav1d instead, entirely in-process.
 ///
 /// Files land in the same flutter_cache_manager disk cache the gallery's
-/// byte prefetch fills. On web this falls back to CachedNetworkImage
+/// byte prefetch fills. URLs resolved once are remembered, so rebuilding a
+/// widget for a known image shows it synchronously instead of repeating the
+/// cache-manager round trip. On web this falls back to CachedNetworkImage
 /// (browsers decode AVIF natively and dart:io file access doesn't apply).
 class RemoteImage extends StatefulWidget {
   final String url;
@@ -26,6 +28,8 @@ class RemoteImage extends StatefulWidget {
   final int? decodeHeight;
 
   /// Shown while the image loads, and on failure when [errorWidget] is null.
+  /// When null, the image occupies no visual space until ready and then
+  /// fades in — the transparent-overlay mode CoverImage layers HD with.
   final WidgetBuilder? placeholder;
   final WidgetBuilder? errorWidget;
 
@@ -43,6 +47,13 @@ class RemoteImage extends StatefulWidget {
     this.onLoaded,
   });
 
+  /// Providers by url + decode caps. A hit skips the async cache-manager
+  /// lookup entirely, so rebuilt widgets (scrolling back, HD layered over a
+  /// just-shown preview) paint from the image cache without a placeholder
+  /// flash. Entries are just file paths; the pixel memory itself stays
+  /// under the global imageCache's control.
+  static final Map<String, ImageProvider> _resolved = {};
+
   @override
   State<RemoteImage> createState() => _RemoteImageState();
 }
@@ -51,10 +62,16 @@ class _RemoteImageState extends State<RemoteImage> {
   ImageProvider? _provider;
   bool _failed = false;
 
+  /// One retry after an error from a remembered provider, in case the
+  /// cache manager evicted the file behind it.
+  bool _retried = false;
+
+  String get _cacheKey => '${widget.url}|${widget.decodeWidth}|${widget.decodeHeight}';
+
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb) _resolve();
+    if (!kIsWeb) _initProvider();
   }
 
   @override
@@ -65,24 +82,48 @@ class _RemoteImageState extends State<RemoteImage> {
         oldWidget.decodeHeight != widget.decodeHeight) {
       _provider = null;
       _failed = false;
-      if (!kIsWeb) _resolve();
+      _retried = false;
+      if (!kIsWeb) _initProvider();
     }
   }
 
+  void _initProvider() {
+    _provider = RemoteImage._resolved[_cacheKey];
+    if (_provider == null) _resolve();
+  }
+
   Future<void> _resolve() async {
-    final url = widget.url;
+    final key = _cacheKey;
     try {
-      final file = await DefaultCacheManager().getSingleFile(url);
+      final stopwatch = Stopwatch()..start();
+      final file = await DefaultCacheManager().getSingleFile(widget.url);
       // The AVIF signature ('ftypavif'/'ftypavis') sits in the first bytes.
       final header = await file.openRead(0, 32).fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
-      if (!mounted || widget.url != url) return;
+      if (kDebugMode && stopwatch.elapsedMilliseconds > 500) {
+        debugPrint('RemoteImage slow resolve: ${stopwatch.elapsedMilliseconds}ms ${widget.url}');
+      }
+      if (!mounted || key != _cacheKey) return;
       final ImageProvider provider = isAvifFile(Uint8List.fromList(header)) != AvifFileType.unknown
           ? FileAvifImage(file)
           : ResizeImage.resizeIfNeeded(widget.decodeWidth, widget.decodeHeight, FileImage(file));
+      RemoteImage._resolved[key] = provider;
       setState(() => _provider = provider);
     } catch (_) {
-      if (mounted && widget.url == url) setState(() => _failed = true);
+      if (mounted && key == _cacheKey) setState(() => _failed = true);
     }
+  }
+
+  /// The file behind a remembered provider may have been evicted from the
+  /// disk cache; drop the memo and re-fetch once before giving up.
+  void _onImageError() {
+    if (_retried) return;
+    _retried = true;
+    RemoteImage._resolved.remove(_cacheKey);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _provider = null);
+      _resolve();
+    });
   }
 
   Widget _buildError(BuildContext context) =>
@@ -116,11 +157,25 @@ class _RemoteImageState extends State<RemoteImage> {
       image: provider,
       fit: widget.fit,
       gaplessPlayback: true,
-      errorBuilder: (context, error, stackTrace) => _buildError(context),
+      errorBuilder: (context, error, stackTrace) {
+        _onImageError();
+        return _buildError(context);
+      },
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (frame == null) return _buildLoading(context);
-        widget.onLoaded?.call();
-        return child;
+        if (wasSynchronouslyLoaded) {
+          widget.onLoaded?.call();
+          return child;
+        }
+        if (frame == null && widget.placeholder != null) return _buildLoading(context);
+        if (frame != null) widget.onLoaded?.call();
+        // Without a placeholder the image is a transparent overlay until its
+        // first frame, then fades in over whatever sits beneath it.
+        return AnimatedOpacity(
+          opacity: frame == null ? 0 : 1,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          child: child,
+        );
       },
     );
   }
