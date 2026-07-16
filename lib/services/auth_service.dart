@@ -68,6 +68,15 @@ class AuthService extends ChangeNotifier {
       // First line only: secure-storage failures embed a full Java stack.
       debugPrint('AuthService.load failed: ${e.toString().split('\n').first}');
       _cookies = const {};
+      // BadPaddingException means the blob is permanently undecryptable
+      // (e.g. a debug build reading a release build's encrypted data) and
+      // would re-fail on every launch; wipe it. Transient keystore errors
+      // don't match and keep the data.
+      if (e.toString().contains('BadPaddingException')) {
+        try {
+          await _storage.delete();
+        } catch (_) {}
+      }
     }
   }
 

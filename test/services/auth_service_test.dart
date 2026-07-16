@@ -76,6 +76,46 @@ void main() {
 
       expect(auth.isLoggedIn, isFalse);
       expect(auth.cookieHeader, isNull);
+      // Unparseable-but-readable data is kept for diagnosis.
+      expect(storage.stored, isNotNull);
+    });
+
+    test('load wipes storage that can never be decrypted again', () async {
+      final undecryptable = ThrowingCookieStorage(
+        Exception('PlatformException(Exception encountered, read, javax.crypto.BadPaddingException: ...)'),
+      );
+      final service = AuthService(undecryptable);
+
+      await service.load();
+
+      expect(service.isLoggedIn, isFalse);
+      expect(undecryptable.deleted, isTrue);
+    });
+
+    test('load keeps storage on transient read failures', () async {
+      final flaky = ThrowingCookieStorage(Exception('KeyStore temporarily unavailable'));
+      final service = AuthService(flaky);
+
+      await service.load();
+
+      expect(service.isLoggedIn, isFalse);
+      expect(flaky.deleted, isFalse);
     });
   });
+}
+
+class ThrowingCookieStorage implements CookieStorage {
+  final Exception readError;
+  bool deleted = false;
+
+  ThrowingCookieStorage(this.readError);
+
+  @override
+  Future<String?> read() async => throw readError;
+
+  @override
+  Future<void> write(String value) async {}
+
+  @override
+  Future<void> delete() async => deleted = true;
 }
