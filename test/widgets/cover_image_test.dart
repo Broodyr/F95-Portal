@@ -11,10 +11,15 @@ void main() {
   Iterable<String> imageUrls(WidgetTester tester) =>
       tester.widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage)).map((w) => w.imageUrl);
 
-  testWidgets('loads the HD variant with the preview as placeholder and fallback', (tester) async {
+  testWidgets('shows the preview immediately, upgrading to HD only after the delay', (tester) async {
     await pumpTestApp(tester, const CoverImage(imageUrl: preview));
     await tester.pump();
 
+    // Before the upgrade delay only the low-res preview is requested, so
+    // cards flung past during a fast scroll never start HD work.
+    expect(imageUrls(tester).toList(), [preview]);
+
+    await tester.pump(CoverImage.hdUpgradeDelay + const Duration(milliseconds: 50));
     expect(imageUrls(tester), contains(hd));
 
     // No network in tests: the HD load fails, and the fallback shown in its

@@ -55,10 +55,20 @@ class ForumService {
       return createMockThreadPosts(page: page);
     }
     final pageUrl = _withPage(url, page);
-    return _cached(
-      pageUrl,
-      () async => parseThreadPosts(await _fetchHtml(pageUrl, client: client, packageInfoLoader: packageInfoLoader)),
-    );
+    return _cached(pageUrl, () async {
+      final stopwatch = Stopwatch()..start();
+      final html = await _fetchHtml(pageUrl, client: client, packageInfoLoader: packageInfoLoader);
+      final fetchMs = stopwatch.elapsedMilliseconds;
+      stopwatch.reset();
+      final parsed = parseThreadPosts(html);
+      if (kDebugMode) {
+        debugPrint(
+          'ForumService thread posts: fetch ${fetchMs}ms, '
+          'parse ${stopwatch.elapsedMilliseconds}ms, ${html.length} chars',
+        );
+      }
+      return parsed;
+    });
   }
 
   static Future<ReactionsPage> fetchReactions(

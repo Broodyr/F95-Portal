@@ -202,6 +202,9 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
         child: PageView.builder(
           controller: _pageController,
           physics: _pageSwipingDisabled ? const NeverScrollableScrollPhysics() : null,
+          // Pre-builds the adjacent pages so their images decode while the
+          // current one is viewed, instead of during the swipe animation.
+          allowImplicitScrolling: true,
           itemCount: widget.urls.length,
           onPageChanged: (index) {
             setState(() => _index = index);

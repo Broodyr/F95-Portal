@@ -139,10 +139,20 @@ class ApiService {
       final cookies = AuthService.instance.cookieHeader;
       if (cookies != null) headers['Cookie'] = cookies;
 
+      final stopwatch = Stopwatch()..start();
       final response = await httpClient.get(uri, headers: headers);
+      final networkMs = stopwatch.elapsedMilliseconds;
 
       if (response.statusCode == 200) {
-        return parse(json.decode(response.body));
+        stopwatch.reset();
+        final parsed = parse(json.decode(response.body));
+        if (kDebugMode) {
+          debugPrint(
+            'ApiService ${queryParams['cmd']}: network ${networkMs}ms, '
+            'parse ${stopwatch.elapsedMilliseconds}ms, ${response.body.length} bytes',
+          );
+        }
+        return parsed;
       }
 
       // Error bodies carry a human-readable msg (e.g. the anonymous
