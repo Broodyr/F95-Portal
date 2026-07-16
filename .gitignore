@@ -49,3 +49,6 @@ test/fixtures/*_files/
 
 # Visual Studio IDE cache
 .vs/
+
+# Claude Code personal config (shared config like launch.json stays tracked)
+.claude/settings.local.json
