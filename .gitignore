@@ -46,3 +46,6 @@ app.*.map.json
 
 # Saved-page asset folders; only the .htm fixtures are used
 test/fixtures/*_files/
+
+# Visual Studio IDE cache
+.vs/
