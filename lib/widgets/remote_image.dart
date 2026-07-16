@@ -59,7 +59,29 @@ class RemoteImage extends StatefulWidget {
   static final Map<String, Future<ImageProvider>> _inflight = {};
 
   static Future<ImageProvider> _sharedResolve(String key, Future<ImageProvider> Function() create) {
-    return _inflight[key] ??= create().whenComplete(() => _inflight.remove(key));
+    // Block body on purpose: an arrow would return the removed future to
+    // whenComplete, which then waits on it — a future awaiting itself.
+    return _inflight[key] ??= create().whenComplete(() {
+      _inflight.remove(key);
+    });
+  }
+
+  /// Fetches and sniffs one URL into a provider; swappable so tests can
+  /// exercise the loading pipeline without the real cache manager.
+  static Future<ImageProvider> Function(String url, int? decodeWidth, int? decodeHeight) loadProvider =
+      _defaultLoadProvider;
+
+  static Future<ImageProvider> _defaultLoadProvider(String url, int? decodeWidth, int? decodeHeight) async {
+    final stopwatch = Stopwatch()..start();
+    final file = await DefaultCacheManager().getSingleFile(url);
+    // The AVIF signature ('ftypavif'/'ftypavis') sits in the first bytes.
+    final header = await file.openRead(0, 32).fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
+    if (kDebugMode && stopwatch.elapsedMilliseconds > 500) {
+      debugPrint('RemoteImage slow resolve: ${stopwatch.elapsedMilliseconds}ms $url');
+    }
+    return isAvifFile(Uint8List.fromList(header)) != AvifFileType.unknown
+        ? FileAvifImage(file)
+        : ResizeImage.resizeIfNeeded(decodeWidth, decodeHeight, FileImage(file));
   }
 
   @override
@@ -106,18 +128,10 @@ class _RemoteImageState extends State<RemoteImage> {
     final decodeWidth = widget.decodeWidth;
     final decodeHeight = widget.decodeHeight;
     try {
-      final provider = await RemoteImage._sharedResolve(key, () async {
-        final stopwatch = Stopwatch()..start();
-        final file = await DefaultCacheManager().getSingleFile(url);
-        // The AVIF signature ('ftypavif'/'ftypavis') sits in the first bytes.
-        final header = await file.openRead(0, 32).fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
-        if (kDebugMode && stopwatch.elapsedMilliseconds > 500) {
-          debugPrint('RemoteImage slow resolve: ${stopwatch.elapsedMilliseconds}ms $url');
-        }
-        return isAvifFile(Uint8List.fromList(header)) != AvifFileType.unknown
-            ? FileAvifImage(file)
-            : ResizeImage.resizeIfNeeded(decodeWidth, decodeHeight, FileImage(file));
-      });
+      final provider = await RemoteImage._sharedResolve(
+        key,
+        () => RemoteImage.loadProvider(url, decodeWidth, decodeHeight),
+      );
       RemoteImage._resolved[key] = provider;
       if (!mounted || key != _cacheKey) return;
       setState(() => _provider = provider);
