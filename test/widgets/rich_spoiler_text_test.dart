@@ -1,5 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:f95_portal/models/thread_page.dart';
+import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/widgets/rich_spoiler_text.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:flutter/material.dart';
@@ -24,7 +24,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byType(CachedNetworkImage).at(1));
+    await tester.tap(find.byType(RemoteImage).at(1));
     // The gallery's spinner never settles; use fixed pumps.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -55,7 +55,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byType(CachedNetworkImage));
+    await tester.tap(find.byType(RemoteImage));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

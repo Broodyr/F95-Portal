@@ -1,8 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../models/thread_page.dart';
+import 'remote_image.dart';
 import 'screenshot_gallery.dart';
 import 'sfw_blur.dart';
 
@@ -87,15 +87,15 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxHeight: 180),
                     child: SfwBlur(
-                      child: CachedNetworkImage(
-                        imageUrl: imageUrl,
+                      child: RemoteImage(
+                        url: imageUrl,
                         fit: BoxFit.contain,
                         // Decode at the 180-logical-px render height, not
                         // source size; some posts inline dozens of images.
-                        memCacheHeight: (180 * MediaQuery.devicePixelRatioOf(context)).round(),
-                        placeholder: (context, url) =>
+                        decodeHeight: (180 * MediaQuery.devicePixelRatioOf(context)).round(),
+                        placeholder: (context) =>
                             Container(width: 120, height: 80, color: const Color(0xFF2A2A2A)),
-                        errorWidget: (context, url, error) => Container(
+                        errorWidget: (context) => Container(
                           width: 120,
                           height: 80,
                           color: const Color(0xFF2A2A2A),

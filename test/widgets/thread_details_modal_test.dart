@@ -1,5 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:f95_portal/models/thread_page.dart';
+import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/models/thread_summary.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/services/auth_service.dart';
@@ -183,7 +183,7 @@ void main() {
 
     // The grid renders the low-quality preview URLs as-is.
     thumbFinder(String url) =>
-        find.byWidgetPredicate((w) => w is CachedNetworkImage && w.imageUrl == url);
+        find.byWidgetPredicate((w) => w is RemoteImage && w.url == url);
     expect(thumbFinder(screens[1]), findsOneWidget);
 
     await tester.tap(thumbFinder(screens[1]));

@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -19,6 +18,7 @@ import '../utils/formatters.dart';
 import '../utils/image_urls.dart';
 import 'app_toast.dart';
 import 'engine_tag.dart';
+import 'remote_image.dart';
 import 'rich_spoiler_text.dart';
 import 'screenshot_gallery.dart';
 import 'sfw_blur.dart';
@@ -790,10 +790,12 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                         child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
                       )
                     : SfwBlur(
-                        child: CachedNetworkImage(
-                          imageUrl: thread.cover,
+                        child: RemoteImage(
+                          url: thread.cover,
                           fit: BoxFit.cover,
-                          errorWidget: (context, url, error) => Container(
+                          decodeWidth:
+                              (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
+                          errorWidget: (context) => Container(
                             color: const Color(0xFF2A2A2A),
                             child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
                           ),
@@ -899,13 +901,13 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
         child: SizedBox(
           width: 150,
           child: SfwBlur(
-            child: CachedNetworkImage(
-              imageUrl: thread.screens[index],
+            child: RemoteImage(
+              url: thread.screens[index],
               fit: BoxFit.cover,
               // Decode at the 150-logical-px render size, not source size.
-              memCacheWidth: (150 * MediaQuery.devicePixelRatioOf(context)).round(),
-              placeholder: (context, url) => Container(color: const Color(0xFF2A2A2A)),
-              errorWidget: (context, url, error) => Container(
+              decodeWidth: (150 * MediaQuery.devicePixelRatioOf(context)).round(),
+              placeholder: (context) => Container(color: const Color(0xFF2A2A2A)),
+              errorWidget: (context) => Container(
                 color: const Color(0xFF2A2A2A),
                 child: const Icon(Icons.broken_image_outlined, color: Color(0xFF666666)),
               ),

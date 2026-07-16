@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../utils/image_urls.dart';
+import 'remote_image.dart';
 import 'sfw_blur.dart';
 
 class CoverImage extends StatefulWidget {
@@ -100,26 +100,22 @@ class _CoverImageState extends State<CoverImage> {
     if (hd == null || !_wantHd) {
       return _lowResImage(url, decodeWidth);
     }
-    return CachedNetworkImage(
-      imageUrl: hd,
+    return RemoteImage(
+      url: hd,
       fit: BoxFit.cover,
-      memCacheWidth: decodeWidth,
-      imageBuilder: (context, imageProvider) {
-        CoverImage._hdLoaded.add(hd);
-        return Image(image: imageProvider, fit: BoxFit.cover);
-      },
-      placeholder: (context, _) => _lowResImage(url, decodeWidth),
-      errorWidget: (context, _, error) => _lowResImage(url, decodeWidth),
+      decodeWidth: decodeWidth,
+      onLoaded: () => CoverImage._hdLoaded.add(hd),
+      placeholder: (context) => _lowResImage(url, decodeWidth),
+      errorWidget: (context) => _lowResImage(url, decodeWidth),
     );
   }
 
   Widget _lowResImage(String url, int decodeWidth) {
-    return CachedNetworkImage(
-      imageUrl: url,
+    return RemoteImage(
+      url: url,
       fit: BoxFit.cover,
-      memCacheWidth: decodeWidth,
-      placeholder: (context, _) => _buildPlaceholder(),
-      errorWidget: (context, _, error) => _buildPlaceholder(),
+      decodeWidth: decodeWidth,
+      placeholder: (context) => _buildPlaceholder(),
     );
   }
 

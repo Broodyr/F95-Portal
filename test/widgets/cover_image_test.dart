@@ -1,5 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:f95_portal/widgets/cover_image.dart';
+import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/widget_test_utils.dart';
@@ -9,7 +9,7 @@ void main() {
   const hd = 'https://attachments.f95zone.to/2023/02/2416942_main_menu.png';
 
   Iterable<String> imageUrls(WidgetTester tester) =>
-      tester.widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage)).map((w) => w.imageUrl);
+      tester.widgetList<RemoteImage>(find.byType(RemoteImage)).map((w) => w.url);
 
   testWidgets('shows the preview immediately, upgrading to HD only after the delay', (tester) async {
     await pumpTestApp(tester, const CoverImage(imageUrl: preview));
@@ -46,15 +46,15 @@ void main() {
     await pumpTestApp(tester, const CoverImage(imageUrl: preview));
     await tester.pump();
 
-    final image = tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage).first);
-    expect(image.memCacheWidth, isNotNull);
-    expect(image.memCacheWidth, greaterThan(0));
+    final image = tester.widget<RemoteImage>(find.byType(RemoteImage).first);
+    expect(image.decodeWidth, isNotNull);
+    expect(image.decodeWidth, greaterThan(0));
   });
 
   testWidgets('shows the plain placeholder without a URL', (tester) async {
     await pumpTestApp(tester, const CoverImage(imageUrl: null));
     await tester.pump();
 
-    expect(find.byType(CachedNetworkImage), findsNothing);
+    expect(find.byType(RemoteImage), findsNothing);
   });
 }

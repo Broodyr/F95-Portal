@@ -1,6 +1,6 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/models/thread_page.dart';
+import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:flutter/material.dart';
@@ -50,7 +50,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap the second image of the rich block (post-wide index 2).
-    await tester.tap(find.byType(CachedNetworkImage).at(2));
+    await tester.tap(find.byType(RemoteImage).at(2));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
