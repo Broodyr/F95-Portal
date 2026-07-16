@@ -65,7 +65,8 @@ class AuthService extends ChangeNotifier {
       _cookies = {for (final entry in decoded.entries) entry.key: entry.value.toString()};
       notifyListeners();
     } catch (e) {
-      debugPrint('AuthService.load failed: $e');
+      // First line only: secure-storage failures embed a full Java stack.
+      debugPrint('AuthService.load failed: ${e.toString().split('\n').first}');
       _cookies = const {};
     }
   }
