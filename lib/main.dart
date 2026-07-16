@@ -9,8 +9,23 @@ import 'services/forum_service.dart';
 import 'services/settings_service.dart';
 import 'services/thread_page_service.dart';
 
+/// Failed image loads (dead links, missing HD variants) each dump a
+/// ~100-line framework error block in debug consoles, drowning out useful
+/// output; collapse them to one line each. Other errors pass through.
+void installConsoleNoiseFilter() {
+  final defaultOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    if (details.library == 'image resource service') {
+      debugPrint('Image failed: ${details.exception}');
+      return;
+    }
+    defaultOnError?.call(details);
+  };
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (kDebugMode) installConsoleNoiseFilter();
   await F95Metadata.load();
   await AuthService.instance.load();
   await SettingsService.instance.load();
