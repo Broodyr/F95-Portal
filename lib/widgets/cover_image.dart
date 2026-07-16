@@ -57,6 +57,10 @@ class _CoverImageState extends State<CoverImage> {
   String? get _hdUrl {
     final url = widget.imageUrl;
     if (!widget.upgradeToHd || url == null || url.isEmpty) return null;
+    // Animated covers keep the preview: HD GIF attachments are multi-MB
+    // downloads plus per-frame decode for barely-visible gains, and were
+    // the slowest images in scroll profiling.
+    if (url.toLowerCase().endsWith('.gif')) return null;
     return toHdImageUrl(url);
   }
 

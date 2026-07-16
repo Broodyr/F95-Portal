@@ -57,6 +57,15 @@ void main() {
     expect(imageUrls(tester).toList(), [preview]);
   });
 
+  testWidgets('animated GIF covers keep the preview instead of upgrading', (tester) async {
+    const gif = 'https://preview.f95zone.to/2026/07/6266560_itch_capsule_1.0.4.gif';
+    await pumpTestApp(tester, const CoverImage(imageUrl: gif));
+    await tester.pump(CoverImage.hdUpgradeDelay + const Duration(milliseconds: 50));
+    await tester.pumpAndSettle();
+
+    expect(imageUrls(tester).toList(), [gif]);
+  });
+
   testWidgets('decodes at the display width instead of the source size', (tester) async {
     await pumpTestApp(tester, const CoverImage(imageUrl: preview));
     await tester.pump();

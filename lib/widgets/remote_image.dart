@@ -54,6 +54,14 @@ class RemoteImage extends StatefulWidget {
   /// under the global imageCache's control.
   static final Map<String, ImageProvider> _resolved = {};
 
+  /// In-flight resolves by the same key, so widgets showing the same image
+  /// concurrently (a card's cover and its reflection) share one fetch.
+  static final Map<String, Future<ImageProvider>> _inflight = {};
+
+  static Future<ImageProvider> _sharedResolve(String key, Future<ImageProvider> Function() create) {
+    return _inflight[key] ??= create().whenComplete(() => _inflight.remove(key));
+  }
+
   @override
   State<RemoteImage> createState() => _RemoteImageState();
 }
@@ -94,19 +102,24 @@ class _RemoteImageState extends State<RemoteImage> {
 
   Future<void> _resolve() async {
     final key = _cacheKey;
+    final url = widget.url;
+    final decodeWidth = widget.decodeWidth;
+    final decodeHeight = widget.decodeHeight;
     try {
-      final stopwatch = Stopwatch()..start();
-      final file = await DefaultCacheManager().getSingleFile(widget.url);
-      // The AVIF signature ('ftypavif'/'ftypavis') sits in the first bytes.
-      final header = await file.openRead(0, 32).fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
-      if (kDebugMode && stopwatch.elapsedMilliseconds > 500) {
-        debugPrint('RemoteImage slow resolve: ${stopwatch.elapsedMilliseconds}ms ${widget.url}');
-      }
-      if (!mounted || key != _cacheKey) return;
-      final ImageProvider provider = isAvifFile(Uint8List.fromList(header)) != AvifFileType.unknown
-          ? FileAvifImage(file)
-          : ResizeImage.resizeIfNeeded(widget.decodeWidth, widget.decodeHeight, FileImage(file));
+      final provider = await RemoteImage._sharedResolve(key, () async {
+        final stopwatch = Stopwatch()..start();
+        final file = await DefaultCacheManager().getSingleFile(url);
+        // The AVIF signature ('ftypavif'/'ftypavis') sits in the first bytes.
+        final header = await file.openRead(0, 32).fold<List<int>>([], (acc, chunk) => acc..addAll(chunk));
+        if (kDebugMode && stopwatch.elapsedMilliseconds > 500) {
+          debugPrint('RemoteImage slow resolve: ${stopwatch.elapsedMilliseconds}ms $url');
+        }
+        return isAvifFile(Uint8List.fromList(header)) != AvifFileType.unknown
+            ? FileAvifImage(file)
+            : ResizeImage.resizeIfNeeded(decodeWidth, decodeHeight, FileImage(file));
+      });
       RemoteImage._resolved[key] = provider;
+      if (!mounted || key != _cacheKey) return;
       setState(() => _provider = provider);
     } catch (_) {
       if (mounted && key == _cacheKey) setState(() => _failed = true);
