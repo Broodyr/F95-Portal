@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../models/search_query.dart';
-import '../models/thread_summary.dart';
+import '../models/browse_thread.dart';
 import '../services/api_service.dart';
-import 'thread_card.dart';
-import 'thread_details_modal.dart';
+import 'browse_card.dart';
+import 'browse_details_sheet.dart';
 
 typedef FetchThreadsCallback =
     Future<ApiResponse> Function({SearchQuery query, int page, int rows, bool fallbackToMockOnError});
 
-class ThreadsList extends StatefulWidget {
+class BrowseList extends StatefulWidget {
   final ScrollController? scrollController;
   final FetchThreadsCallback fetchThreads;
   final SearchQuery query;
@@ -18,14 +18,14 @@ class ThreadsList extends StatefulWidget {
   /// Reports the server-side total result count after each successful load.
   final ValueChanged<int>? onCountChanged;
 
-  /// Called when the user picks a tag inside the details modal.
-  final ValueChanged<ThreadTagSelection>? onTagSelected;
+  /// Called when the user picks a tag inside the details sheet.
+  final ValueChanged<BrowseTagSelection>? onTagSelected;
 
   /// Rendered as the first list item, scrolling with the content (also kept
   /// visible above the loading/error/empty states).
   final Widget? header;
 
-  const ThreadsList({
+  const BrowseList({
     super.key,
     this.scrollController,
     this.fetchThreads = ApiService.fetchThreads,
@@ -36,14 +36,14 @@ class ThreadsList extends StatefulWidget {
   });
 
   @override
-  State<ThreadsList> createState() => _ThreadsListState();
+  State<BrowseList> createState() => _BrowseListState();
 }
 
-class _ThreadsListState extends State<ThreadsList> {
+class _BrowseListState extends State<BrowseList> {
   /// Start fetching the next page when an item this close to the end builds.
   static const int _loadMoreThreshold = 5;
 
-  List<ThreadSummary> _threads = [];
+  List<BrowseThread> _threads = [];
   bool _isLoading = true;
   String? _error;
 
@@ -61,7 +61,7 @@ class _ThreadsListState extends State<ThreadsList> {
   }
 
   @override
-  void didUpdateWidget(ThreadsList oldWidget) {
+  void didUpdateWidget(BrowseList oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.query != widget.query) {
       _loadThreads();
@@ -138,8 +138,8 @@ class _ThreadsListState extends State<ThreadsList> {
     await _loadThreads();
   }
 
-  Future<void> _onThreadTap(ThreadSummary thread) async {
-    final selection = await ThreadDetailsModal.show(context, thread, category: widget.query.category);
+  Future<void> _onThreadTap(BrowseThread thread) async {
+    final selection = await BrowseDetailsSheet.show(context, thread, category: widget.query.category);
     if (selection != null) {
       widget.onTagSelected?.call(selection);
     }
@@ -242,7 +242,7 @@ class _ThreadsListState extends State<ThreadsList> {
           }
 
           final thread = _threads[threadIndex];
-          return ThreadCard(thread: thread, category: widget.query.category, onTap: () => _onThreadTap(thread));
+          return BrowseCard(thread: thread, category: widget.query.category, onTap: () => _onThreadTap(thread));
         },
       ),
     );

@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:f95_portal/models/search_query.dart';
-import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/models/browse_thread.dart';
 import 'package:f95_portal/services/api_service.dart';
-import 'package:f95_portal/widgets/thread_card.dart';
-import 'package:f95_portal/widgets/threads_list.dart';
+import 'package:f95_portal/widgets/browse_card.dart';
+import 'package:f95_portal/widgets/browse_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -13,8 +13,8 @@ import '../helpers/test_data.dart';
 import '../helpers/widget_test_utils.dart';
 
 /// Builds a page of [count] distinct threads, titled "P(page) #(n)".
-List<ThreadSummary> pageOf(int page, int count, {int idOffset = 0}) => [
-  for (int i = 0; i < count; i++) createThreadSummary(threadId: page * 1000 + idOffset + i, title: 'P$page #$i'),
+List<BrowseThread> pageOf(int page, int count, {int idOffset = 0}) => [
+  for (int i = 0; i < count; i++) createBrowseThread(threadId: page * 1000 + idOffset + i, title: 'P$page #$i'),
 ];
 
 void main() {
@@ -35,7 +35,7 @@ void main() {
       return completer.future;
     }
 
-    await pumpTestApp(tester, ThreadsList(fetchThreads: delayedFetch));
+    await pumpTestApp(tester, BrowseList(fetchThreads: delayedFetch));
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
@@ -46,7 +46,7 @@ void main() {
   });
 
   testWidgets('renders thread cards when fetch succeeds', (tester) async {
-    final apiResponse = createApiResponse(threads: [createThreadSummary(title: 'TDD Adventure')]);
+    final apiResponse = createApiResponse(threads: [createBrowseThread(title: 'TDD Adventure')]);
 
     successfulFetch({
       SearchQuery query = const SearchQuery(),
@@ -57,12 +57,12 @@ void main() {
       return apiResponse;
     }
 
-    await pumpTestApp(tester, ThreadsList(fetchThreads: successfulFetch));
+    await pumpTestApp(tester, BrowseList(fetchThreads: successfulFetch));
 
     await tester.pumpAndSettle();
 
     expect(find.text('TDD Adventure'), findsOneWidget);
-    expect(find.byType(ThreadCard), findsOneWidget);
+    expect(find.byType(BrowseCard), findsOneWidget);
   });
 
   testWidgets('shows error state when fetch fails', (tester) async {
@@ -75,7 +75,7 @@ void main() {
       throw ApiException('boom');
     }
 
-    await pumpTestApp(tester, ThreadsList(fetchThreads: failingFetch));
+    await pumpTestApp(tester, BrowseList(fetchThreads: failingFetch));
 
     await tester.pumpAndSettle();
 
@@ -99,7 +99,7 @@ void main() {
 
     Widget buildList(SearchQuery query) => MaterialApp(
       home: Scaffold(
-        body: ThreadsList(fetchThreads: recordingFetch, query: query),
+        body: BrowseList(fetchThreads: recordingFetch, query: query),
       ),
     );
 
@@ -126,7 +126,7 @@ void main() {
       return createApiResponse(count: 321);
     }
 
-    await pumpTestApp(tester, ThreadsList(fetchThreads: countFetch, onCountChanged: (count) => reportedCount = count));
+    await pumpTestApp(tester, BrowseList(fetchThreads: countFetch, onCountChanged: (count) => reportedCount = count));
     await tester.pumpAndSettle();
 
     expect(reportedCount, 321);
@@ -145,7 +145,7 @@ void main() {
       return createApiResponse(threads: pageOf(page, 8), page: page, total: 3, count: 24);
     }
 
-    await pumpTestApp(tester, ThreadsList(fetchThreads: pagedFetch));
+    await pumpTestApp(tester, BrowseList(fetchThreads: pagedFetch));
     await tester.pumpAndSettle();
 
     // The cache extent may prefetch page 2 with these small test pages, but
@@ -178,7 +178,7 @@ void main() {
       return createApiResponse(threads: pageOf(page, 8), page: page, total: 1, count: 8);
     }
 
-    await pumpTestApp(tester, ThreadsList(fetchThreads: singlePageFetch));
+    await pumpTestApp(tester, BrowseList(fetchThreads: singlePageFetch));
     await tester.pumpAndSettle();
 
     await tester.drag(find.byType(ListView), const Offset(0, -30000));
@@ -195,11 +195,11 @@ void main() {
       bool fallbackToMockOnError = false,
     }) async {
       // Page 2 re-serves the last page-1 thread (id 1007) plus new ones.
-      final threads = page == 1 ? pageOf(1, 8) : [createThreadSummary(threadId: 1007, title: 'P1 #7'), ...pageOf(2, 4)];
+      final threads = page == 1 ? pageOf(1, 8) : [createBrowseThread(threadId: 1007, title: 'P1 #7'), ...pageOf(2, 4)];
       return createApiResponse(threads: threads, page: page, total: 2, count: 12);
     }
 
-    await pumpTestApp(tester, ThreadsList(fetchThreads: overlappingFetch));
+    await pumpTestApp(tester, BrowseList(fetchThreads: overlappingFetch));
     await tester.pumpAndSettle();
 
     await tester.drag(find.byType(ListView), const Offset(0, -30000));
@@ -226,7 +226,7 @@ void main() {
 
     Widget buildList(SearchQuery query) => MaterialApp(
       home: Scaffold(
-        body: ThreadsList(fetchThreads: recordingFetch, query: query),
+        body: BrowseList(fetchThreads: recordingFetch, query: query),
       ),
     );
 
@@ -256,7 +256,7 @@ void main() {
     }
 
     const headerKey = Key('list-header');
-    await pumpTestApp(tester, ThreadsList(fetchThreads: pagedFetch, header: const SizedBox(key: headerKey, height: 44)));
+    await pumpTestApp(tester, BrowseList(fetchThreads: pagedFetch, header: const SizedBox(key: headerKey, height: 44)));
     await tester.pumpAndSettle();
 
     expect(find.byKey(headerKey), findsOneWidget);
@@ -282,7 +282,7 @@ void main() {
     }
 
     const headerKey = Key('list-header');
-    await pumpTestApp(tester, ThreadsList(fetchThreads: emptyFetch, header: const SizedBox(key: headerKey, height: 44)));
+    await pumpTestApp(tester, BrowseList(fetchThreads: emptyFetch, header: const SizedBox(key: headerKey, height: 44)));
     await tester.pumpAndSettle();
 
     expect(find.byKey(headerKey), findsOneWidget);
@@ -304,7 +304,7 @@ void main() {
 
     Widget buildList() => MaterialApp(
       home: Scaffold(
-        body: ThreadsList(
+        body: BrowseList(
           fetchThreads: countingFetch,
           query: const SearchQuery(search: 'same'),
         ),

@@ -3,7 +3,7 @@ import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/settings_service.dart';
 import 'package:f95_portal/widgets/app_text_scale.dart';
-import 'package:f95_portal/widgets/search_options_modal.dart';
+import 'package:f95_portal/widgets/search_options_sheet.dart';
 import 'package:f95_portal/widgets/sliding_reveal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +12,9 @@ import '../helpers/in_memory_settings_storage.dart';
 import '../helpers/metadata_test_utils.dart';
 import '../helpers/widget_test_utils.dart';
 
-/// Pumps a host app with a button that opens the modal; returns a getter for
-/// the SearchQuery the modal eventually pops with.
-Future<SearchQuery? Function()> pumpModal(
+/// Pumps a host app with a button that opens the sheet; returns a getter for
+/// the SearchQuery the sheet eventually pops with.
+Future<SearchQuery? Function()> pumpSheet(
   WidgetTester tester, {
   SearchQuery initialQuery = const SearchQuery(),
   List<PopularTag> popularTags = const [],
@@ -35,7 +35,7 @@ Future<SearchQuery? Function()> pumpModal(
                 result = await showModalBottomSheet<SearchQuery>(
                   context: context,
                   isScrollControlled: true,
-                  builder: (_) => SearchOptionsModal(initialQuery: initialQuery, fetchPopularTags: fakePopular),
+                  builder: (_) => SearchOptionsSheet(initialQuery: initialQuery, fetchPopularTags: fakePopular),
                 );
               },
               child: const Text('open'),
@@ -52,7 +52,7 @@ Future<SearchQuery? Function()> pumpModal(
   return () => result;
 }
 
-Future<void> submitModal(WidgetTester tester) async {
+Future<void> submitSheet(WidgetTester tester) async {
   await tester.ensureVisible(find.text('Search'));
   await tester.tap(find.text('Search'));
   await tester.pumpAndSettle();
@@ -60,7 +60,7 @@ Future<void> submitModal(WidgetTester tester) async {
 
 /// Scrolls the sheet body (the TextField contributes a second Scrollable,
 /// so the default single-Scrollable lookup fails).
-Future<void> scrollModalTo(WidgetTester tester, Finder finder) async {
+Future<void> scrollSheetTo(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(finder, 200, scrollable: find.byType(Scrollable).first);
   await tester.pumpAndSettle();
 }
@@ -87,7 +87,7 @@ void main() {
     await SettingsService.instance.update(
       SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.large),
     );
-    await pumpModal(tester);
+    await pumpSheet(tester);
 
     // Anchored: section headers and the search field hold their base size.
     expect(effectiveFontSize(tester, find.text('Sort by')), moreOrLessEquals(16));
@@ -104,7 +104,7 @@ void main() {
     await SettingsService.instance.update(
       SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.small),
     );
-    await pumpModal(tester);
+    await pumpSheet(tester);
 
     expect(effectiveFontSize(tester, find.text('Sort by')), moreOrLessEquals(15));
     expect(effectiveFontSize(tester, find.text('Search titles, tags, creators…')), moreOrLessEquals(15));
@@ -112,7 +112,7 @@ void main() {
   });
 
   testWidgets('typing suggests tags; tapping one adds an include filter', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     await tester.enterText(find.byType(TextField), 'pregn');
     await tester.pumpAndSettle();
@@ -122,7 +122,7 @@ void main() {
     await tester.tap(find.text('pregnancy').first);
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query, isNotNull);
@@ -132,7 +132,7 @@ void main() {
   });
 
   testWidgets('tapping a filter chip toggles it to an exclusion', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     await tester.enterText(find.byType(TextField), 'netorar');
     await tester.pumpAndSettle();
@@ -142,7 +142,7 @@ void main() {
     await tester.tap(find.text('netorare'));
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.notags, [258]);
@@ -150,7 +150,7 @@ void main() {
   });
 
   testWidgets('engine and status prefixes are suggested too', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     await tester.enterText(find.byType(TextField), 'godot');
     await tester.pumpAndSettle();
@@ -162,7 +162,7 @@ void main() {
     await tester.tap(find.text('Completed').first);
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.prefixes, containsAll([116, 18]));
@@ -170,7 +170,7 @@ void main() {
   });
 
   testWidgets('creator suggestion converts the text into a creator filter', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     await tester.enterText(find.byType(TextField), 'Caribdis');
     await tester.pumpAndSettle();
@@ -178,7 +178,7 @@ void main() {
     await tester.tap(find.textContaining('Creator:'));
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.creator, 'Caribdis');
@@ -186,7 +186,7 @@ void main() {
   });
 
   testWidgets('title suggestion converts the text into a title filter', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     await tester.enterText(find.byType(TextField), 'goblin layer');
     await tester.pumpAndSettle();
@@ -194,7 +194,7 @@ void main() {
     await tester.tap(find.textContaining('Title:'));
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.search, 'goblin layer');
@@ -202,7 +202,7 @@ void main() {
   });
 
   testWidgets('tag suggestions show their per-category match counts', (tester) async {
-    await pumpModal(tester, popularTags: const [PopularTag(tagId: 225, count: 4700)]);
+    await pumpSheet(tester, popularTags: const [PopularTag(tagId: 225, count: 4700)]);
 
     await tester.enterText(find.byType(TextField), 'pregn');
     await tester.pumpAndSettle();
@@ -212,7 +212,7 @@ void main() {
   });
 
   testWidgets('include tags are capped at 10, matching the API limit', (tester) async {
-    final getResult = await pumpModal(
+    final getResult = await pumpSheet(
       tester,
       initialQuery: const SearchQuery(tags: [30, 44, 45, 75, 103, 105, 107, 111, 130, 141]),
     );
@@ -222,7 +222,7 @@ void main() {
     await tester.tap(find.text('netorare').first, warnIfMissed: false);
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.tags, hasLength(10));
@@ -230,7 +230,7 @@ void main() {
   });
 
   testWidgets('match-any toggle appears with two include tags and round-trips', (tester) async {
-    final getResult = await pumpModal(tester, initialQuery: const SearchQuery(tags: [225, 103]));
+    final getResult = await pumpSheet(tester, initialQuery: const SearchQuery(tags: [225, 103]));
 
     expect(find.text('Match: all'), findsOneWidget);
 
@@ -238,7 +238,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Match: any'), findsOneWidget);
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.anyTags, isTrue);
@@ -246,38 +246,38 @@ void main() {
   });
 
   testWidgets('match toggle is hidden with fewer than two include tags', (tester) async {
-    await pumpModal(tester, initialQuery: const SearchQuery(tags: [225]));
+    await pumpSheet(tester, initialQuery: const SearchQuery(tags: [225]));
 
     expect(find.textContaining('Match:'), findsNothing);
   });
 
   testWidgets('date limit selection round-trips', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     await tester.ensureVisible(find.text('30d'));
     await tester.tap(find.text('30d'));
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.dateDays, 30);
   });
 
   testWidgets('leftover text in the field becomes the title search', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     await tester.enterText(find.byType(TextField), 'goblin layer');
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.search, 'goblin layer');
   });
 
   testWidgets('initial query reconstructs chips and settings', (tester) async {
-    final getResult = await pumpModal(
+    final getResult = await pumpSheet(
       tester,
       initialQuery: const SearchQuery(
         category: SearchCategory.games,
@@ -292,7 +292,7 @@ void main() {
     expect(find.text('Abandoned'), findsOneWidget);
     expect(find.textContaining('SomeDev'), findsOneWidget);
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.tags, [225]);
@@ -302,7 +302,7 @@ void main() {
   });
 
   testWidgets('popular tags appear once the empty field is focused', (tester) async {
-    final getResult = await pumpModal(tester, popularTags: const [PopularTag(tagId: 103, count: 999)]);
+    final getResult = await pumpSheet(tester, popularTags: const [PopularTag(tagId: 103, count: 999)]);
 
     // Compact until the user shows intent by focusing the field.
     expect(find.text('corruption'), findsNothing);
@@ -315,7 +315,7 @@ void main() {
     await tester.tap(find.text('corruption'));
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.tags, [103]);
@@ -325,7 +325,7 @@ void main() {
     final service = SettingsService.instance;
     await service.update(service.settings.copyWith(recentTags: [225]));
 
-    final getResult = await pumpModal(
+    final getResult = await pumpSheet(
       tester,
       popularTags: const [PopularTag(tagId: 225, count: 4700), PopularTag(tagId: 103, count: 999)],
     );
@@ -342,28 +342,28 @@ void main() {
 
     await tester.tap(find.text('pregnancy'));
     await tester.pumpAndSettle();
-    await submitModal(tester);
+    await submitSheet(tester);
 
     expect(getResult()!.tags, [225]);
   });
 
   testWidgets('sort selection round-trips', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
-    await scrollModalTo(tester, find.text('Rating'));
+    await scrollSheetTo(tester, find.text('Rating'));
     await tester.tap(find.text('Rating'));
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.sort, SortOrder.rating);
   });
 
   testWidgets('segmented rows slide a single highlight pill to the tapped segment', (tester) async {
-    await pumpModal(tester);
+    await pumpSheet(tester);
 
-    await scrollModalTo(tester, find.text('Rating'));
+    await scrollSheetTo(tester, find.text('Rating'));
 
     // One sliding highlight per segmented row: Sort by and Updated within.
     final highlights = find.byKey(const Key('segment-highlight'));
@@ -384,7 +384,7 @@ void main() {
   });
 
   testWidgets('the suggestion dropdown slides open and closed', (tester) async {
-    await pumpModal(tester, popularTags: const [PopularTag(tagId: 103, count: 999)]);
+    await pumpSheet(tester, popularTags: const [PopularTag(tagId: 103, count: 999)]);
 
     await tester.tap(find.byType(TextField));
     await tester.pump();
@@ -407,9 +407,9 @@ void main() {
   });
 
   testWidgets('section bodies slide open and closed instead of popping', (tester) async {
-    await pumpModal(tester);
+    await pumpSheet(tester);
 
-    await scrollModalTo(tester, find.text('Engine'));
+    await scrollSheetTo(tester, find.text('Engine'));
     expect(find.text('Godot'), findsNothing);
 
     await tester.tap(find.text('Engine'));
@@ -431,21 +431,21 @@ void main() {
   });
 
   testWidgets('engine pills cycle to include and the section lists the vocabulary', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
     // Sections start collapsed; expand Engine first.
-    await scrollModalTo(tester, find.text('Engine'));
+    await scrollSheetTo(tester, find.text('Engine'));
     await tester.tap(find.text('Engine'));
     await tester.pumpAndSettle();
 
-    await scrollModalTo(tester, find.text('Godot'));
+    await scrollSheetTo(tester, find.text('Godot'));
     // The full engine vocabulary is visible without typing anything.
     expect(find.text('RPGM'), findsOneWidget);
     expect(find.text('Java'), findsOneWidget);
 
     await tester.tap(find.text('Godot'));
     await tester.pumpAndSettle();
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.prefixes, [116]);
@@ -453,19 +453,19 @@ void main() {
   });
 
   testWidgets('a second tap on a status pill turns it into an exclusion', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
-    await scrollModalTo(tester, find.text('Status'));
+    await scrollSheetTo(tester, find.text('Status'));
     await tester.tap(find.text('Status'));
     await tester.pumpAndSettle();
 
-    await scrollModalTo(tester, find.text('Abandoned'));
+    await scrollSheetTo(tester, find.text('Abandoned'));
     await tester.tap(find.text('Abandoned'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Abandoned'));
     await tester.pumpAndSettle();
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.noprefixes, [22]);
@@ -473,19 +473,19 @@ void main() {
   });
 
   testWidgets('a third tap clears the prefix pill', (tester) async {
-    final getResult = await pumpModal(tester);
+    final getResult = await pumpSheet(tester);
 
-    await scrollModalTo(tester, find.text('Engine'));
+    await scrollSheetTo(tester, find.text('Engine'));
     await tester.tap(find.text('Engine'));
     await tester.pumpAndSettle();
 
-    await scrollModalTo(tester, find.text('Unity'));
+    await scrollSheetTo(tester, find.text('Unity'));
     for (int i = 0; i < 3; i++) {
       await tester.tap(find.text('Unity'));
       await tester.pumpAndSettle();
     }
 
-    await submitModal(tester);
+    await submitSheet(tester);
 
     final query = getResult();
     expect(query!.prefixes, isEmpty);

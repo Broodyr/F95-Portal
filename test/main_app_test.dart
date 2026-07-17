@@ -1,7 +1,7 @@
 import 'package:f95_portal/main_app.dart';
 import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/screens/settings_screen.dart';
-import 'package:f95_portal/screens/threads_screen.dart';
+import 'package:f95_portal/screens/browse_screen.dart';
 import 'package:f95_portal/widgets/bottom_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +21,7 @@ void main() {
   // settles inside MainApp; every wait below uses bounded pumps instead.
   Future<ScrollPosition> pumpApp(WidgetTester tester, {int threadCount = 30}) async {
     installTestSettings();
-    final threads = List.generate(threadCount, (i) => createThreadSummary(threadId: i + 1, title: 'Thread ${i + 1}'));
+    final threads = List.generate(threadCount, (i) => createBrowseThread(threadId: i + 1, title: 'Thread ${i + 1}'));
 
     mockFetch({
       SearchQuery query = const SearchQuery(),
@@ -36,7 +36,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    final scrollable = find.descendant(of: find.byType(ThreadsScreen), matching: find.byType(Scrollable)).first;
+    final scrollable = find.descendant(of: find.byType(BrowseScreen), matching: find.byType(Scrollable)).first;
     return tester.state<ScrollableState>(scrollable).position;
   }
 
@@ -97,7 +97,7 @@ void main() {
     final position = await pumpApp(tester, threadCount: 1);
     expect(position.maxScrollExtent, 0);
 
-    await tester.drag(tabScrollable(ThreadsScreen), const Offset(0, -200));
+    await tester.drag(tabScrollable(BrowseScreen), const Offset(0, -200));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

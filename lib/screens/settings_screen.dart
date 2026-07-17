@@ -9,7 +9,7 @@ import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../services/settings_service.dart';
 import '../widgets/app_toast.dart';
-import '../widgets/search_options_modal.dart';
+import '../widgets/search_options_sheet.dart';
 import '../widgets/segmented_selector.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -31,10 +31,10 @@ class SettingsScreen extends StatelessWidget {
         final bool glass = SettingsService.instance.settings.glassEffects;
         final content = DecoratedBox(
           decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: glass ? 0.65 : 0.97)),
-          child: SearchOptionsModal(
+          child: SearchOptionsSheet(
             initialQuery: current.defaultQuery,
             submitLabel: 'Save',
-            // Swipe-dismiss also saves: the modal reports its state when
+            // Swipe-dismiss also saves: the sheet reports its state when
             // popped without an explicit submit.
             onDismissSave: (query) =>
                 SettingsService.instance.update(SettingsService.instance.settings.copyWith(defaultQuery: query)),

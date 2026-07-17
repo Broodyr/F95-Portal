@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
-import '../models/thread_summary.dart';
+import '../models/browse_thread.dart';
 import 'auth_service.dart';
 
 typedef PackageInfoLoader = Future<PackageInfo> Function();
@@ -268,7 +268,7 @@ class ApiService {
   /// 2=RPGM, 13=VN, 116=Godot; 18/20/22 = Completed/Onhold/Abandoned).
   static ApiResponse createMockData() {
     final mockThreads = [
-      ThreadSummary(
+      BrowseThread(
         threadId: 35192,
         title: "SiNiSistar 2",
         creator: "HenryTaiwan",
@@ -286,7 +286,7 @@ class ApiService {
         isNew: false,
         timestamp: 1747104420,
       ),
-      ThreadSummary(
+      BrowseThread(
         threadId: 35193,
         title: "Hard Stuck",
         creator: "DevStudio",
@@ -304,7 +304,7 @@ class ApiService {
         isNew: true,
         timestamp: 1747104420,
       ),
-      ThreadSummary(
+      BrowseThread(
         threadId: 35194,
         title: "The Night Driver",
         creator: "NightDev",
@@ -322,7 +322,7 @@ class ApiService {
         isNew: false,
         timestamp: 1747104420,
       ),
-      ThreadSummary(
+      BrowseThread(
         threadId: 35195,
         title: "Fantasy Adventure",
         creator: "FantasyDev",
@@ -340,7 +340,7 @@ class ApiService {
         isNew: false,
         timestamp: 1747104420,
       ),
-      ThreadSummary(
+      BrowseThread(
         threadId: 35196,
         title: "College Dreams",
         creator: "EduDev",
@@ -358,7 +358,7 @@ class ApiService {
         isNew: true,
         timestamp: 1747104420,
       ),
-      ThreadSummary(
+      BrowseThread(
         threadId: 35197,
         title: "Cyber City",
         creator: "CyberStudio",
@@ -376,7 +376,7 @@ class ApiService {
         isNew: false,
         timestamp: 1747104420,
       ),
-      ThreadSummary(
+      BrowseThread(
         threadId: 35198,
         title: "Summer Memories",
         creator: "SummerDev",

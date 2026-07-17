@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:f95_portal/services/settings_service.dart';
 import 'package:f95_portal/widgets/app_text_scale.dart';
-import 'package:f95_portal/widgets/thread_card.dart';
+import 'package:f95_portal/widgets/browse_card.dart';
 
 import '../helpers/in_memory_settings_storage.dart';
 import '../helpers/metadata_test_utils.dart';
@@ -29,7 +29,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         builder: (context, child) => AppTextScale(child: child!),
-        home: Scaffold(body: ThreadCard(thread: createThreadSummary())),
+        home: Scaffold(body: BrowseCard(thread: createBrowseThread())),
       ),
     );
   }

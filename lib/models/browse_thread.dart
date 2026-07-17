@@ -13,7 +13,7 @@ List<int> _asIntList(dynamic value) => [
     if (item is num) item.toInt(),
 ];
 
-class ThreadSummary {
+class BrowseThread {
   final int threadId;
   final String title;
   final String creator;
@@ -31,7 +31,7 @@ class ThreadSummary {
   final bool isNew;
   final int timestamp;
 
-  ThreadSummary({
+  BrowseThread({
     required this.threadId,
     required this.title,
     required this.creator,
@@ -50,8 +50,8 @@ class ThreadSummary {
     required this.timestamp,
   });
 
-  factory ThreadSummary.fromJson(Map<String, dynamic> json) {
-    return ThreadSummary(
+  factory BrowseThread.fromJson(Map<String, dynamic> json) {
+    return BrowseThread(
       threadId: _asInt(json['thread_id']),
       title: _asString(json['title']),
       creator: _asString(json['creator']),
@@ -109,7 +109,7 @@ class ApiResponse {
 }
 
 class ApiResponseData {
-  final List<ThreadSummary> threads;
+  final List<BrowseThread> threads;
   final Pagination pagination;
   final int count;
 
@@ -117,7 +117,7 @@ class ApiResponseData {
 
   factory ApiResponseData.fromJson(Map<String, dynamic> json) {
     return ApiResponseData(
-      threads: (json['data'] as List? ?? []).map((item) => ThreadSummary.fromJson(item)).toList(),
+      threads: (json['data'] as List? ?? []).map((item) => BrowseThread.fromJson(item)).toList(),
       pagination: Pagination.fromJson(json['pagination'] ?? {}),
       count: _asInt(json['count']),
     );

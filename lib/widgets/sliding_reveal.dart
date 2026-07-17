@@ -7,7 +7,7 @@ abstract final class Motion {
   static const Curve curve = Curves.easeOutCubic;
 }
 
-/// Clip-and-slide reveal for collapsible content: search-modal sections,
+/// Clip-and-slide reveal for collapsible content: search-sheet sections,
 /// the suggestion dropdown, and spoiler cards. When [visible] flips off,
 /// the outgoing child stays mounted just long enough to slide shut, then
 /// is dropped from the tree so hidden content can't be found or hit.

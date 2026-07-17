@@ -65,7 +65,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
 
   Future<void> _load() async {
     // Account feeds change out from under the app (a bookmark made moments
-    // ago in the thread modal, or on another device): always fetch live.
+    // ago in the details sheet, or on another device): always fetch live.
     ForumService.invalidateAccountPages();
     setState(() {
       _loading = _page == null;

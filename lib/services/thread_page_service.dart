@@ -7,7 +7,7 @@ import 'auth_service.dart';
 import 'thread_page_parser.dart';
 
 /// Fetches and parses thread first posts, with a small in-memory cache so
-/// reopening a details modal is instant.
+/// reopening a details sheet is instant.
 class ThreadPageService {
   static const int _cacheLimit = 20;
   static final Map<int, ThreadPage> _cache = {};

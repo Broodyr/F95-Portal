@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../models/search_category.dart';
-import '../models/thread_summary.dart';
+import '../models/browse_thread.dart';
 import '../utils/formatters.dart';
 import 'cover_image.dart';
 import 'engine_tag.dart';
@@ -12,12 +12,12 @@ import 'glass_aware.dart';
 import 'metadata_row.dart';
 import 'version_pill.dart';
 
-class ThreadCard extends StatelessWidget {
-  final ThreadSummary thread;
+class BrowseCard extends StatelessWidget {
+  final BrowseThread thread;
   final SearchCategory category;
   final VoidCallback? onTap;
 
-  const ThreadCard({super.key, required this.thread, this.category = SearchCategory.games, this.onTap});
+  const BrowseCard({super.key, required this.thread, this.category = SearchCategory.games, this.onTap});
 
   @override
   Widget build(BuildContext context) {

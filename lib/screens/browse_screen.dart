@@ -8,17 +8,17 @@ import '../services/settings_service.dart';
 import '../widgets/active_filters_bar.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/search_fab.dart';
-import '../widgets/thread_details_modal.dart';
-import '../widgets/search_options_modal.dart';
-import '../widgets/threads_list.dart';
+import '../widgets/browse_details_sheet.dart';
+import '../widgets/search_options_sheet.dart';
+import '../widgets/browse_list.dart';
 //import '../widgets/noisy_background.dart';
 
-class ThreadsScreen extends StatefulWidget {
+class BrowseScreen extends StatefulWidget {
   final ScrollController? scrollController;
   final ValueNotifier<bool> bottomNavVisible;
   final FetchThreadsCallback fetchThreads;
 
-  const ThreadsScreen({
+  const BrowseScreen({
     super.key,
     this.scrollController,
     required this.bottomNavVisible,
@@ -26,10 +26,10 @@ class ThreadsScreen extends StatefulWidget {
   });
 
   @override
-  State<ThreadsScreen> createState() => _ThreadsScreenState();
+  State<BrowseScreen> createState() => _BrowseScreenState();
 }
 
-class _ThreadsScreenState extends State<ThreadsScreen> {
+class _BrowseScreenState extends State<BrowseScreen> {
   // Use external ScrollController if provided, otherwise create internal one
   late final ScrollController _scrollController;
   late SearchQuery _activeQuery;
@@ -87,7 +87,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
         final bool glass = SettingsService.instance.settings.glassEffects;
         final content = DecoratedBox(
           decoration: BoxDecoration(color: colorScheme.surface.withValues(alpha: glass ? 0.65 : 0.97)),
-          child: SearchOptionsModal(initialQuery: _activeQuery),
+          child: SearchOptionsSheet(initialQuery: _activeQuery),
         );
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -114,7 +114,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
     SettingsService.instance.recordTagUse(query.tags);
   }
 
-  void _onTagSelected(ThreadTagSelection selection) {
+  void _onTagSelected(BrowseTagSelection selection) {
     final updated = selection.replace
         ? _activeQuery.replacedWithTag(selection.tagId)
         : _activeQuery.withTagAdded(selection.tagId);
@@ -145,7 +145,7 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
               ),
             ),
           ),
-          ThreadsList(
+          BrowseList(
             scrollController: _scrollController,
             fetchThreads: widget.fetchThreads,
             query: _activeQuery,

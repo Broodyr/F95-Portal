@@ -2,7 +2,7 @@ import 'package:f95_portal/models/search_category.dart';
 import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/screens/settings_screen.dart';
 import 'package:f95_portal/services/settings_service.dart';
-import 'package:f95_portal/widgets/search_options_modal.dart';
+import 'package:f95_portal/widgets/search_options_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,13 +71,13 @@ void main() {
     expect(service.settings.fontSize, FontSizeOption.large);
   });
 
-  testWidgets('edit defaults opens the search modal and persists the result', (tester) async {
+  testWidgets('edit defaults opens the search sheet and persists the result', (tester) async {
     await pumpSettings(tester);
 
     await tester.tap(find.text('Edit defaults'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SearchOptionsModal), findsOneWidget);
+    expect(find.byType(SearchOptionsSheet), findsOneWidget);
 
     // Sections start collapsed; expand Category first.
     await tester.tap(find.text('Category'));
@@ -92,7 +92,7 @@ void main() {
     expect(service.settings.defaultQuery.category, SearchCategory.comics);
   });
 
-  testWidgets('dismissing the defaults modal without saving still persists', (tester) async {
+  testWidgets('dismissing the defaults sheet without saving still persists', (tester) async {
     await pumpSettings(tester);
 
     await tester.tap(find.text('Edit defaults'));
@@ -107,7 +107,7 @@ void main() {
     tester.state<NavigatorState>(find.byType(Navigator)).pop();
     await tester.pumpAndSettle();
 
-    expect(find.byType(SearchOptionsModal), findsNothing);
+    expect(find.byType(SearchOptionsSheet), findsNothing);
     expect(service.settings.defaultQuery.category, SearchCategory.comics);
   });
 

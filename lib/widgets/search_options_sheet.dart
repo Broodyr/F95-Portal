@@ -40,7 +40,7 @@ class _Suggestion {
 /// and creators from the bundled vocabulary. Selected filters become chips
 /// (tap to toggle include/exclude, x to remove); leftover text is submitted
 /// as the title search. Pops a [SearchQuery].
-class SearchOptionsModal extends StatefulWidget {
+class SearchOptionsSheet extends StatefulWidget {
   final SearchQuery initialQuery;
   final FetchPopularTagsCallback? fetchPopularTags;
 
@@ -52,7 +52,7 @@ class SearchOptionsModal extends StatefulWidget {
   /// save either way.
   final ValueChanged<SearchQuery>? onDismissSave;
 
-  const SearchOptionsModal({
+  const SearchOptionsSheet({
     super.key,
     this.initialQuery = const SearchQuery(),
     this.fetchPopularTags,
@@ -61,10 +61,10 @@ class SearchOptionsModal extends StatefulWidget {
   });
 
   @override
-  State<SearchOptionsModal> createState() => _SearchOptionsModalState();
+  State<SearchOptionsSheet> createState() => _SearchOptionsSheetState();
 }
 
-class _SearchOptionsModalState extends State<SearchOptionsModal> {
+class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
   static const int _maxTagSuggestions = 6;
   static const int _maxPrefixSuggestions = 4;
   static const int _maxEmptySuggestions = 32;
@@ -133,7 +133,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
 
   void _onTextChanged() => setState(() {});
 
-  /// The modal is short-lived and reopened fresh, so a plain read (no
+  /// The sheet is short-lived and reopened fresh, so a plain read (no
   /// listener) of the font-size preference is safe here.
   FontSizeOption get _fontSize => SettingsService.instance.settings.fontSize;
 
@@ -341,9 +341,9 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
           children: [
             // Plain (non-scrollable) grab zone: the sheet's own drag
             // recognizer owns it even when the content below scrolls, so the
-            // modal stays easy to pull down from the top.
+            // sheet stays easy to pull down from the top.
             SizedBox(
-              key: const Key('modal-drag-band'),
+              key: const Key('sheet-drag-band'),
               height: 44,
               child: Center(
                 child: Container(

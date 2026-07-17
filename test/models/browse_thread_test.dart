@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/models/browse_thread.dart';
 
 void main() {
-  group('ThreadSummary', () {
+  group('BrowseThread', () {
     test('fromJson parses full payload', () {
       final json = {
         'thread_id': 42,
@@ -23,7 +23,7 @@ void main() {
         'ts': 1234567890,
       };
 
-      final thread = ThreadSummary.fromJson(json);
+      final thread = BrowseThread.fromJson(json);
 
       expect(thread.threadId, 42);
       expect(thread.title, 'Sample Thread');
@@ -57,7 +57,7 @@ void main() {
         'ts': 1234567890.0,
       };
 
-      final thread = ThreadSummary.fromJson(json);
+      final thread = BrowseThread.fromJson(json);
 
       expect(thread.threadId, 42);
       expect(thread.views, 12345);
@@ -73,7 +73,7 @@ void main() {
       // "version": 1.3 as a raw JSON number.
       final json = {'thread_id': 200660, 'title': 'Brothel of Darkness', 'version': 1.3, 'date': 2};
 
-      final thread = ThreadSummary.fromJson(json);
+      final thread = BrowseThread.fromJson(json);
 
       expect(thread.version, '1.3');
       expect(thread.date, '2');
@@ -82,7 +82,7 @@ void main() {
     });
 
     test('toJson serializes correctly', () {
-      final thread = ThreadSummary(
+      final thread = BrowseThread(
         threadId: 7,
         title: 'Serialize Me',
         creator: 'Serializer',
@@ -122,7 +122,7 @@ void main() {
     });
 
     test('status helpers detect completion edge cases', () {
-      final thread = ThreadSummary(
+      final thread = BrowseThread(
         threadId: 1,
         title: 'Edges',
         creator: 'Edge Lord',

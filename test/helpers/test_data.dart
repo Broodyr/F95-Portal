@@ -1,6 +1,6 @@
-import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/models/browse_thread.dart';
 
-ThreadSummary createThreadSummary({
+BrowseThread createBrowseThread({
   int threadId = 1,
   String title = 'Test Thread',
   String creator = 'Test Creator',
@@ -18,7 +18,7 @@ ThreadSummary createThreadSummary({
   bool isNew = false,
   int timestamp = 0,
 }) {
-  return ThreadSummary(
+  return BrowseThread(
     threadId: threadId,
     title: title,
     creator: creator,
@@ -38,8 +38,8 @@ ThreadSummary createThreadSummary({
   );
 }
 
-ApiResponse createApiResponse({List<ThreadSummary>? threads, int page = 1, int total = 1, int count = 1}) {
-  final threadList = threads ?? [createThreadSummary()];
+ApiResponse createApiResponse({List<BrowseThread>? threads, int page = 1, int total = 1, int count = 1}) {
+  final threadList = threads ?? [createBrowseThread()];
   return ApiResponse(
     status: 'ok',
     data: ApiResponseData(

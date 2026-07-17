@@ -9,7 +9,7 @@ import '../constants.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/thread_page.dart';
-import '../models/thread_summary.dart';
+import '../models/browse_thread.dart';
 import '../screens/forum_thread_screen.dart';
 import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
@@ -26,21 +26,21 @@ import 'sfw_blur.dart';
 import 'sliding_reveal.dart';
 import 'version_pill.dart';
 
-/// Popped by the modal when the user picks a tag: tap adds it to the active
+/// Popped by the sheet when the user picks a tag: tap adds it to the active
 /// search, long-press replaces the search with just that tag.
-class ThreadTagSelection {
+class BrowseTagSelection {
   final int tagId;
   final bool replace;
 
-  const ThreadTagSelection({required this.tagId, required this.replace});
+  const BrowseTagSelection({required this.tagId, required this.replace});
 }
 
 typedef UrlLauncher = Future<bool> Function(Uri uri);
 typedef FetchThreadPage = Future<ThreadPage> Function(int threadId);
 typedef ThreadActionSender = Future<void> Function(String url, String csrfToken, Map<String, String> fields);
 
-class ThreadDetailsModal extends StatefulWidget {
-  final ThreadSummary thread;
+class BrowseDetailsSheet extends StatefulWidget {
+  final BrowseThread thread;
   final SearchCategory category;
   final UrlLauncher? urlLauncher;
   final FetchThreadPage? fetchThreadPage;
@@ -49,7 +49,7 @@ class ThreadDetailsModal extends StatefulWidget {
   /// Passed to the forum viewer that "Open thread" pushes (tests inject it).
   final FetchThreadPosts? fetchThreadPosts;
 
-  const ThreadDetailsModal({
+  const BrowseDetailsSheet({
     super.key,
     required this.thread,
     this.category = SearchCategory.games,
@@ -59,21 +59,21 @@ class ThreadDetailsModal extends StatefulWidget {
     this.fetchThreadPosts,
   });
 
-  static Future<ThreadTagSelection?> show(
+  static Future<BrowseTagSelection?> show(
     BuildContext context,
-    ThreadSummary thread, {
+    BrowseThread thread, {
     SearchCategory category = SearchCategory.games,
     UrlLauncher? urlLauncher,
     FetchThreadPage? fetchThreadPage,
     ThreadActionSender? actionSender,
     FetchThreadPosts? fetchThreadPosts,
   }) {
-    return showModalBottomSheet<ThreadTagSelection>(
+    return showModalBottomSheet<BrowseTagSelection>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: 0.55),
-      builder: (BuildContext context) => ThreadDetailsModal(
+      builder: (BuildContext context) => BrowseDetailsSheet(
         thread: thread,
         category: category,
         urlLauncher: urlLauncher,
@@ -85,10 +85,10 @@ class ThreadDetailsModal extends StatefulWidget {
   }
 
   @override
-  State<ThreadDetailsModal> createState() => _ThreadDetailsModalState();
+  State<BrowseDetailsSheet> createState() => _BrowseDetailsSheetState();
 }
 
-class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
+class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
   final DraggableScrollableController _sheetController = DraggableScrollableController();
   ThreadPage? _page;
   bool _loadingPage = true;
@@ -100,7 +100,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   /// Selected group per download set (sets are independent switchers).
   final Map<int, int> _setGroupIndex = {};
 
-  ThreadSummary get thread => widget.thread;
+  BrowseThread get thread => widget.thread;
 
   Uri get _threadUri => Uri.parse('https://f95zone.to/threads/${thread.threadId}/');
 
@@ -116,7 +116,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
     super.dispose();
   }
 
-  /// The top grab band resizes the sheet directly, so the modal can always
+  /// The top grab band resizes the sheet directly, so the sheet can always
   /// be pulled down even when the inner list is scrolled deep into content.
   void _onBandDragUpdate(DragUpdateDetails details) {
     final height = MediaQuery.of(context).size.height;
@@ -179,7 +179,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
 
   /// Opens the thread in the in-app forum viewer (which keeps its own
   /// open-in-browser action for the external escape hatch). The user can
-  /// sign in from inside the viewer, so on return the modal refetches if
+  /// sign in from inside the viewer, so on return the sheet refetches if
   /// the session appeared while it was showing guest content.
   Future<void> _openThread() async {
     final bool wasLoggedIn = AuthService.instance.isLoggedIn;
@@ -195,7 +195,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
   }
 
   /// Optimistically toggles the bookmark, reverting on failure. The page
-  /// cache is invalidated so a reopened modal refetches the real state.
+  /// cache is invalidated so a reopened sheet refetches the real state.
   Future<void> _toggleBookmark() async {
     final actions = _page?.actions;
     if (actions == null) return;
@@ -234,7 +234,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        // Same glass treatment as the search modal: blur + translucent
+        // Same glass treatment as the search sheet: blur + translucent
         // surface, or a near-opaque solid when glass effects are disabled.
         final bool glass = SettingsService.instance.settings.glassEffects;
         return ClipRRect(
@@ -246,7 +246,7 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
               child: Column(
                 children: [
                   GestureDetector(
-                    key: const Key('modal-drag-band'),
+                    key: const Key('sheet-drag-band'),
                     behavior: HitTestBehavior.opaque,
                     onVerticalDragUpdate: _onBandDragUpdate,
                     onVerticalDragEnd: _onBandDragEnd,
@@ -934,11 +934,11 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
               // because Android maps heavyImpact to CONTEXT_CLICK, which
               // feels weaker than lightImpact on many devices.
               HapticFeedback.selectionClick();
-              Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: false));
+              Navigator.of(context).pop(BrowseTagSelection(tagId: tagId, replace: false));
             },
             onLongPress: () {
               HapticFeedback.vibrate();
-              Navigator.of(context).pop(ThreadTagSelection(tagId: tagId, replace: true));
+              Navigator.of(context).pop(BrowseTagSelection(tagId: tagId, replace: true));
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

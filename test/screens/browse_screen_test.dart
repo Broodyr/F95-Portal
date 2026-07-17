@@ -1,5 +1,5 @@
 import 'package:f95_portal/models/search_query.dart';
-import 'package:f95_portal/screens/threads_screen.dart';
+import 'package:f95_portal/screens/browse_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,7 +30,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark(),
-        home: ThreadsScreen(bottomNavVisible: ValueNotifier(true), fetchThreads: recordingFetch),
+        home: BrowseScreen(bottomNavVisible: ValueNotifier(true), fetchThreads: recordingFetch),
       ),
     );
     await tester.pumpAndSettle();

@@ -6,11 +6,11 @@ import 'constants.dart';
 import 'screens/forum_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
-import 'screens/threads_screen.dart';
+import 'screens/browse_screen.dart';
 import 'services/api_service.dart';
 import 'widgets/app_toast.dart';
 import 'widgets/bottom_navigation.dart';
-import 'widgets/threads_list.dart';
+import 'widgets/browse_list.dart';
 
 class MainApp extends StatefulWidget {
   final FetchThreadsCallback fetchThreads;
@@ -117,7 +117,7 @@ class _MainAppState extends State<MainApp> {
           IndexedStack(
             index: _currentIndex,
             children: [
-              ThreadsScreen(
+              BrowseScreen(
                 scrollController: _tabControllers[0],
                 bottomNavVisible: _bottomNavVisible,
                 fetchThreads: widget.fetchThreads,

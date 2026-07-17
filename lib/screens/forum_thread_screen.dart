@@ -174,7 +174,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
 
   /// Optimistically toggles the thread watch (without email notifications),
   /// reverting on failure. Watched threads are what feed reply alerts, so
-  /// this replaces the old modal-side watch action.
+  /// this replaces the old sheet-side watch action.
   Future<void> _toggleWatch() async {
     HapticFeedback.selectionClick();
     await _applyWatchChoice(_watched ? WatchChoice.off : WatchChoice.alerts);
@@ -303,7 +303,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
 
   Future<void> _launch(Uri uri) async {
     // Guest-rendered pages route masked links to the login page; open the
-    // in-app sign-in (same flow as the thread modal) and reload after.
+    // in-app sign-in (same flow as the details sheet) and reload after.
     // The auth change already clears ForumService's cache.
     if (uri.host.endsWith('f95zone.to') && (uri.path.startsWith('/login') || uri.path.startsWith('/register'))) {
       final success = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen()));

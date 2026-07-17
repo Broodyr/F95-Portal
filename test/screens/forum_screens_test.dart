@@ -224,7 +224,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(find.byKey(const Key('composer-message')));
-    expect(field.controller!.text, contains('[QUOTE="DarkVault, post: 9001"]'));
+    expect(field.controller!.text, contains('[QUOTE="DarkVault, post: 9001, member: 4242"]'));
     expect(field.controller!.text, contains('Nobody mentions Wands & Witches'));
 
     await tester.tap(find.text('Post reply'));

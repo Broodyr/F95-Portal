@@ -1,13 +1,13 @@
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
-import 'package:f95_portal/models/thread_summary.dart';
+import 'package:f95_portal/models/browse_thread.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/thread_page_service.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:f95_portal/widgets/sliding_reveal.dart';
-import 'package:f95_portal/widgets/thread_details_modal.dart';
+import 'package:f95_portal/widgets/browse_details_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,7 +31,7 @@ List<String> recordHaptics(WidgetTester tester) {
   return haptics;
 }
 
-ThreadSummary detailedThread() => createThreadSummary(
+BrowseThread detailedThread() => createBrowseThread(
   threadId: 42,
   title: 'College Dreams',
   creator: 'EduDev',
@@ -44,15 +44,15 @@ ThreadSummary detailedThread() => createThreadSummary(
   tags: [107, 254],
 );
 
-/// Hosts a button that opens the modal; returns a getter for the popped
+/// Hosts a button that opens the sheet; returns a getter for the popped
 /// tag selection and a recorder for launched URLs.
-Future<(ThreadTagSelection? Function(), List<Uri>)> pumpDetails(
+Future<(BrowseTagSelection? Function(), List<Uri>)> pumpDetails(
   WidgetTester tester, {
-  ThreadSummary? thread,
+  BrowseThread? thread,
   FetchThreadPage? fetchThreadPage,
   ThreadActionSender? actionSender,
 }) async {
-  ThreadTagSelection? selection;
+  BrowseTagSelection? selection;
   final launched = <Uri>[];
 
   await tester.pumpWidget(
@@ -63,7 +63,7 @@ Future<(ThreadTagSelection? Function(), List<Uri>)> pumpDetails(
           body: Center(
             child: ElevatedButton(
               onPressed: () async {
-                selection = await ThreadDetailsModal.show(
+                selection = await BrowseDetailsSheet.show(
                   context,
                   thread ?? detailedThread(),
                   urlLauncher: (uri) async {
@@ -143,7 +143,7 @@ void main() {
   });
 
   testWidgets('tapping the cover opens it fullscreen in the gallery', (tester) async {
-    await pumpDetails(tester, thread: createThreadSummary(threadId: 42, cover: 'https://example.com/cover.png'));
+    await pumpDetails(tester, thread: createBrowseThread(threadId: 42, cover: 'https://example.com/cover.png'));
 
     await tester.tap(find.byKey(const Key('details-cover')));
     // The gallery's loading spinner animates indefinitely (the image never
@@ -158,7 +158,7 @@ void main() {
   testWidgets('the gallery gets the HD variant of a preview-host cover', (tester) async {
     await pumpDetails(
       tester,
-      thread: createThreadSummary(threadId: 42, cover: 'https://preview.f95zone.to/2023/02/42_cover.png'),
+      thread: createBrowseThread(threadId: 42, cover: 'https://preview.f95zone.to/2023/02/42_cover.png'),
     );
 
     await tester.tap(find.byKey(const Key('details-cover')));
@@ -177,7 +177,7 @@ void main() {
       'https://preview.f95zone.to/2023/02/42_s1.png',
       'https://preview.f95zone.to/2023/02/42_s2.png',
     ];
-    await pumpDetails(tester, thread: createThreadSummary(threadId: 42, screens: screens));
+    await pumpDetails(tester, thread: createBrowseThread(threadId: 42, screens: screens));
 
     await tester.scrollUntilVisible(find.text('Screenshots'), 150);
     await tester.pumpAndSettle();
@@ -496,7 +496,7 @@ void main() {
     expect(find.textContaining('Sign in to see download links'), findsNothing);
   });
 
-  testWidgets('signing in inside the pushed viewer refreshes the modal on return', (tester) async {
+  testWidgets('signing in inside the pushed viewer refreshes the sheet on return', (tester) async {
     final previousAuth = AuthService.instance;
     addTearDown(() => AuthService.instance = previousAuth);
     AuthService.instance = AuthService(InMemoryCookieStorage());
@@ -523,7 +523,7 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    // The modal refetched as a member: downloads replace the notice.
+    // The sheet refetched as a member: downloads replace the notice.
     expect(find.textContaining('Sign in to see download links'), findsNothing);
     await tester.scrollUntilVisible(find.text('Downloads'), 150);
     expect(find.text('Downloads'), findsOneWidget);
