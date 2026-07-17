@@ -94,6 +94,9 @@ void main() {
       expect(find.text('Member'), findsOneWidget);
       expect(find.text('291 messages · Joined Dec 11, 2017'), findsOneWidget);
       expect(find.text('Last seen Today at 4:55 PM'), findsOneWidget);
+
+      // The tab bar uses the app's segmented-track radio design.
+      expect(find.byKey(const Key('segment-highlight')), findsOneWidget);
     });
 
     testWidgets('shows a retry on load failure', (tester) async {

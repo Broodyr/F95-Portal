@@ -8,6 +8,14 @@ that aren't obvious from reading the code:
 - Any backdrop blur must go through the `GlassAware` widget
   (`lib/widgets/glass_aware.dart`) so the "Glass effects" setting can disable
   it — a raw `BackdropFilter` ignores the user's performance preference.
+- Any exclusive-choice control (radio group, sort order, kind filter, tab
+  bar) must use `SegmentedSelector` (`lib/widgets/segmented_selector.dart`):
+  a dark pill track with one sliding bordered highlight. Size can vary
+  (`dense`, `shrinkWrap`), the style cannot. Don't hand-roll pill rows or use
+  Material `SegmentedButton`/`Radio`. Exceptions only where a fixed
+  equal-width track can't work: option sets of variable/unbounded count that
+  must wrap (download group switcher in `thread_details_modal.dart`) or
+  scroll (reaction tabs in `reactions_sheet.dart`).
 - Tests first (TDD): write or extend a failing test before the implementation
   change. Run `flutter analyze` before committing.
 

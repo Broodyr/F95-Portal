@@ -10,6 +10,7 @@ import '../models/search_query.dart';
 import '../services/settings_service.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/search_options_modal.dart';
+import '../widgets/segmented_selector.dart';
 
 class SettingsScreen extends StatelessWidget {
   /// The list's controller; MainApp watches it to hide/show the bottom nav
@@ -116,22 +117,15 @@ class SettingsScreen extends StatelessWidget {
                   style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
                 const SizedBox(height: 12),
-                SegmentedButton<FontSizeOption>(
-                  showSelectedIcon: false,
-                  style: SegmentedButton.styleFrom(
-                    foregroundColor: Colors.grey[400],
-                    selectedForegroundColor: colorScheme.primary,
-                    selectedBackgroundColor: colorScheme.primary.withValues(alpha: 0.18),
-                    side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
-                  ),
-                  segments: const [
-                    ButtonSegment(value: FontSizeOption.small, label: Text('Small')),
-                    ButtonSegment(value: FontSizeOption.medium, label: Text('Medium')),
-                    ButtonSegment(value: FontSizeOption.large, label: Text('Large')),
-                  ],
-                  selected: {settings.fontSize},
-                  onSelectionChanged: (selection) =>
-                      SettingsService.instance.update(settings.copyWith(fontSize: selection.single)),
+                SegmentedSelector<FontSizeOption>(
+                  values: FontSizeOption.values,
+                  isSelected: (option) => settings.fontSize == option,
+                  label: (option) => switch (option) {
+                    FontSizeOption.small => 'Small',
+                    FontSizeOption.medium => 'Medium',
+                    FontSizeOption.large => 'Large',
+                  },
+                  onSelect: (option) => SettingsService.instance.update(settings.copyWith(fontSize: option)),
                 ),
                 _sectionHeader('Privacy'),
                 SwitchListTile(

@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../utils/formatters.dart';
 import 'app_toast.dart';
+import 'segmented_selector.dart';
 import 'sliding_reveal.dart';
 
 typedef _EmptyTag = ({int id, String name, bool recent});
@@ -394,8 +395,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                     const SizedBox(height: 16),
                     Text('Sort by', style: _headerStyle(textTheme)),
                     const SizedBox(height: 8),
-                    _buildSegmentedSelector<SortOrder>(
-                      colorScheme,
+                    SegmentedSelector<SortOrder>(
                       values: SortOrder.values,
                       isSelected: (order) => _sort == order,
                       label: (order) => order.displayLabel,
@@ -404,8 +404,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                     const SizedBox(height: 16),
                     Text('Updated within', style: _headerStyle(textTheme)),
                     const SizedBox(height: 8),
-                    _buildSegmentedSelector<MapEntry<String, int?>>(
-                      colorScheme,
+                    SegmentedSelector<MapEntry<String, int?>>(
                       values: _dateLimits.entries.toList(),
                       isSelected: (entry) => _dateDays == entry.value,
                       label: (entry) => entry.key,
@@ -756,75 +755,6 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             onTap: () => _onCategoryChanged(category),
           ),
       ],
-    );
-  }
-
-  /// Single full-width pill with equal-width segments; replaces the wrapped
-  /// per-option pills that broke onto a second line on narrow screens.
-  Widget _buildSegmentedSelector<T>(
-    ColorScheme colorScheme, {
-    required List<T> values,
-    required bool Function(T) isSelected,
-    required String Function(T) label,
-    required ValueChanged<T> onSelect,
-  }) {
-    final int selectedIndex = values.indexWhere(isSelected);
-
-    return Container(
-      // Borderless dark track: the selected segment carries the only border,
-      // so it does not clash with an outer outline.
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(999)),
-      child: Stack(
-        children: [
-          // One shared highlight pill that slides between segments rather
-          // than each segment cross-fading its own background.
-          if (selectedIndex >= 0)
-            Positioned.fill(
-              child: AnimatedAlign(
-                key: const Key('segment-highlight'),
-                duration: Motion.duration,
-                curve: Motion.curve,
-                alignment: Alignment(values.length == 1 ? 0 : -1 + 2 * selectedIndex / (values.length - 1), 0),
-                child: FractionallySizedBox(
-                  widthFactor: 1 / values.length,
-                  heightFactor: 1,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: colorScheme.primary, width: 1.5),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          Row(
-            children: [
-              for (final value in values)
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => onSelect(value),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 9),
-                      child: Center(
-                        child: AnimatedDefaultTextStyle(
-                          duration: Motion.duration,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected(value) ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                            fontWeight: isSelected(value) ? FontWeight.w600 : FontWeight.w400,
-                          ),
-                          child: Text(label(value)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 

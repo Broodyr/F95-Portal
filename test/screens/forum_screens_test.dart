@@ -562,6 +562,10 @@ void main() {
     await tester.tap(find.byTooltip('Search the forum'));
     await tester.pumpAndSettle();
 
+    // The sort radios share the app's segmented-track design: one sliding
+    // highlight pill (the Titles-only toggle stays a lone pill).
+    expect(find.byKey(const Key('segment-highlight')), findsOneWidget);
+
     await tester.enterText(find.byKey(const Key('forum-search-field')), 'futanari');
     await tester.tap(find.text('Titles only'));
     await tester.pumpAndSettle();
@@ -774,6 +778,9 @@ void main() {
     expect(find.textContaining('Secret Flasher Manaka'), findsOneWidget);
     expect(find.text('THREAD'), findsOneWidget);
     expect(find.text('POST'), findsOneWidget);
+
+    // The kind filter uses the app's segmented-track radio design.
+    expect(find.byKey(const Key('segment-highlight')), findsOneWidget);
 
     // Kind filter narrows the list client-side.
     await tester.tap(find.text('Posts'));

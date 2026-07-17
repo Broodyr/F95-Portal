@@ -10,6 +10,7 @@ import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
+import '../widgets/segmented_selector.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
 
@@ -474,35 +475,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTabBar(ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        children: [
-          for (final (index, label) in const [(0, 'Profile posts'), (1, 'Postings'), (2, 'About')])
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _openTab(index),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _tab == index ? colorScheme.primary.withValues(alpha: 0.18) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: _tab == index ? colorScheme.primary : Colors.grey[500],
-                      fontSize: 12,
-                      fontWeight: _tab == index ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+    return SegmentedSelector<int>(
+      values: const [0, 1, 2],
+      isSelected: (index) => _tab == index,
+      label: (index) => const ['Profile posts', 'Postings', 'About'][index],
+      onSelect: _openTab,
     );
   }
 

@@ -8,7 +8,7 @@ import '../services/thread_page_service.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
-import '../widgets/sliding_reveal.dart';
+import '../widgets/segmented_selector.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
 
@@ -168,39 +168,23 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: Row(
               children: [
-                _buildToggle(colorScheme, 'All', _filter == _BookmarkFilter.all, _BookmarkFilter.all),
-                const SizedBox(width: 6),
-                _buildToggle(colorScheme, 'Threads', _filter == _BookmarkFilter.threads, _BookmarkFilter.threads),
-                const SizedBox(width: 6),
-                _buildToggle(colorScheme, 'Posts', _filter == _BookmarkFilter.posts, _BookmarkFilter.posts),
+                SegmentedSelector<_BookmarkFilter>(
+                  dense: true,
+                  shrinkWrap: true,
+                  values: _BookmarkFilter.values,
+                  isSelected: (filter) => _filter == filter,
+                  label: (filter) => switch (filter) {
+                    _BookmarkFilter.all => 'All',
+                    _BookmarkFilter.threads => 'Threads',
+                    _BookmarkFilter.posts => 'Posts',
+                  },
+                  onSelect: (filter) => setState(() => _filter = filter),
+                ),
               ],
             ),
           ),
           Expanded(child: _buildBody(colorScheme)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildToggle(ColorScheme colorScheme, String label, bool selected, _BookmarkFilter filter) {
-    return GestureDetector(
-      onTap: () => setState(() => _filter = filter),
-      child: AnimatedContainer(
-        duration: Motion.duration,
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-        decoration: BoxDecoration(
-          color: selected ? colorScheme.primary.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? colorScheme.primary : Colors.transparent),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.5,
-            color: selected ? colorScheme.primary : Colors.grey[400],
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
       ),
     );
   }

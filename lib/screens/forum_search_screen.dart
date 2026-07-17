@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
+import '../widgets/segmented_selector.dart';
 import '../widgets/sliding_reveal.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
@@ -165,15 +166,20 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
             child: Row(
               children: [
                 _buildToggle(colorScheme, 'Titles only', _titleOnly, () => setState(() => _titleOnly = !_titleOnly)),
-                const SizedBox(width: 6),
-                _buildToggle(
-                  colorScheme,
-                  'Relevance',
-                  _order == 'relevance',
-                  () => setState(() => _order = 'relevance'),
+                Container(
+                  width: 1,
+                  height: 14,
+                  margin: const EdgeInsets.symmetric(horizontal: 9),
+                  color: Colors.grey[800],
                 ),
-                const SizedBox(width: 6),
-                _buildToggle(colorScheme, 'Newest', _order == 'date', () => setState(() => _order = 'date')),
+                SegmentedSelector<String>(
+                  dense: true,
+                  shrinkWrap: true,
+                  values: const ['relevance', 'date'],
+                  isSelected: (order) => _order == order,
+                  label: (order) => order == 'date' ? 'Newest' : 'Relevance',
+                  onSelect: (order) => setState(() => _order = order),
+                ),
               ],
             ),
           ),

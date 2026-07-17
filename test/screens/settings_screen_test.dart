@@ -61,6 +61,9 @@ void main() {
 
     expect(service.settings.fontSize, FontSizeOption.medium);
 
+    // The selector uses the app's segmented-track radio design.
+    expect(find.byKey(const Key('segment-highlight')), findsOneWidget);
+
     await tester.ensureVisible(find.text('Large'));
     await tester.tap(find.text('Large'));
     await tester.pumpAndSettle();
