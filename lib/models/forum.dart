@@ -141,6 +141,10 @@ class ForumPost {
 
   /// The author's member page URL; lets the viewer open their profile.
   final String? authorUrl;
+
+  /// The author's member id; 0 when unparsed. Carried into quote BBCode
+  /// (`member: N`), which is what makes the site alert the quoted user.
+  final int authorId;
   final String memberTitle;
   final String date;
   final List<ForumPostBlock> blocks;
@@ -155,6 +159,7 @@ class ForumPost {
     this.author = '',
     this.avatarUrl,
     this.authorUrl,
+    this.authorId = 0,
     this.memberTitle = '',
     this.date = '',
     this.blocks = const [],

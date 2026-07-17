@@ -65,4 +65,48 @@ void main() {
     // cached_network_image leaves pending timers.
     await tester.pump(const Duration(minutes: 1));
   });
+
+  testWidgets('quoting a post prefills author, post id, and member id', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Quote me',
+      replyUrl: 'https://example.com/threads/quote-me.1/add-reply',
+      posts: const [
+        ForumPost(
+          postId: 42,
+          number: 1,
+          author: 'VoidTraveler',
+          authorId: 3590149,
+          blocks: [
+            ForumPostBlock(
+              kind: PostBlockKind.rich,
+              pieces: [
+                RichPiece.text('hello there'),
+                RichPiece.smilie(':love:', asset: 'assets/smilies/love.png'),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/quote-me.1/',
+          title: 'Quote me',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Quote'));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField).last);
+    // The member id is what makes the site alert the quoted user; smilies
+    // come through as their shortcode.
+    expect(field.controller!.text, '[QUOTE="VoidTraveler, post: 42, member: 3590149"]\nhello there:love:\n[/QUOTE]\n');
+  });
 }

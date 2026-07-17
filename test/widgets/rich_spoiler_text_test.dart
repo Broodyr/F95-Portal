@@ -70,4 +70,54 @@ void main() {
     // cached_network_image leaves pending timers.
     await tester.pump(const Duration(minutes: 1));
   });
+
+  testWidgets('smilies render as inline assets, unknown ones as their shortcode', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: RichSpoilerText(
+            pieces: const [
+              RichPiece.text('gg '),
+              RichPiece.smilie(':love:', asset: 'assets/smilies/love.png'),
+              RichPiece.smilie(':lepew:'),
+            ],
+            onOpenLink: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final image = tester.widget<Image>(find.byType(Image));
+    expect((image.image as AssetImage).assetName, 'assets/smilies/love.png');
+
+    final text = tester.widget<Text>(find.byType(Text).first);
+    expect(text.textSpan!.toPlainText(), contains(':lepew:'));
+  });
+
+  testWidgets('smilie size follows the ambient text scale', (tester) async {
+    Future<Image> pumpScaled(double scale) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: Scaffold(
+              body: RichSpoilerText(
+                pieces: const [RichPiece.smilie(':love:', asset: 'assets/smilies/love.png')],
+                onOpenLink: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return tester.widget<Image>(find.byType(Image));
+    }
+
+    final normal = await pumpScaled(1.0);
+    final large = await pumpScaled(1.5);
+    expect(large.width!, greaterThan(normal.width!));
+  });
 }

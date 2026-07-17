@@ -70,6 +70,26 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
         spans.add(const TextSpan(text: '\n'));
         continue;
       }
+      final smilieAsset = piece.smilieAsset;
+      if (smilieAsset != null) {
+        // Sized off the scaled font so smilies follow the font-size
+        // setting; WidgetSpan children don't inherit the text scaler.
+        final size = MediaQuery.textScalerOf(context).scale(baseStyle.fontSize! * 1.35);
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Image.asset(
+              smilieAsset,
+              width: size,
+              height: size,
+              semanticLabel: piece.text,
+              errorBuilder: (context, error, stackTrace) => Text(piece.text, style: baseStyle),
+            ),
+          ),
+        );
+        continue;
+      }
+
       final imageUrl = piece.imageUrl;
       if (imageUrl != null) {
         // Inline shows the thumbnail; tapping opens the full-resolution

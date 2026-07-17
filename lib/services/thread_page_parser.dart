@@ -3,6 +3,9 @@ import 'package:html/parser.dart' as html_parser;
 
 import '../models/thread_page.dart';
 import '../utils/image_urls.dart';
+import 'smilies.dart';
+
+final _spriteClassPattern = RegExp(r'^smilie--sprite(\d+)$');
 
 /// One inline item on a "line" of the first post: a text run (possibly
 /// bold), a link, or a placeholder for a spoiler block.
@@ -392,7 +395,7 @@ List<RichPiece> _spoilerRich(Element spoiler) =>
     parseRichContent(spoiler.querySelector('.bbCodeSpoiler-content') ?? spoiler);
 
 /// Walks [content] into inline [RichPiece]s (bold/italic/underline/strike,
-/// bullets, links, non-smilie images), capped for pathological posts.
+/// bullets, links, images, smilies), capped for pathological posts.
 /// Shared by spoiler sections and the forum post-loop parser.
 List<RichPiece> parseRichContent(Element content) {
   final pieces = <RichPiece>[];
@@ -436,7 +439,25 @@ List<RichPiece> parseRichContent(Element content) {
         return;
       }
       if (tag == 'img') {
-        if (node.classes.contains('smilie')) return;
+        if (node.classes.contains('smilie')) {
+          // Smilie srcs are 1x1 placeholders; the art is CSS keyed on the
+          // smilie--spriteNNN class, mapped to bundled assets. Unmapped
+          // ones (donor emotes) degrade to their shortcode as text.
+          int? spriteId;
+          for (final cls in node.classes) {
+            final match = _spriteClassPattern.firstMatch(cls);
+            if (match != null) {
+              spriteId = int.parse(match.group(1)!);
+              break;
+            }
+          }
+          final shortname = node.attributes['data-shortname'] ?? node.attributes['alt'] ?? '';
+          final smilie = smiliesBySpriteId[spriteId] ?? smiliesByShortname[shortname];
+          final text = shortname.isNotEmpty ? shortname : (smilie?.shortname ?? '');
+          if (text.isEmpty) return;
+          pieces.add(RichPiece.smilie(text, asset: smilie?.assetPath));
+          return;
+        }
         final rawSrc = node.attributes['src'] ?? '';
         final dataSrc = node.attributes['data-src'];
         // Inline thumbnail: the live `src` (an http `/thumb/` URL) when

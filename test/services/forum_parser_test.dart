@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:f95_portal/models/account.dart';
 import 'package:f95_portal/models/forum.dart';
+import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/services/forum_parser.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -123,6 +124,9 @@ void main() {
       expect(post.date, 'May 12, 2024');
       expect(post.avatarUrl, endsWith('137028_002_iNbu.jpg'));
       expect(post.authorUrl, 'https://f95zone.to/members/lerd0.137028/');
+      // Needed for the `member:` part of quote BBCode, which is what makes
+      // the site alert the quoted user.
+      expect(post.authorId, 137028);
     });
 
     test('splits the body into quote and rich blocks in order', () {
@@ -500,6 +504,54 @@ void main() {
 
       expect(img.imageUrl, 'https://preview.f95zone.to/2025/03/888_saved.png');
       expect(img.fullImageUrl, 'https://attachments.f95zone.to/2025/03/888_saved.png');
+    });
+  });
+
+  group('smilies', () {
+    // Post smilies are 1x1 data-URI placeholders; the art comes from site
+    // CSS keyed on the smilie--spriteNNN class, so the parser maps that
+    // class to a bundled asset instead of dropping the img.
+    List<RichPiece> smiliePieces(String bbWrapper) {
+      final page = parseThreadPosts(
+        '<article class="message message--post" data-author="A" data-content="post-7">'
+        '<div class="message-body"><div class="bbWrapper">$bbWrapper</div></div></article>',
+      );
+      return page.posts.single.blocks.single.pieces;
+    }
+
+    test('a sprite smilie becomes an asset piece with its shortcode as text', () {
+      final pieces = smiliePieces(
+        'Nice <img src="data:image/gif;base64,R0lGOD" class="smilie smilie--sprite smilie--sprite682" '
+        'alt=":love:" data-shortname=":love:">',
+      );
+
+      final smilie = pieces.singleWhere((p) => p.smilieAsset != null);
+      expect(smilie.smilieAsset, 'assets/smilies/love.png');
+      // The shortcode as text keeps quotes of this post round-trippable.
+      expect(smilie.text, ':love:');
+    });
+
+    test('falls back to the shortname when the sprite class is missing', () {
+      final pieces = smiliePieces('<img class="smilie" alt=":KEK:" data-shortname=":KEK:">');
+      expect(pieces.single.smilieAsset, 'assets/smilies/kek.png');
+      expect(pieces.single.text, ':KEK:');
+    });
+
+    test('unknown donor emotes keep their shortcode as plain text', () {
+      final pieces = smiliePieces(
+        '<img class="smilie smilie--sprite smilie--sprite711" alt=":lepew:" data-shortname=":lepew:">',
+      );
+      expect(pieces.single.smilieAsset, isNull);
+      expect(pieces.single.text, ':lepew:');
+    });
+
+    test('fixture smilies survive parsing', () {
+      final dik = parseThreadPosts(fixture('thread_renpy_being_a_dik.htm'));
+      final pieces = [
+        for (final post in dik.posts)
+          for (final block in post.blocks) ...block.pieces,
+      ];
+      expect(pieces.any((p) => p.smilieAsset != null), isTrue);
     });
   });
 

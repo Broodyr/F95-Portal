@@ -343,6 +343,15 @@ ForumPost _parsePost(Element post) {
       post.querySelector('.message-avatar a')?.attributes['href'] ??
           post.querySelector('.message-name a')?.attributes['href'],
     ),
+    // Scoped to the user cell: body mentions carry data-user-id too.
+    authorId:
+        int.tryParse(
+          (post.querySelector('.message-name a[data-user-id]') ??
+                  post.querySelector('.message-avatar a[data-user-id]'))
+                  ?.attributes['data-user-id'] ??
+              '',
+        ) ??
+        0,
     memberTitle: _clean(post.querySelector('.message-userTitle')?.text ?? ''),
     date: _clean(post.querySelector('.message-attribution-main time')?.text ?? ''),
     blocks: _parsePostBlocks(post.querySelector('.message-body .bbWrapper')),

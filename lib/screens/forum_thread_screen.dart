@@ -296,7 +296,9 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       }
       buffer.write('\n');
     }
-    return '[QUOTE="${post.author}, post: ${post.postId}"]\n${buffer.toString().trim()}\n[/QUOTE]\n';
+    // `member:` is what makes the site alert the quoted user.
+    final member = post.authorId == 0 ? '' : ', member: ${post.authorId}';
+    return '[QUOTE="${post.author}, post: ${post.postId}$member"]\n${buffer.toString().trim()}\n[/QUOTE]\n';
   }
 
   Future<void> _launch(Uri uri) async {

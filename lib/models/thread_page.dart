@@ -89,6 +89,12 @@ class RichPiece {
   /// True for explicit line breaks (text/styles unused).
   final bool newline;
 
+  /// Bundled asset for a forum smilie, rendered inline at text size.
+  /// [text] holds the shortcode (e.g. `:love:`) so plain-text renderings
+  /// and BBCode quotes round-trip; a null asset (unmapped donor emote)
+  /// shows the shortcode instead.
+  final String? smilieAsset;
+
   const RichPiece.text(
     this.text, {
     this.bold = false,
@@ -98,6 +104,7 @@ class RichPiece {
     this.url,
   }) : imageUrl = null,
        fullImageUrl = null,
+       smilieAsset = null,
        newline = false;
 
   const RichPiece.image(this.imageUrl, {this.fullImageUrl})
@@ -107,6 +114,18 @@ class RichPiece {
       underline = false,
       strike = false,
       url = null,
+      smilieAsset = null,
+      newline = false;
+
+  const RichPiece.smilie(this.text, {String? asset})
+    : bold = false,
+      italic = false,
+      underline = false,
+      strike = false,
+      url = null,
+      imageUrl = null,
+      fullImageUrl = null,
+      smilieAsset = asset,
       newline = false;
 
   const RichPiece.newline()
@@ -118,6 +137,7 @@ class RichPiece {
       url = null,
       imageUrl = null,
       fullImageUrl = null,
+      smilieAsset = null,
       newline = true;
 }
 
