@@ -4,6 +4,7 @@ import '../models/forum.dart';
 import '../services/forum_service.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/forum_node_row.dart';
+import '../widgets/glass_fab.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import 'forum_thread_screen.dart';
@@ -143,16 +144,24 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
           ],
         ),
       ),
-      body: _buildBody(colorScheme, page),
-      floatingActionButton: page?.postThreadUrl == null
-          ? null
-          : FloatingActionButton.small(
-              tooltip: 'New thread',
-              backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
-              onPressed: _composeThread,
-              child: const Icon(Icons.edit),
+      body: Stack(
+        children: [
+          _buildBody(colorScheme, page),
+          // Same spot as the browse tab's search FAB in its nav-hidden
+          // position — the bottom nav never shows on pushed screens.
+          if (page?.postThreadUrl != null)
+            Positioned(
+              right: 32,
+              bottom: MediaQuery.of(context).padding.bottom + 24,
+              child: GlassFab(
+                icon: Icons.edit,
+                tooltip: 'New thread',
+                scrollController: _scrollController,
+                onPressed: _composeThread,
+              ),
             ),
+        ],
+      ),
     );
   }
 

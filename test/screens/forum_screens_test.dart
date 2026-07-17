@@ -10,6 +10,7 @@ import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/forum_threads_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
 import 'package:f95_portal/services/forum_service.dart';
+import 'package:f95_portal/widgets/glass_fab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -248,6 +249,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(replies, ['Nice thread!']);
+  });
+
+  testWidgets('the reply FAB is a 56pt glass button anchored at the search FAB spot', (tester) async {
+    await pumpForum(tester);
+    await openThreadViewer(tester);
+
+    final fab = find.byType(GlassFab);
+    expect(fab, findsOneWidget);
+    final rect = tester.getRect(fab);
+    final screen = tester.getRect(find.byType(Scaffold).last);
+    expect(rect.size, const Size(56, 56));
+    expect(screen.right - rect.right, 32);
+    expect(screen.bottom - rect.bottom, 24);
+  });
+
+  testWidgets('the new-thread FAB is a 56pt glass button anchored at the search FAB spot', (tester) async {
+    await pumpForum(tester);
+    await tester.tap(find.text('General Discussions'));
+    await tester.pumpAndSettle();
+
+    final fab = find.byType(GlassFab);
+    expect(fab, findsOneWidget);
+    final rect = tester.getRect(fab);
+    final screen = tester.getRect(find.byType(Scaffold).last);
+    expect(rect.size, const Size(56, 56));
+    expect(screen.right - rect.right, 32);
+    expect(screen.bottom - rect.bottom, 24);
   });
 
   testWidgets('write actions are hidden when the page has no reply URL', (tester) async {
