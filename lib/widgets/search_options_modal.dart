@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
@@ -130,6 +131,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   }
 
   void _onTextChanged() => setState(() {});
+
+  /// The modal is short-lived and reopened fresh, so a plain read (no
+  /// listener) of the font-size preference is safe here.
+  FontSizeOption get _fontSize => SettingsService.instance.settings.fontSize;
+
+  /// Section headers are anchored: already big enough at titleMedium's 16pt
+  /// base, so they hold it (15pt on small) while their contents scale.
+  TextStyle? _headerStyle(TextTheme textTheme) => textTheme.titleMedium?.copyWith(fontSize: _fontSize.anchored(16));
 
   void _restoreFilters(SearchQuery query) {
     final metadata = F95Metadata.instance;
@@ -383,7 +392,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                       ),
                     ],
                     const SizedBox(height: 16),
-                    Text('Sort by', style: textTheme.titleMedium),
+                    Text('Sort by', style: _headerStyle(textTheme)),
                     const SizedBox(height: 8),
                     _buildSegmentedSelector<SortOrder>(
                       colorScheme,
@@ -393,7 +402,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                       onSelect: (order) => setState(() => _sort = order),
                     ),
                     const SizedBox(height: 16),
-                    Text('Updated within', style: textTheme.titleMedium),
+                    Text('Updated within', style: _headerStyle(textTheme)),
                     const SizedBox(height: 8),
                     _buildSegmentedSelector<MapEntry<String, int?>>(
                       colorScheme,
@@ -406,11 +415,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                     FilledButton.icon(
                       onPressed: _onSubmit,
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        // Tighter padding offsets the bigger CTA label so
+                        // the button height stays put.
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: colorScheme.primary,
                         foregroundColor: colorScheme.onPrimary,
+                        textStyle: AppButtons.ctaTextStyle,
                       ),
-                      icon: const Icon(Icons.search),
+                      icon: const Icon(Icons.search, size: AppButtons.ctaIconSize),
                       label: Text(widget.submitLabel),
                     ),
                   ],
@@ -439,7 +451,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            Text(title, style: textTheme.titleMedium),
+            Text(title, style: _headerStyle(textTheme)),
             const Spacer(),
             if (summary.isNotEmpty) Text(summary, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
             const SizedBox(width: 4),
@@ -529,11 +541,14 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
         focusNode: _searchFocus,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => _onSubmit(),
-        decoration: const InputDecoration(
+        // Anchored: the field is already comfortable at its 16pt base.
+        style: TextStyle(fontSize: _fontSize.anchored(16)),
+        decoration: InputDecoration(
           hintText: 'Search titles, tags, creators…',
+          hintStyle: TextStyle(fontSize: _fontSize.anchored(16)),
           border: InputBorder.none,
-          prefixIcon: Icon(Icons.search),
-          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          prefixIcon: const Icon(Icons.search),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
     );

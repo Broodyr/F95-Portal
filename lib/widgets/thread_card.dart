@@ -7,6 +7,7 @@ import '../models/thread_summary.dart';
 import '../utils/formatters.dart';
 import 'cover_image.dart';
 import 'engine_tag.dart';
+import 'font_size_aware.dart';
 import 'glass_aware.dart';
 import 'metadata_row.dart';
 import 'version_pill.dart';
@@ -141,12 +142,19 @@ class ThreadCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Thread title
-                          Text(
-                            thread.title,
-                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          // Thread title; anchored: already big enough at
+                          // 18pt, so it ignores the app text scale.
+                          FontSizeAware(
+                            builder: (context, fontSize) => Text(
+                              thread.title,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: fontSize.anchored(18),
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           // Metadata row

@@ -56,6 +56,18 @@ void main() {
     expect(service.settings.glassEffects, isFalse);
   });
 
+  testWidgets('text size selector round-trips to the service', (tester) async {
+    await pumpSettings(tester);
+
+    expect(service.settings.fontSize, FontSizeOption.medium);
+
+    await tester.ensureVisible(find.text('Large'));
+    await tester.tap(find.text('Large'));
+    await tester.pumpAndSettle();
+
+    expect(service.settings.fontSize, FontSizeOption.large);
+  });
+
   testWidgets('edit defaults opens the search modal and persists the result', (tester) async {
     await pumpSettings(tester);
 

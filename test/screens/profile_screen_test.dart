@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_cookie_storage.dart';
+import '../helpers/widget_test_utils.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +55,12 @@ void main() {
       expect(find.text('Not signed in'), findsOneWidget);
       expect(find.text('Sign in to F95Zone'), findsOneWidget);
       expect(find.byTooltip('Sign out'), findsNothing);
+    });
+
+    testWidgets('the sign-in button uses the enlarged 18pt CTA label', (tester) async {
+      await pumpProfile(tester);
+
+      expect(effectiveFontSize(tester, find.text('Sign in to F95Zone')), moreOrLessEquals(18));
     });
 
     testWidgets('signing in mid-session loads the profile', (tester) async {

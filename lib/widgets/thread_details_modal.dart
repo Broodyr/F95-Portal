@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
+import '../constants.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/thread_page.dart';
@@ -314,8 +315,9 @@ class _ThreadDetailsModalState extends State<ThreadDetailsModal> {
                                     backgroundColor: colorScheme.primary,
                                     foregroundColor: colorScheme.onPrimary,
                                     padding: const EdgeInsets.symmetric(vertical: 14),
+                                    textStyle: AppButtons.ctaTextStyle,
                                   ),
-                                  icon: const Icon(Icons.forum_outlined, size: 18),
+                                  icon: const Icon(Icons.forum_outlined, size: AppButtons.ctaIconSize),
                                   label: const Text('Open thread'),
                                 ),
                               ),

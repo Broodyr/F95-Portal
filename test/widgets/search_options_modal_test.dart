@@ -2,6 +2,7 @@ import 'package:f95_portal/models/search_category.dart';
 import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/settings_service.dart';
+import 'package:f95_portal/widgets/app_text_scale.dart';
 import 'package:f95_portal/widgets/search_options_modal.dart';
 import 'package:f95_portal/widgets/sliding_reveal.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_settings_storage.dart';
 import '../helpers/metadata_test_utils.dart';
+import '../helpers/widget_test_utils.dart';
 
 /// Pumps a host app with a button that opens the modal; returns a getter for
 /// the SearchQuery the modal eventually pops with.
@@ -24,6 +26,7 @@ Future<SearchQuery? Function()> pumpModal(
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(),
+      builder: (context, child) => AppTextScale(child: child!),
       home: Builder(
         builder: (context) => Scaffold(
           body: Center(
@@ -78,6 +81,34 @@ void main() {
 
   tearDown(() {
     SettingsService.instance = previousSettings;
+  });
+
+  testWidgets('large font scales contents but anchors the field and headers at 16pt', (tester) async {
+    await SettingsService.instance.update(
+      SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.large),
+    );
+    await pumpModal(tester);
+
+    // Anchored: section headers and the search field hold their base size.
+    expect(effectiveFontSize(tester, find.text('Sort by')), moreOrLessEquals(16));
+    expect(effectiveFontSize(tester, find.text('Search titles, tags, creators…')), moreOrLessEquals(16));
+
+    // Their contents still scale: a segmented label grows past its 12pt base.
+    expect(effectiveFontSize(tester, find.text('Any')), moreOrLessEquals(12 * FontSizeOption.large.scale));
+
+    // The submit button scales from its enlarged 18pt base.
+    expect(effectiveFontSize(tester, find.text('Search')), moreOrLessEquals(18 * FontSizeOption.large.scale));
+  });
+
+  testWidgets('small font trims anchored elements by 1pt and keeps the big search button', (tester) async {
+    await SettingsService.instance.update(
+      SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.small),
+    );
+    await pumpModal(tester);
+
+    expect(effectiveFontSize(tester, find.text('Sort by')), moreOrLessEquals(15));
+    expect(effectiveFontSize(tester, find.text('Search titles, tags, creators…')), moreOrLessEquals(15));
+    expect(effectiveFontSize(tester, find.text('Search')), moreOrLessEquals(18));
   });
 
   testWidgets('typing suggests tags; tapping one adds an include filter', (tester) async {

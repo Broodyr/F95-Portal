@@ -5,6 +5,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/search_query.dart';
 
+/// Overall text size. [scale] feeds the app-wide text scaler (AppTextScale);
+/// [anchored] pins the few elements that are already big enough at their
+/// base size.
+enum FontSizeOption {
+  small(1.0),
+  medium(1.08),
+  large(1.16);
+
+  const FontSizeOption(this.scale);
+
+  /// App-wide text scale multiplier: roughly +1pt of body text and +2pt of
+  /// title text per step up. Small is the app's original sizing.
+  final double scale;
+
+  /// Pre-scale font size for text that should render at [base] regardless of
+  /// the app scale, except 1pt smaller on small (where everything else
+  /// shrinks too). Dividing by [scale] cancels the app's own scaler while
+  /// leaving the OS accessibility factor intact.
+  double anchored(double base) => (this == small ? base - 1 : base) / scale;
+}
+
 @immutable
 class AppSettings {
   /// Baseline query for the Browse tab: applied at startup and when the
@@ -16,6 +37,9 @@ class AppSettings {
 
   /// Backdrop blur behind pills/sheets; disable on low-end phones.
   final bool glassEffects;
+
+  /// Overall text size; small is the app's original sizing.
+  final FontSizeOption fontSize;
 
   /// Flutter's performance overlay (only effective in debug/profile builds).
   final bool showPerfOverlay;
@@ -29,6 +53,7 @@ class AppSettings {
     this.defaultQuery = const SearchQuery(),
     this.sfwBlur = false,
     this.glassEffects = true,
+    this.fontSize = FontSizeOption.medium,
     this.showPerfOverlay = false,
     this.recentTags = const [],
   });
@@ -37,6 +62,7 @@ class AppSettings {
     SearchQuery? defaultQuery,
     bool? sfwBlur,
     bool? glassEffects,
+    FontSizeOption? fontSize,
     bool? showPerfOverlay,
     List<int>? recentTags,
   }) {
@@ -44,6 +70,7 @@ class AppSettings {
       defaultQuery: defaultQuery ?? this.defaultQuery,
       sfwBlur: sfwBlur ?? this.sfwBlur,
       glassEffects: glassEffects ?? this.glassEffects,
+      fontSize: fontSize ?? this.fontSize,
       showPerfOverlay: showPerfOverlay ?? this.showPerfOverlay,
       recentTags: recentTags ?? this.recentTags,
     );
@@ -53,6 +80,7 @@ class AppSettings {
     'defaultQuery': defaultQuery.toJson(),
     'sfwBlur': sfwBlur,
     'glassEffects': glassEffects,
+    'fontSize': fontSize.name,
     'showPerfOverlay': showPerfOverlay,
     'recentTags': recentTags,
   };
@@ -64,6 +92,7 @@ class AppSettings {
           : const SearchQuery(),
       sfwBlur: json['sfwBlur'] ?? false,
       glassEffects: json['glassEffects'] ?? true,
+      fontSize: FontSizeOption.values.asNameMap()[json['fontSize']] ?? FontSizeOption.medium,
       showPerfOverlay: json['showPerfOverlay'] ?? false,
       // A 'suggestionSource' key may linger in persisted JSON from when the
       // suggestion source was a user setting; it is intentionally ignored.

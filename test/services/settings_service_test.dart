@@ -64,6 +64,31 @@ void main() {
       expect(storage.stored, isNull);
     });
 
+    test('font size defaults to medium and round-trips through storage', () async {
+      expect(service.settings.fontSize, FontSizeOption.medium);
+
+      await service.update(service.settings.copyWith(fontSize: FontSizeOption.large));
+
+      final fresh = SettingsService(storage);
+      await fresh.load();
+      expect(fresh.settings.fontSize, FontSizeOption.large);
+    });
+
+    test('unrecognized persisted font size falls back to medium', () async {
+      storage.stored = '{"fontSize": "enormous"}';
+
+      await service.load();
+
+      expect(service.settings.fontSize, FontSizeOption.medium);
+    });
+
+    test('anchored sizes cancel the app scale, trimming 1pt on small', () {
+      for (final option in FontSizeOption.values) {
+        final rendered = option.anchored(18) * option.scale;
+        expect(rendered, moreOrLessEquals(option == FontSizeOption.small ? 17 : 18));
+      }
+    });
+
     test('load tolerates corrupt storage', () async {
       storage.stored = '{{{ not json';
 

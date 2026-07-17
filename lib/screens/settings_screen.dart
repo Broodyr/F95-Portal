@@ -105,6 +105,29 @@ class SettingsScreen extends StatelessWidget {
                       ),
                   ],
                 ),
+                _sectionHeader('Appearance'),
+                Text(
+                  'Text size across the app',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<FontSizeOption>(
+                  showSelectedIcon: false,
+                  style: SegmentedButton.styleFrom(
+                    foregroundColor: Colors.grey[400],
+                    selectedForegroundColor: colorScheme.primary,
+                    selectedBackgroundColor: colorScheme.primary.withValues(alpha: 0.18),
+                    side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                  ),
+                  segments: const [
+                    ButtonSegment(value: FontSizeOption.small, label: Text('Small')),
+                    ButtonSegment(value: FontSizeOption.medium, label: Text('Medium')),
+                    ButtonSegment(value: FontSizeOption.large, label: Text('Large')),
+                  ],
+                  selected: {settings.fontSize},
+                  onSelectionChanged: (selection) =>
+                      SettingsService.instance.update(settings.copyWith(fontSize: selection.single)),
+                ),
                 _sectionHeader('Privacy'),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,

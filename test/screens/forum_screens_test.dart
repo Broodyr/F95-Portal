@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_cookie_storage.dart';
+import '../helpers/widget_test_utils.dart';
 
 /// Swaps in a signed-in in-memory auth session for one test.
 Future<void> signIn() async {
@@ -276,6 +277,16 @@ void main() {
     expect(rect.size, const Size(56, 56));
     expect(screen.right - rect.right, 32);
     expect(screen.bottom - rect.bottom, 24);
+  });
+
+  testWidgets('the composer submit button uses the enlarged 18pt CTA label', (tester) async {
+    await pumpForum(tester);
+    await openThreadViewer(tester);
+
+    await tester.tap(find.byTooltip('Reply'));
+    await tester.pumpAndSettle();
+
+    expect(effectiveFontSize(tester, find.text('Post reply')), moreOrLessEquals(18));
   });
 
   testWidgets('write actions are hidden when the page has no reply URL', (tester) async {

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import '../constants.dart';
 import '../models/profile.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
@@ -332,8 +333,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                textStyle: AppButtons.ctaTextStyle,
               ),
-              icon: const Icon(Icons.login),
+              icon: const Icon(Icons.login, size: AppButtons.ctaIconSize),
               label: const Text('Sign in to F95Zone'),
             ),
           ],

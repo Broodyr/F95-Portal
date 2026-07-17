@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers/in_memory_cookie_storage.dart';
 import '../helpers/metadata_test_utils.dart';
 import '../helpers/test_data.dart';
+import '../helpers/widget_test_utils.dart';
 
 List<String> recordHaptics(WidgetTester tester) {
   final haptics = <String>[];
@@ -214,6 +215,13 @@ void main() {
     // nothing is launched externally.
     expect(find.byType(ForumThreadScreen), findsOneWidget);
     expect(launched, isEmpty);
+  });
+
+  testWidgets('the Open thread button uses the enlarged 18pt CTA label', (tester) async {
+    await pumpDetails(tester);
+
+    await tester.scrollUntilVisible(find.text('Open thread'), 100);
+    expect(effectiveFontSize(tester, find.text('Open thread')), moreOrLessEquals(18));
   });
 
   testWidgets('screenshot strip appears only when screens exist', (tester) async {

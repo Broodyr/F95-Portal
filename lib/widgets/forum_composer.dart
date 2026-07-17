@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../services/settings_service.dart';
 
 /// Compose sheet for replies and new threads: optional title field, a
@@ -162,10 +163,13 @@ class _ForumComposerState extends State<ForumComposer> {
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 13),
+              textStyle: AppButtons.ctaTextStyle,
             ),
             icon: _sending
-                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.send, size: 16),
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                // The send glyph reads heavier than most icons; keep it a
+                // touch under the shared CTA icon size.
+                : const Icon(Icons.send, size: 20),
             label: Text(widget.submitLabel),
           ),
         ],

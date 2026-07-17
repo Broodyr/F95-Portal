@@ -8,6 +8,7 @@ import 'services/auth_service.dart';
 import 'services/forum_service.dart';
 import 'services/settings_service.dart';
 import 'services/thread_page_service.dart';
+import 'widgets/app_text_scale.dart';
 
 /// Failed image loads (dead links, missing HD variants) each dump a
 /// ~100-line framework error block in debug consoles, drowning out useful
@@ -49,6 +50,7 @@ class F95Portal extends StatelessWidget {
         title: 'F95 Portal',
         debugShowCheckedModeBanner: false,
         showPerformanceOverlay: SettingsService.instance.settings.showPerfOverlay && !kReleaseMode,
+        builder: (context, child) => AppTextScale(child: child!),
         theme: ThemeData(
           colorScheme: const ColorScheme.dark(
             primary: Color(0xFFDC144D),
