@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 
 import '../models/search_query.dart';
 import '../services/api_service.dart';
@@ -49,13 +48,11 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
     _activeQuery = _appliedDefault;
     _settingsService.addListener(_onSettingsChanged);
     _scrollController = widget.scrollController ?? ScrollController();
-    _scrollController.addListener(_scrollListener);
   }
 
   @override
   void dispose() {
     _settingsService.removeListener(_onSettingsChanged);
-    _scrollController.removeListener(_scrollListener);
     // Only dispose if we created the controller internally
     if (widget.scrollController == null) {
       _scrollController.dispose();
@@ -77,19 +74,6 @@ class _ThreadsScreenState extends State<ThreadsScreen> {
       });
     }
     _appliedDefault = newDefault;
-  }
-
-  void _scrollListener() {
-    final direction = _scrollController.position.userScrollDirection;
-    if (direction == ScrollDirection.reverse) {
-      if (widget.bottomNavVisible.value) {
-        widget.bottomNavVisible.value = false;
-      }
-    } else if (direction == ScrollDirection.forward) {
-      if (!widget.bottomNavVisible.value) {
-        widget.bottomNavVisible.value = true;
-      }
-    }
   }
 
   void _onSearchPressed() async {

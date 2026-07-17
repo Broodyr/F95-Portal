@@ -32,6 +32,11 @@ class ProfileScreen extends StatefulWidget {
   /// Member page URL to show; null means the signed-in user's own profile.
   final String? url;
 
+  /// The wall list's controller, passed by MainApp on the own-profile tab
+  /// to hide/show the bottom nav and route the nav bar's pass-through
+  /// drags here. Pushed member profiles have no bottom nav and omit it.
+  final ScrollController? scrollController;
+
   /// The member's name, shown in the top bar while their page loads.
   final String? username;
 
@@ -47,6 +52,7 @@ class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
     this.url,
+    this.scrollController,
     this.username,
     this.fetchProfile,
     this.fetchPostings,
@@ -399,6 +405,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               color: colorScheme.primary,
               backgroundColor: _card,
               child: ListView(
+                controller: widget.scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
                 children: [

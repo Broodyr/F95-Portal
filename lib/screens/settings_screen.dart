@@ -12,7 +12,11 @@ import '../widgets/app_toast.dart';
 import '../widgets/search_options_modal.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  /// The list's controller; MainApp watches it to hide/show the bottom nav
+  /// and route the nav bar's pass-through drags here.
+  final ScrollController? scrollController;
+
+  const SettingsScreen({super.key, this.scrollController});
 
   Future<void> _editDefaults(BuildContext context) async {
     final current = SettingsService.instance.settings;
@@ -71,6 +75,7 @@ class SettingsScreen extends StatelessWidget {
             final settings = SettingsService.instance.settings;
 
             return ListView(
+              controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
               children: [
                 const Text(

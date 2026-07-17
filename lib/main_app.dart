@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'constants.dart';
@@ -22,21 +23,49 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int _currentIndex = 0;
-  final ScrollController _scrollController = ScrollController();
+
+  // One controller per tab: every tab's scroll drives the nav bar's
+  // hide/show, and the bar's pass-through drags reach the active tab's list.
+  final List<ScrollController> _tabControllers = List.generate(4, (_) => ScrollController());
   final ValueNotifier<bool> _bottomNavVisible = ValueNotifier(true);
 
   @override
+  void initState() {
+    super.initState();
+    for (final controller in _tabControllers) {
+      controller.addListener(() => _onTabScroll(controller));
+    }
+  }
+
+  @override
   void dispose() {
-    _scrollController.dispose();
+    for (final controller in _tabControllers) {
+      controller.dispose();
+    }
     _bottomNavVisible.dispose();
     super.dispose();
   }
 
+  /// Scrolling down hides the nav bar, scrolling up shows it. A page that
+  /// fits on screen never hides it — there's no reading space to reclaim,
+  /// and a hidden bar would strand the user (matters on bouncing physics,
+  /// where overscroll still moves the offset).
+  void _onTabScroll(ScrollController controller) {
+    if (!controller.hasClients) return;
+    final position = controller.position;
+    if (position.userScrollDirection == ScrollDirection.reverse && position.maxScrollExtent > 0) {
+      _bottomNavVisible.value = false;
+    } else if (position.userScrollDirection == ScrollDirection.forward) {
+      _bottomNavVisible.value = true;
+    }
+  }
+
   void _onTabTapped(int index) {
-    // Re-tapping Browse while already on it scrolls the list back to the top.
-    if (index == 0 && _currentIndex == 0) {
-      if (_scrollController.hasClients && _scrollController.offset > 0) {
-        _scrollController.animateTo(
+    // Re-tapping the active tab scrolls its list back to the top.
+    if (index == _currentIndex) {
+      final controller = _tabControllers[index];
+      if (controller.hasClients && controller.offset > 0) {
+        controller.animateTo(
           0,
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeOutCubic,
@@ -89,13 +118,13 @@ class _MainAppState extends State<MainApp> {
             index: _currentIndex,
             children: [
               ThreadsScreen(
-                scrollController: _scrollController,
+                scrollController: _tabControllers[0],
                 bottomNavVisible: _bottomNavVisible,
                 fetchThreads: widget.fetchThreads,
               ),
-              const ForumScreen(),
-              const SettingsScreen(),
-              const ProfileScreen(),
+              ForumScreen(scrollController: _tabControllers[1]),
+              SettingsScreen(scrollController: _tabControllers[2]),
+              ProfileScreen(scrollController: _tabControllers[3]),
             ],
           ),
           ValueListenableBuilder<bool>(
@@ -113,7 +142,7 @@ class _MainAppState extends State<MainApp> {
             child: CustomBottomNavigation(
               currentIndex: _currentIndex,
               onTap: _onTabTapped,
-              scrollController: _scrollController,
+              scrollController: _tabControllers[_currentIndex],
             ),
           ),
         ],

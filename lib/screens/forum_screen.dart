@@ -20,6 +20,10 @@ typedef FetchForumIndex = Future<ForumIndex> Function();
 /// Link-forum redirect nodes (Trending Games etc.) are hidden — they don't
 /// hold threads.
 class ForumScreen extends StatefulWidget {
+  /// The directory list's controller; MainApp watches it to hide/show the
+  /// bottom nav and route the nav bar's pass-through drags here.
+  final ScrollController? scrollController;
+
   final FetchForumIndex? fetchIndex;
   final FetchForumPage? fetchForumPage;
   final FetchThreadPosts? fetchThreadPosts;
@@ -36,6 +40,7 @@ class ForumScreen extends StatefulWidget {
 
   const ForumScreen({
     super.key,
+    this.scrollController,
     this.fetchIndex,
     this.fetchForumPage,
     this.fetchThreadPosts,
@@ -269,6 +274,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
         await _load();
       },
       child: ListView(
+        controller: widget.scrollController,
         padding: EdgeInsets.fromLTRB(12, 0, 12, 100 + MediaQuery.of(context).viewPadding.bottom),
         children: [
           for (final section in sections) ...[
