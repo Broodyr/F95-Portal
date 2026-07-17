@@ -56,15 +56,6 @@ void main() {
     expect(service.settings.glassEffects, isFalse);
   });
 
-  testWidgets('suggestion source pills update the service', (tester) async {
-    await pumpSettings(tester);
-
-    await tester.tap(find.text('Recent tags'));
-    await tester.pumpAndSettle();
-
-    expect(service.settings.suggestionSource, SuggestionSource.recent);
-  });
-
   testWidgets('edit defaults opens the search modal and persists the result', (tester) async {
     await pumpSettings(tester);
 

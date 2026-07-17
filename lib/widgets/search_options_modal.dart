@@ -9,7 +9,7 @@ import '../utils/formatters.dart';
 import 'app_toast.dart';
 import 'sliding_reveal.dart';
 
-typedef _EmptyTag = ({int id, String name, int? count});
+typedef _EmptyTag = ({int id, String name, bool recent});
 
 typedef FetchPopularTagsCallback = Future<List<PopularTag>> Function({SearchCategory category});
 
@@ -65,7 +65,7 @@ class SearchOptionsModal extends StatefulWidget {
 class _SearchOptionsModalState extends State<SearchOptionsModal> {
   static const int _maxTagSuggestions = 6;
   static const int _maxPrefixSuggestions = 4;
-  static const int _maxPopularTags = 8;
+  static const int _maxEmptySuggestions = 32;
 
   /// Day counts offered by the "Updated within" row; null = anytime.
   static const Map<String, int?> _dateLimits = {'Any': null, '24h': 1, '7d': 7, '30d': 30, '90d': 90, '1y': 365};
@@ -317,7 +317,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     final keyboardInset = MediaQuery.of(context).viewInsets.bottom;
     final suggestions = _buildSuggestions(_searchController.text);
-    final (emptyTags, recentMode) = _emptyTagSuggestions();
+    final emptyTags = _emptyTagSuggestions();
     final bool showEmptyTags = _searchFocus.hasFocus && _searchController.text.trim().isEmpty && emptyTags.isNotEmpty;
 
     return SafeArea(
@@ -359,12 +359,7 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
                     _buildSearchField(colorScheme),
                     _buildSuggestionDropdown(
                       suggestions.isNotEmpty || _hasCreatorSuggestion || showEmptyTags
-                          ? _buildSuggestionList(
-                              colorScheme,
-                              suggestions,
-                              emptyTags: showEmptyTags ? emptyTags : const [],
-                              recentMode: recentMode,
-                            )
+                          ? _buildSuggestionList(colorScheme, suggestions, emptyTags: showEmptyTags ? emptyTags : const [])
                           : null,
                     ),
                     const SizedBox(height: 16),
@@ -492,27 +487,34 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
   bool get _hasCreatorSuggestion => _searchController.text.trim().isNotEmpty;
 
   /// What to suggest while the field is empty: the user's recently used
-  /// tags when that source is selected (and non-empty), else popular tags
-  /// for the category. The bool is true when recents are being shown.
-  (List<_EmptyTag>, bool) _emptyTagSuggestions() {
+  /// tags first, then popular tags for the category filling the remaining
+  /// slots. New users see pure discovery; active users see mostly their
+  /// own history.
+  ///
+  /// Possible future change: sample the popular portion from a deeper
+  /// slice of the ranking (e.g. a random 8 of the top 40) so it varies
+  /// between opens instead of always showing the same site-wide top tags.
+  List<_EmptyTag> _emptyTagSuggestions() {
     final metadata = F95Metadata.instance;
     final settings = SettingsService.instance.settings;
 
-    if (settings.suggestionSource == SuggestionSource.recent) {
-      final recents = [
-        for (final id in settings.recentTags)
-          if (metadata.tagName(id) != null && !_isActive(_FilterKind.tag, id))
-            (id: id, name: metadata.tagName(id)!, count: null),
-      ].take(_maxPopularTags).toList();
-      if (recents.isNotEmpty) return (recents, true);
+    final suggestions = <_EmptyTag>[];
+    final seen = <int>{};
+
+    void add(int id, {required bool recent}) {
+      if (suggestions.length >= _maxEmptySuggestions) return;
+      final name = metadata.tagName(id);
+      if (name == null || _isActive(_FilterKind.tag, id) || !seen.add(id)) return;
+      suggestions.add((id: id, name: name, recent: recent));
     }
 
-    final popular = [
-      for (final tag in _popularTags)
-        if (metadata.tagName(tag.tagId) != null && !_isActive(_FilterKind.tag, tag.tagId))
-          (id: tag.tagId, name: metadata.tagName(tag.tagId)!, count: tag.count),
-    ].take(_maxPopularTags).toList();
-    return (popular, false);
+    for (final id in settings.recentTags) {
+      add(id, recent: true);
+    }
+    for (final tag in _popularTags) {
+      add(tag.tagId, recent: false);
+    }
+    return suggestions;
   }
 
   Widget _buildSearchField(ColorScheme colorScheme) {
@@ -600,7 +602,6 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
     ColorScheme colorScheme,
     List<_Suggestion> suggestions, {
     List<_EmptyTag> emptyTags = const [],
-    bool recentMode = false,
   }) {
     // A Material (not a decorated Container): ListTile paints its ink on
     // the nearest Material, and newer SDKs assert when a colored
@@ -648,30 +649,40 @@ class _SearchOptionsModalState extends State<SearchOptionsModal> {
             if (emptyTags.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Text(
-                  '${recentMode ? 'Recent' : 'Popular'} tags — engines & statuses match here too',
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                child: Text('Suggestions', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [for (final tag in emptyTags) _buildEmptyTagChip(colorScheme, tag)],
                 ),
               ),
-              for (final tag in emptyTags)
-                ListTile(
-                  dense: true,
-                  visualDensity: VisualDensity.compact,
-                  leading: Icon(
-                    recentMode ? Icons.history : Icons.trending_up,
-                    size: 18,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  title: Text(tag.name),
-                  trailing: tag.count == null
-                      ? null
-                      : Text(
-                          NumberFormatter.formatNumber(tag.count!),
-                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-                        ),
-                  onTap: () => _addFilter(_FilterKind.tag, tag.id, tag.name),
-                ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Compact tap-to-add chip for the empty-field suggestion cloud; recents
+  /// carry a history icon, the popular fill a trending one.
+  Widget _buildEmptyTagChip(ColorScheme colorScheme, _EmptyTag tag) {
+    return GestureDetector(
+      onTap: () => _addFilter(_FilterKind.tag, tag.id, tag.name),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(tag.recent ? Icons.history : Icons.trending_up, size: 14, color: colorScheme.onSurfaceVariant),
+            const SizedBox(width: 5),
+            Text(tag.name, style: TextStyle(fontSize: 13, color: colorScheme.onSurfaceVariant)),
           ],
         ),
       ),

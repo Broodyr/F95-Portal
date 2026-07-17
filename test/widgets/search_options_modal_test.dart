@@ -290,19 +290,24 @@ void main() {
     expect(query!.tags, [103]);
   });
 
-  testWidgets('recent tags replace popular ones when that source is selected', (tester) async {
+  testWidgets('recent tags come first, popular tags fill the rest, duplicates collapse', (tester) async {
     final service = SettingsService.instance;
-    await service.update(service.settings.copyWith(suggestionSource: SuggestionSource.recent, recentTags: [225, 103]));
+    await service.update(service.settings.copyWith(recentTags: [225]));
 
-    final getResult = await pumpModal(tester, popularTags: const [PopularTag(tagId: 130, count: 999)]);
+    final getResult = await pumpModal(
+      tester,
+      popularTags: const [PopularTag(tagId: 225, count: 4700), PopularTag(tagId: 103, count: 999)],
+    );
 
     await tester.tap(find.byType(TextField));
     await tester.pumpAndSettle();
 
+    expect(find.text('Suggestions'), findsOneWidget);
+    // 225 (pregnancy) is both recent and popular; it shows once, as a recent.
     expect(find.text('pregnancy'), findsOneWidget);
     expect(find.text('corruption'), findsOneWidget);
-    expect(find.text('big tits'), findsNothing);
-    expect(find.textContaining('Recent tags'), findsOneWidget);
+    expect(find.byIcon(Icons.history), findsOneWidget);
+    expect(find.byIcon(Icons.trending_up), findsOneWidget);
 
     await tester.tap(find.text('pregnancy'));
     await tester.pumpAndSettle();

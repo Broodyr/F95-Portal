@@ -105,32 +105,6 @@ class SettingsScreen extends StatelessWidget {
                       ),
                   ],
                 ),
-                _sectionHeader('Empty search suggestions'),
-                Text(
-                  'What the search sheet suggests before you type.',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _choicePill(
-                      colorScheme,
-                      label: 'Popular tags',
-                      selected: settings.suggestionSource == SuggestionSource.popular,
-                      onTap: () => SettingsService.instance.update(
-                        settings.copyWith(suggestionSource: SuggestionSource.popular),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _choicePill(
-                      colorScheme,
-                      label: 'Recent tags',
-                      selected: settings.suggestionSource == SuggestionSource.recent,
-                      onTap: () =>
-                          SettingsService.instance.update(settings.copyWith(suggestionSource: SuggestionSource.recent)),
-                    ),
-                  ],
-                ),
                 _sectionHeader('Privacy'),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -241,33 +215,4 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _choicePill(
-    ColorScheme colorScheme, {
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? colorScheme.primary.withValues(alpha: 0.18)
-              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? colorScheme.primary : Colors.transparent, width: 1.5),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
-      ),
-    );
-  }
 }

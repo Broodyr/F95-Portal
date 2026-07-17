@@ -5,9 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/search_query.dart';
 
-/// What the search modal suggests while the field is empty.
-enum SuggestionSource { popular, recent }
-
 @immutable
 class AppSettings {
   /// Baseline query for the Browse tab: applied at startup and when the
@@ -23,8 +20,6 @@ class AppSettings {
   /// Flutter's performance overlay (only effective in debug/profile builds).
   final bool showPerfOverlay;
 
-  final SuggestionSource suggestionSource;
-
   /// Most-recently-used include tags, newest first.
   final List<int> recentTags;
 
@@ -35,7 +30,6 @@ class AppSettings {
     this.sfwBlur = false,
     this.glassEffects = true,
     this.showPerfOverlay = false,
-    this.suggestionSource = SuggestionSource.popular,
     this.recentTags = const [],
   });
 
@@ -44,7 +38,6 @@ class AppSettings {
     bool? sfwBlur,
     bool? glassEffects,
     bool? showPerfOverlay,
-    SuggestionSource? suggestionSource,
     List<int>? recentTags,
   }) {
     return AppSettings(
@@ -52,7 +45,6 @@ class AppSettings {
       sfwBlur: sfwBlur ?? this.sfwBlur,
       glassEffects: glassEffects ?? this.glassEffects,
       showPerfOverlay: showPerfOverlay ?? this.showPerfOverlay,
-      suggestionSource: suggestionSource ?? this.suggestionSource,
       recentTags: recentTags ?? this.recentTags,
     );
   }
@@ -62,7 +54,6 @@ class AppSettings {
     'sfwBlur': sfwBlur,
     'glassEffects': glassEffects,
     'showPerfOverlay': showPerfOverlay,
-    'suggestionSource': suggestionSource.name,
     'recentTags': recentTags,
   };
 
@@ -74,7 +65,8 @@ class AppSettings {
       sfwBlur: json['sfwBlur'] ?? false,
       glassEffects: json['glassEffects'] ?? true,
       showPerfOverlay: json['showPerfOverlay'] ?? false,
-      suggestionSource: SuggestionSource.values.asNameMap()[json['suggestionSource']] ?? SuggestionSource.popular,
+      // A 'suggestionSource' key may linger in persisted JSON from when the
+      // suggestion source was a user setting; it is intentionally ignored.
       recentTags: [
         for (final tag in json['recentTags'] as List? ?? const [])
           if (tag is num) tag.toInt(),

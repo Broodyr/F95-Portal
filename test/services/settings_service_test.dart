@@ -18,7 +18,6 @@ void main() {
     test('starts with sane defaults', () {
       expect(service.settings.defaultQuery, const SearchQuery());
       expect(service.settings.sfwBlur, isFalse);
-      expect(service.settings.suggestionSource, SuggestionSource.popular);
       expect(service.settings.recentTags, isEmpty);
     });
 
@@ -29,7 +28,7 @@ void main() {
       await service.update(
         service.settings.copyWith(
           sfwBlur: true,
-          suggestionSource: SuggestionSource.recent,
+          recentTags: [225, 103],
           defaultQuery: const SearchQuery(category: SearchCategory.comics, notags: [258]),
         ),
       );
@@ -40,7 +39,7 @@ void main() {
       final fresh = SettingsService(storage);
       await fresh.load();
       expect(fresh.settings.sfwBlur, isTrue);
-      expect(fresh.settings.suggestionSource, SuggestionSource.recent);
+      expect(fresh.settings.recentTags, [225, 103]);
       expect(fresh.settings.defaultQuery.category, SearchCategory.comics);
       expect(fresh.settings.defaultQuery.notags, [258]);
     });
