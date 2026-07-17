@@ -88,6 +88,69 @@ class _ForumComposerState extends State<ForumComposer> {
     }
   }
 
+  /// The common F95zone tags as tap-to-reference examples; a stopgap until
+  /// (or unless) the composer grows real formatting buttons.
+  static const List<(String, String)> _bbCodeTags = [
+    ('[b]bold[/b]', 'Bold'),
+    ('[i]italic[/i]', 'Italic'),
+    ('[u]underline[/u]', 'Underline'),
+    ('[s]strike[/s]', 'Strikethrough'),
+    ('[color=red]text[/color]', 'Colored text'),
+    ('[size=5]text[/size]', 'Text size (1–7)'),
+    ('[url=https://…]link[/url]', 'Link'),
+    ('[img]https://…[/img]', 'Image'),
+    ('[media=youtube]video-id[/media]', 'Embedded media'),
+    ('[quote="name"]text[/quote]', 'Quote someone'),
+    ('[spoiler=Title]hidden[/spoiler]', 'Spoiler (title optional)'),
+    ('[code]monospace block[/code]', 'Code block'),
+    ('[icode]inline code[/icode]', 'Inline code'),
+    ('[list]\n[*]item\n[/list]', 'Bullet list'),
+    ('[center]text[/center]', 'Centered text'),
+    ('[user=1234]@name[/user]', 'Mention a member'),
+  ];
+
+  void _showBbCodeCheatsheet(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('BBCode cheatsheet', style: TextStyle(fontSize: 16)),
+        contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.separated(
+            key: const Key('bbcode-cheatsheet-list'),
+            shrinkWrap: true,
+            itemCount: _bbCodeTags.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final (code, label) = _bbCodeTags[index];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 11)),
+                  const SizedBox(height: 2),
+                  Text(
+                    code,
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
   InputDecoration _decoration(String hint) {
     return InputDecoration(
       hintText: hint,
@@ -126,9 +189,28 @@ class _ForumComposerState extends State<ForumComposer> {
               ),
             ),
           ),
-          Text(
-            widget.heading,
-            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.heading,
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+              TextButton.icon(
+                key: const Key('composer-bbcode-help'),
+                onPressed: () => _showBbCodeCheatsheet(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.help_outline, size: 15),
+                label: const Text('BBCode', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           if (widget.withTitle) ...[

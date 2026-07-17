@@ -279,6 +279,36 @@ void main() {
     expect(screen.bottom - rect.bottom, 24);
   });
 
+  testWidgets('the composer BBCode link opens the cheatsheet dialog', (tester) async {
+    await pumpForum(tester);
+    await openThreadViewer(tester);
+
+    await tester.tap(find.byTooltip('Reply'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('composer-bbcode-help')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('BBCode cheatsheet'), findsOneWidget);
+    expect(find.text('[b]bold[/b]'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('[spoiler=Title]hidden[/spoiler]'),
+      60,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('bbcode-cheatsheet-list')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    expect(find.text('[spoiler=Title]hidden[/spoiler]'), findsOneWidget);
+    expect(find.text('[quote="name"]text[/quote]'), findsOneWidget);
+
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.text('BBCode cheatsheet'), findsNothing);
+    // The composer is still open underneath.
+    expect(find.byKey(const Key('composer-message')), findsOneWidget);
+  });
+
   testWidgets('the composer submit button uses the enlarged 18pt CTA label', (tester) async {
     await pumpForum(tester);
     await openThreadViewer(tester);
