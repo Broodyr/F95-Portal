@@ -6,11 +6,15 @@ import 'screens/forum_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/threads_screen.dart';
+import 'services/api_service.dart';
 import 'widgets/app_toast.dart';
 import 'widgets/bottom_navigation.dart';
+import 'widgets/threads_list.dart';
 
 class MainApp extends StatefulWidget {
-  const MainApp({super.key});
+  final FetchThreadsCallback fetchThreads;
+
+  const MainApp({super.key, this.fetchThreads = ApiService.fetchThreads});
 
   @override
   State<MainApp> createState() => _MainAppState();
@@ -29,6 +33,17 @@ class _MainAppState extends State<MainApp> {
   }
 
   void _onTabTapped(int index) {
+    // Re-tapping Browse while already on it scrolls the list back to the top.
+    if (index == 0 && _currentIndex == 0) {
+      if (_scrollController.hasClients && _scrollController.offset > 0) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      return;
+    }
     setState(() {
       _currentIndex = index;
     });
@@ -73,7 +88,11 @@ class _MainAppState extends State<MainApp> {
           IndexedStack(
             index: _currentIndex,
             children: [
-              ThreadsScreen(scrollController: _scrollController, bottomNavVisible: _bottomNavVisible),
+              ThreadsScreen(
+                scrollController: _scrollController,
+                bottomNavVisible: _bottomNavVisible,
+                fetchThreads: widget.fetchThreads,
+              ),
               const ForumScreen(),
               const SettingsScreen(),
               const ProfileScreen(),
