@@ -86,13 +86,6 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
   List<PopularTag> _popularTags = const [];
   Map<int, int> _tagCounts = const {};
 
-  static const Map<SearchCategory, IconData> _categoryIcons = {
-    SearchCategory.games: Icons.sports_esports_outlined,
-    SearchCategory.comics: Icons.menu_book_outlined,
-    SearchCategory.animations: Icons.movie_filter_outlined,
-    SearchCategory.assets: Icons.layers_outlined,
-  };
-
   @override
   void initState() {
     super.initState();
@@ -373,13 +366,15 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    _buildSectionHeader(
-                      colorScheme,
-                      textTheme,
-                      title: 'Category',
-                      summary: _selectedCategory.displayLabel,
+                    Text('Category', style: _headerStyle(textTheme)),
+                    const SizedBox(height: 8),
+                    SegmentedSelector<SearchCategory>(
+                      values: SearchCategory.values,
+                      isSelected: (category) => _selectedCategory == category,
+                      label: (category) => category.displayLabel,
+                      onSelect: _onCategoryChanged,
                     ),
-                    _buildSectionBody('Category', _buildCategorySelector(colorScheme)),
+                    const SizedBox(height: 8),
                     for (final group in _prefixGroups()) ...[
                       const SizedBox(height: 8),
                       _buildSectionHeader(colorScheme, textTheme, title: group.name, summary: _groupSummary(group)),
@@ -700,61 +695,6 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildChoicePill(
-    ColorScheme colorScheme, {
-    required String label,
-    IconData? icon,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    final Color foreground = selected ? colorScheme.primary : colorScheme.onSurfaceVariant;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: Motion.duration,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          // Idle pills get a solid dark fill so they read as buttons against
-          // the blurred glass background rather than floating words.
-          color: selected ? colorScheme.primary.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? colorScheme.primary : Colors.transparent, width: 1.5),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[Icon(icon, size: 16, color: foreground), const SizedBox(width: 6)],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                color: foreground,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategorySelector(ColorScheme colorScheme) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final category in SearchCategory.values)
-          _buildChoicePill(
-            colorScheme,
-            label: category.displayLabel,
-            icon: _categoryIcons[category],
-            selected: _selectedCategory == category,
-            onTap: () => _onCategoryChanged(category),
-          ),
-      ],
     );
   }
 

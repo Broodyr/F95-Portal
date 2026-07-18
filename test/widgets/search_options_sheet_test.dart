@@ -4,8 +4,10 @@ import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/settings_service.dart';
 import 'package:f95_portal/widgets/app_text_scale.dart';
 import 'package:f95_portal/widgets/search_options_sheet.dart';
+import 'package:f95_portal/widgets/segmented_selector.dart';
 import 'package:f95_portal/widgets/sliding_reveal.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_settings_storage.dart';
@@ -347,6 +349,59 @@ void main() {
     expect(getResult()!.tags, [225]);
   });
 
+  testWidgets('segmented labels shrink to fit instead of wrapping on narrow screens', (tester) async {
+    // A narrow phone at the biggest font size is the worst case for the
+    // four-way Category row ("Animations" is the widest label).
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await SettingsService.instance.update(
+      SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.large),
+    );
+
+    await pumpSheet(tester);
+
+    // A wrapped label would make its track ~15px taller, so the Category row
+    // must come out as tall as the Sort by row (within the sub-pixel drift
+    // scaleDown introduces when rows shrink by different amounts).
+    final categoryHeight = tester.getSize(find.byType(SegmentedSelector<SearchCategory>)).height;
+    final sortHeight = tester.getSize(find.byType(SegmentedSelector<SortOrder>)).height;
+    expect(categoryHeight, moreOrLessEquals(sortHeight, epsilon: 2));
+
+    // And the widest label still renders on a single line.
+    final animations = tester.renderObject<RenderParagraph>(find.text('Animations'));
+    expect(animations.size.height, lessThan(2 * animations.text.style!.fontSize!));
+  });
+
+  testWidgets('category is an always-visible segmented row that round-trips', (tester) async {
+    final getResult = await pumpSheet(tester);
+
+    // No expanding needed: all four categories are tappable immediately.
+    expect(find.text('Comics'), findsOneWidget);
+    expect(find.text('Assets'), findsOneWidget);
+
+    await tester.tap(find.text('Comics'));
+    await tester.pumpAndSettle();
+
+    await submitSheet(tester);
+
+    expect(getResult()!.category, SearchCategory.comics);
+  });
+
+  testWidgets('switching category drops prefixes that do not resolve there', (tester) async {
+    // Godot (116) is a games-only engine prefix.
+    final getResult = await pumpSheet(tester, initialQuery: const SearchQuery(prefixes: [116]));
+
+    await tester.tap(find.text('Comics'));
+    await tester.pumpAndSettle();
+
+    await submitSheet(tester);
+
+    final query = getResult();
+    expect(query!.category, SearchCategory.comics);
+    expect(query.prefixes, isEmpty);
+  });
+
   testWidgets('sort selection round-trips', (tester) async {
     final getResult = await pumpSheet(tester);
 
@@ -365,12 +420,13 @@ void main() {
 
     await scrollSheetTo(tester, find.text('Rating'));
 
-    // One sliding highlight per segmented row: Sort by and Updated within.
+    // One sliding highlight per segmented row: Category, Sort by, and
+    // Updated within.
     final highlights = find.byKey(const Key('segment-highlight'));
-    expect(highlights, findsNWidgets(2));
+    expect(highlights, findsNWidgets(3));
 
     // Default sort is Date — the first segment, so the pill sits hard left.
-    AnimatedAlign sortHighlight() => tester.widget<AnimatedAlign>(highlights.first);
+    AnimatedAlign sortHighlight() => tester.widget<AnimatedAlign>(highlights.at(1));
     expect(sortHighlight().alignment, const Alignment(-1, 0));
 
     await tester.tap(find.text('Rating'));

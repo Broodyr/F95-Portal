@@ -69,16 +69,22 @@ class SegmentedSelector<T> extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: () => onSelect(value),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: dense ? 6 : 10),
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: dense ? 6 : 10),
                       child: Center(
-                        child: AnimatedDefaultTextStyle(
-                          duration: Motion.duration,
-                          style: TextStyle(
-                            fontSize: dense ? 11.5 : 12,
-                            color: isSelected(value) ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                            fontWeight: isSelected(value) ? FontWeight.w600 : FontWeight.w400,
+                        // scaleDown keeps an oversized label on one line
+                        // (shrinking it slightly) instead of letting it wrap
+                        // and double the track height.
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: AnimatedDefaultTextStyle(
+                            duration: Motion.duration,
+                            style: TextStyle(
+                              fontSize: dense ? 11.5 : 12,
+                              color: isSelected(value) ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                              fontWeight: isSelected(value) ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                            child: Text(label(value)),
                           ),
-                          child: Text(label(value)),
                         ),
                       ),
                     ),
