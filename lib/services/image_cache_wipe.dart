@@ -1,4 +1,4 @@
-/// Deletes the flutter_cache_manager image store from disk.
+/// Deletes or trims the flutter_cache_manager image store on disk.
 ///
 /// flutter_cache_manager 3.4.1's emptyCache() removes its database rows but
 /// resolves each file's relative path against the process working directory

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +8,7 @@ import 'main_app.dart';
 import 'models/f95_metadata.dart';
 import 'services/auth_service.dart';
 import 'services/forum_service.dart';
+import 'services/image_cache_wipe.dart';
 import 'services/settings_service.dart';
 import 'services/thread_page_service.dart';
 import 'theme/app_colors.dart';
@@ -33,6 +36,9 @@ Future<void> main() async {
   await SettingsService.instance.load();
   ThreadPageService.bindToAuthChanges();
   ForumService.bindToAuthChanges();
+  // The app's own image-cache eviction (the package's never deletes files);
+  // runs in the background so startup doesn't wait on directory listing.
+  unawaited(trimImageCacheDir());
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent, systemNavigationBarColor: Colors.transparent),

@@ -30,4 +30,48 @@ void main() {
 
     expect(tempDir.existsSync(), isTrue);
   });
+
+  group('trimImageCacheDir', () {
+    late Directory cacheDir;
+
+    File writeFile(String name, DateTime modified, {int size = 400}) {
+      final file = File(p.join(cacheDir.path, name))..writeAsBytesSync(List.filled(size, 0));
+      file.setLastModifiedSync(modified);
+      return file;
+    }
+
+    setUp(() {
+      cacheDir = Directory(p.join(tempDir.path, 'libCachedImageData'))..createSync();
+    });
+
+    test('deletes oldest-modified files first until the folder fits the budget', () async {
+      final oldest = writeFile('oldest.avif', DateTime(2026, 1, 1));
+      final middle = writeFile('middle.avif', DateTime(2026, 2, 1));
+      final newest = writeFile('newest.avif', DateTime(2026, 3, 1));
+
+      await trimImageCacheDir(maxBytes: 800, tempDir: tempDir);
+
+      expect(oldest.existsSync(), isFalse);
+      expect(middle.existsSync(), isTrue);
+      expect(newest.existsSync(), isTrue);
+    });
+
+    test('leaves everything alone while under the budget', () async {
+      final a = writeFile('a.avif', DateTime(2026, 1, 1));
+      final b = writeFile('b.avif', DateTime(2026, 2, 1));
+
+      await trimImageCacheDir(maxBytes: 1000, tempDir: tempDir);
+
+      expect(a.existsSync(), isTrue);
+      expect(b.existsSync(), isTrue);
+    });
+
+    test('is a no-op when the folder does not exist', () async {
+      cacheDir.deleteSync();
+
+      await trimImageCacheDir(maxBytes: 100, tempDir: tempDir);
+
+      expect(cacheDir.existsSync(), isFalse);
+    });
+  });
 }
