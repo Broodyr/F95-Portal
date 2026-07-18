@@ -50,6 +50,64 @@ void main() {
     expect(loads, 1);
   });
 
+  testWidgets('a failed download keeps the placeholder and retries until it succeeds', (tester) async {
+    // First attempt rejected (a rate-limited CDN answers fast), later ones ok.
+    RemoteImage.loadProvider = (url, decodeWidth, decodeHeight) async {
+      loads++;
+      if (loads == 1) throw Exception('429');
+      return MemoryImage(kTransparentPng);
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RemoteImage(
+          url: 'https://example.com/${DateTime.now().microsecondsSinceEpoch}-retry.png',
+          placeholder: (context) => const ColoredBox(color: Colors.grey, key: Key('loading')),
+          errorWidget: (context) => const Icon(Icons.broken_image_outlined, key: Key('error')),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // The failure must not surface as a broken icon while retries remain.
+    expect(find.byKey(const Key('error')), findsNothing);
+    expect(find.byKey(const Key('loading')), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
+
+    expect(find.byType(Image), findsOneWidget);
+    expect(loads, 2);
+  });
+
+  testWidgets('the error widget only shows once every retry has failed', (tester) async {
+    RemoteImage.loadProvider = (url, decodeWidth, decodeHeight) async {
+      loads++;
+      throw Exception('429');
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RemoteImage(
+          url: 'https://example.com/${DateTime.now().microsecondsSinceEpoch}-fail.png',
+          placeholder: (context) => const ColoredBox(color: Colors.grey, key: Key('loading')),
+          errorWidget: (context) => const Icon(Icons.broken_image_outlined, key: Key('error')),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('error')), findsNothing);
+
+    // Walk far enough through time to exhaust every scheduled retry.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+    }
+
+    expect(find.byKey(const Key('error')), findsOneWidget);
+    expect(loads, greaterThan(1));
+  });
+
   testWidgets('widgets showing the same url concurrently share one load', (tester) async {
     final url = 'https://example.com/${DateTime.now().microsecondsSinceEpoch}-b.png';
     await tester.pumpWidget(

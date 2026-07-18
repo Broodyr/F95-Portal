@@ -82,6 +82,11 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
   /// HD images are only fetched once the viewer opens; start downloading
   /// them all now (nearest to the opened image first) so swiping doesn't
   /// wait on the network. Bytes only — never decode ahead of display.
+  /// A few workers drain a shared queue instead of firing every request
+  /// at once: bursting the CDN is what got the first images rejected
+  /// with an instant broken icon.
+  static const int _prefetchConcurrency = 3;
+
   void _prefetchBytes() {
     final order = List.generate(widget.urls.length, (i) => i)
       ..sort((a, b) {
@@ -89,8 +94,18 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
         // Ties favor the higher index: forward is the likelier swipe.
         return byDistance != 0 ? byDistance : b.compareTo(a);
       });
-    for (final i in order) {
-      ScreenshotGallery.downloadBytes(widget.urls[i]).catchError((Object _) {});
+    final queue = [for (final i in order) widget.urls[i]];
+    Future<void> work() async {
+      while (queue.isNotEmpty) {
+        final url = queue.removeAt(0);
+        try {
+          await ScreenshotGallery.downloadBytes(url);
+        } catch (_) {}
+      }
+    }
+
+    for (var i = 0; i < _prefetchConcurrency; i++) {
+      work();
     }
   }
 

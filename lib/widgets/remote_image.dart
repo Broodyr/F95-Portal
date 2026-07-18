@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -96,6 +98,14 @@ class _RemoteImageState extends State<RemoteImage> {
   /// cache manager evicted the file behind it.
   bool _retried = false;
 
+  /// Delays before re-attempting a failed download. A rate-limited CDN
+  /// rejects a burst of requests in milliseconds, so without these the
+  /// error widget appears "instantly" and sticks for this state's whole
+  /// lifetime; the placeholder stays up while retries remain.
+  static const List<Duration> _retryDelays = [Duration(seconds: 2), Duration(seconds: 6)];
+  int _failedAttempts = 0;
+  Timer? _retryTimer;
+
   String get _cacheKey => '${widget.url}|${widget.decodeWidth}|${widget.decodeHeight}';
 
   @override
@@ -113,8 +123,16 @@ class _RemoteImageState extends State<RemoteImage> {
       _provider = null;
       _failed = false;
       _retried = false;
+      _failedAttempts = 0;
+      _retryTimer?.cancel();
       if (!kIsWeb) _initProvider();
     }
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    super.dispose();
   }
 
   void _initProvider() {
@@ -136,7 +154,14 @@ class _RemoteImageState extends State<RemoteImage> {
       if (!mounted || key != _cacheKey) return;
       setState(() => _provider = provider);
     } catch (_) {
-      if (mounted && key == _cacheKey) setState(() => _failed = true);
+      if (!mounted || key != _cacheKey) return;
+      if (_failedAttempts < _retryDelays.length) {
+        _retryTimer = Timer(_retryDelays[_failedAttempts++], () {
+          if (mounted && key == _cacheKey) _resolve();
+        });
+      } else {
+        setState(() => _failed = true);
+      }
     }
   }
 

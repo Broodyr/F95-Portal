@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +30,48 @@ void main() {
       'https://example.com/b.png',
       'https://example.com/a.png',
     ]);
+
+    // Let cached_network_image's internal timers expire before teardown.
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('prefetch never runs more than a few downloads at once', (tester) async {
+    final started = <String>[];
+    final completers = <String, Completer<void>>{};
+    final original = ScreenshotGallery.downloadBytes;
+    ScreenshotGallery.downloadBytes = (url) {
+      started.add(url);
+      return (completers[url] = Completer<void>()).future;
+    };
+    addTearDown(() => ScreenshotGallery.downloadBytes = original);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ScreenshotGallery(
+          urls: [for (var i = 0; i < 6; i++) 'https://example.com/$i.png'],
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // A burst of simultaneous requests is what gets the first images
+    // rejected by the CDN; only a small window may be in flight.
+    expect(started, [
+      'https://example.com/0.png',
+      'https://example.com/1.png',
+      'https://example.com/2.png',
+    ]);
+
+    // Finishing one download frees its slot for the next queued URL.
+    completers['https://example.com/1.png']!.complete();
+    await tester.pump();
+    expect(started.last, 'https://example.com/3.png');
+    expect(started.length, 4);
+
+    completers['https://example.com/0.png']!.complete();
+    await tester.pump();
+    expect(started.last, 'https://example.com/4.png');
+    expect(started.length, 5);
 
     // Let cached_network_image's internal timers expire before teardown.
     await tester.pump(const Duration(minutes: 1));
