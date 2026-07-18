@@ -12,7 +12,6 @@ import '../widgets/search_fab.dart';
 import '../widgets/browse_details_sheet.dart';
 import '../widgets/search_options_sheet.dart';
 import '../widgets/browse_list.dart';
-//import '../widgets/noisy_background.dart';
 
 class BrowseScreen extends StatefulWidget {
   final ScrollController? scrollController;
@@ -141,7 +140,6 @@ class _BrowseScreenState extends State<BrowseScreen> {
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          //PreRenderedNoisyBackground(child: Container()),
           Container(
             decoration: const BoxDecoration(
               gradient: RadialGradient(

@@ -15,7 +15,6 @@ const _allowed = {
   'lib/widgets/reaction_icon.dart', // reaction glyph + avatar palettes
   'lib/widgets/version_pill.dart', // thread status colors
   'lib/widgets/star_rating.dart', // gold star
-  'lib/widgets/noisy_background.dart', // decorative noise base, caller-overridable
 };
 
 void main() {
