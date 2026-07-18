@@ -531,7 +531,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
   Widget _buildSearchField(ColorScheme colorScheme) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
       ),
@@ -591,7 +591,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
               ),
@@ -623,7 +623,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 240),
       child: Material(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),

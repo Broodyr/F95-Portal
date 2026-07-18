@@ -6,10 +6,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../constants.dart';
+import '../models/browse_thread.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/thread_page.dart';
-import '../models/browse_thread.dart';
 import '../screens/forum_thread_screen.dart';
 import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
@@ -444,7 +444,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(12),
             ),
             child: _buildHostLinks(colorScheme, page.attachments),
@@ -502,7 +502,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(12),
             ),
             // The card glides between the 5-line clamp and the full text.
@@ -555,7 +555,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -580,7 +580,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -723,7 +723,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -832,7 +832,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: colorScheme.primary.withValues(alpha: 0.45)),
           ),
@@ -943,7 +943,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
               ),

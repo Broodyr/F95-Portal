@@ -660,7 +660,7 @@ class _PostCardState extends State<_PostCard> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(12),
         border: widget.highlighted ? Border.all(color: colorScheme.primary.withValues(alpha: 0.45)) : null,
       ),

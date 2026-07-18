@@ -287,7 +287,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
             ),
             Container(
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

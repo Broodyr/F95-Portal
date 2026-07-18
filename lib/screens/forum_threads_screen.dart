@@ -221,7 +221,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
           if (subforums.isNotEmpty) ...[
             Container(
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
