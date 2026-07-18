@@ -6,6 +6,7 @@ import '../constants.dart';
 import '../models/profile.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/reaction_icon.dart';
@@ -70,9 +71,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const Color _background = Color(0xFF0F0F0F);
-  static const Color _card = Color(0xFF1C1C1E);
-
   ProfilePage? _page;
   bool _loading = false;
   String? _error;
@@ -303,7 +301,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: _background,
       body: ListenableBuilder(
         listenable: AuthService.instance,
         builder: (context, _) {
@@ -404,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: RefreshIndicator(
               onRefresh: _refresh,
               color: colorScheme.primary,
-              backgroundColor: _card,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               child: ListView(
                 controller: widget.scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -452,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF262629),
+                        color: AppColors.of(context).chipSurface,
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(page.memberTitle, style: TextStyle(color: Colors.grey[400], fontSize: 10.5)),
@@ -506,7 +503,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
               child: Row(
                 children: [
                   Icon(Icons.edit_outlined, size: 15, color: Colors.grey[600]),
@@ -536,7 +533,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -554,7 +551,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           post.author,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Color(0xFFE8E8E8), fontSize: 12.5, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12.5, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -565,7 +562,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(post.body, style: const TextStyle(color: Color(0xFFC9C9C9), fontSize: 12.5, height: 1.45)),
+          Text(post.body, style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12.5, height: 1.45)),
           if (post.comments.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
@@ -622,7 +619,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           comment.author,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Color(0xFFD5D5D5), fontSize: 11.5, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: AppColors.of(context).brightText, fontSize: 11.5, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -675,7 +672,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => _openPosting(posting),
         borderRadius: BorderRadius.circular(12),
@@ -769,7 +766,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
           child: Column(
             children: [
               for (final (icon, label, value) in details)
@@ -785,7 +782,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           value,
                           textAlign: TextAlign.right,
-                          style: const TextStyle(color: Color(0xFFD5D5D5), fontSize: 12),
+                          style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12),
                         ),
                       ),
                     ],
@@ -797,8 +794,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (about.bio.isNotEmpty)
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: _card, borderRadius: BorderRadius.circular(12)),
-          child: Text(about.bio, style: const TextStyle(color: Color(0xFFC9C9C9), fontSize: 12.5, height: 1.5)),
+          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
+          child: Text(about.bio, style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12.5, height: 1.5)),
         ),
     ];
   }

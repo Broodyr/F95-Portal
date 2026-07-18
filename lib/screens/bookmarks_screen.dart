@@ -5,6 +5,7 @@ import '../models/account.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../services/thread_page_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
@@ -159,7 +160,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(title: const Text('Bookmarks', style: TextStyle(fontSize: 16))),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,7 +239,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       color: colorScheme.primary,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: colorScheme.surface,
       child: ListView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -325,7 +325,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                 tooltip: 'Bookmark tools',
                 padding: EdgeInsets.zero,
                 icon: Icon(Icons.more_vert, size: 16, color: Colors.grey[600]),
-                color: const Color(0xFF262629),
+                color: AppColors.of(context).chipSurface,
                 onSelected: (_) => _delete(entry),
                 itemBuilder: (context) => const [
                   PopupMenuItem(

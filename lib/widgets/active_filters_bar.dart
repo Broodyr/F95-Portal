@@ -146,7 +146,7 @@ class ActiveFiltersBar extends StatelessWidget {
             height: 44,
             padding: const EdgeInsets.only(left: 12),
             decoration: BoxDecoration(
-              color: Color(0xFF1C1C1E).withValues(alpha: glass ? 0.4 : 0.92),
+              color: colorScheme.surface.withValues(alpha: glass ? 0.4 : 0.92),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
             ),

@@ -163,7 +163,6 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       body: SafeArea(
         bottom: false,
         child: Column(

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import '../utils/image_urls.dart';
 import 'remote_image.dart';
 import 'sfw_blur.dart';
@@ -86,7 +87,7 @@ class _CoverImageState extends State<CoverImage> {
     return AspectRatio(
       aspectRatio: 3.0, // 3:1 aspect ratio
       child: Container(
-        decoration: BoxDecoration(color: const Color(0xFF2A2A2A)),
+        decoration: BoxDecoration(color: AppColors.of(context).placeholderSurface),
         child: ClipRRect(
           borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
           child: url != null && url.isNotEmpty
@@ -132,8 +133,8 @@ class _CoverImageState extends State<CoverImage> {
 
   Widget _buildPlaceholder() {
     return Container(
-      color: const Color(0xFF3A3A3A),
-      child: const Center(child: Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48)),
+      color: AppColors.of(context).placeholderSurface,
+      child: Center(child: Icon(Icons.image_outlined, color: AppColors.of(context).mutedForeground, size: 48)),
     );
   }
 }

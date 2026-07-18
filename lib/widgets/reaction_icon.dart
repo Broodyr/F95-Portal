@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+
 /// System emoji for the site's reaction ids (sprite images aren't worth
 /// fetching). Emoji are drawn as text via the platform font: they render
 /// reliably (unlike Material Symbols' variable-font glyphs, which Impeller
@@ -101,9 +103,9 @@ class ForumAvatar extends StatelessWidget {
                 imageUrl: url.startsWith('/') ? 'https://f95zone.to$url' : url,
                 fit: BoxFit.cover,
                 errorWidget: (context, imageUrl, error) => Container(
-                  color: const Color(0xFF2A2A2A),
+                  color: AppColors.of(context).placeholderSurface,
                   alignment: Alignment.center,
-                  child: Icon(Icons.person, size: size * 0.6, color: const Color(0xFF666666)),
+                  child: Icon(Icons.person, size: size * 0.6, color: AppColors.of(context).mutedForeground),
                 ),
               ),
       ),

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
+import '../theme/app_colors.dart';
 import 'glass_aware.dart';
 
 /// App-styled toast: a self-sized floating pill on the bottom nav's glass
@@ -37,7 +38,7 @@ class AppToast {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1C1C1E).withValues(alpha: glass ? 0.4 : 0.92),
+                      color: colorScheme.surface.withValues(alpha: glass ? 0.4 : 0.92),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 0.5),
                       boxShadow: [
@@ -63,7 +64,7 @@ class AppToast {
                         Flexible(
                           child: Text(
                             message,
-                            style: const TextStyle(color: Color(0xFFE8E8E8), fontSize: 12.5, height: 1.35),
+                            style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12.5, height: 1.35),
                           ),
                         ),
                       ],

@@ -81,7 +81,6 @@ class SettingsScreen extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       body: SafeArea(
         child: ListenableBuilder(
           // Auth changes show/hide the forum-account section.

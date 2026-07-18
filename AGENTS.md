@@ -16,6 +16,23 @@ that aren't obvious from reading the code:
   equal-width track can't work: option sets of variable/unbounded count that
   must wrap (download group switcher in `browse_details_sheet.dart`) or
   scroll (reaction tabs in `reactions_sheet.dart`).
+- No `Color(0x...)` literals in widgets or screens — every color reads from
+  the theme. The app is dark-only and single-accent (crimson primary;
+  `secondary` is deliberately a neutral grey — don't give it a hue).
+  Sources, in order of preference:
+  - `Theme.of(context).colorScheme.*` for Material tokens (surface, primary,
+    surfaceContainerHighest, ...). Don't set `Scaffold.backgroundColor` or
+    sheet backgrounds explicitly; the theme defaults already cover them.
+  - `AppColors.of(context)` (`lib/theme/app_colors.dart`) for app-specific
+    tokens (placeholderSurface, mutedForeground, chipSurface). Need a new
+    color? Add a token there, don't inline the hex.
+  - `AppPalette` constants are for the `ThemeData` definition in `main.dart`
+    only — never reference them from widgets.
+  Exception: semantic one-off palettes where the hex *is* the meaning
+  (version-pill status badges, reaction/label colors in
+  `utils/formatters.dart`) stay local to their widget. Enforced by
+  `test/theme_guard_test.dart` — its whitelist is the authoritative
+  exception list.
 - Tests first (TDD): write or extend a failing test before the implementation
   change. Run `flutter analyze` before committing.
 

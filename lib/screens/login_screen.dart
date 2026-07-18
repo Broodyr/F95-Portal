@@ -38,7 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         title: const Text('Sign in to F95Zone'),
         bottom: _progress < 1.0

@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../models/thread_page.dart';
+import '../theme/app_colors.dart';
 import 'remote_image.dart';
 import 'screenshot_gallery.dart';
 import 'sfw_blur.dart';
@@ -114,12 +115,12 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
                         // source size; some posts inline dozens of images.
                         decodeHeight: (180 * MediaQuery.devicePixelRatioOf(context)).round(),
                         placeholder: (context) =>
-                            Container(width: 120, height: 80, color: const Color(0xFF2A2A2A)),
+                            Container(width: 120, height: 80, color: AppColors.of(context).placeholderSurface),
                         errorWidget: (context) => Container(
                           width: 120,
                           height: 80,
-                          color: const Color(0xFF2A2A2A),
-                          child: const Icon(Icons.broken_image_outlined, color: Color(0xFF666666), size: 24),
+                          color: AppColors.of(context).placeholderSurface,
+                          child: Icon(Icons.broken_image_outlined, color: AppColors.of(context).mutedForeground, size: 24),
                         ),
                       ),
                     ),

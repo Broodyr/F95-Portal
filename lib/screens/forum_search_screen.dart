@@ -138,7 +138,6 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         titleSpacing: 0,
         title: TextField(

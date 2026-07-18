@@ -324,7 +324,6 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     final int totalPages = page?.totalPages ?? 1;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         titleSpacing: 0,
         title: Column(
@@ -539,7 +538,6 @@ class _WatchOptionsSheet extends StatelessWidget {
   static Future<WatchChoice?> show(BuildContext context, {required WatchChoice? current}) {
     return showModalBottomSheet<WatchChoice>(
       context: context,
-      backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => _WatchOptionsSheet(current: current),
     );

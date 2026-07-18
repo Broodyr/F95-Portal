@@ -109,7 +109,6 @@ class _MainAppState extends State<MainApp> {
 
   Widget _buildScaffold(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       body: Stack(
         children: [
           // IndexedStack keeps every tab's state alive (active search,

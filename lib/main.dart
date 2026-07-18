@@ -8,6 +8,7 @@ import 'services/auth_service.dart';
 import 'services/forum_service.dart';
 import 'services/settings_service.dart';
 import 'services/thread_page_service.dart';
+import 'theme/app_colors.dart';
 import 'widgets/app_text_scale.dart';
 
 /// Failed image loads (dead links, missing HD variants) each dump a
@@ -54,24 +55,24 @@ class F95Portal extends StatelessWidget {
         theme: ThemeData(
           colorScheme: const ColorScheme.dark(
             primary: Color(0xFFDC144D),
-            secondary: Color(0xFF2189FF),
-            surface: Color(0xFF1E1E1E),
+            // Single-accent app: secondary is a neutral grey. Its only
+            // visible surface is M3 fallbacks (secondaryContainer ->
+            // secondary), e.g. the login progress bar's track.
+            secondary: Color(0xFF3A3A3A),
+            surface: AppPalette.surface,
           ),
-          scaffoldBackgroundColor: const Color(0xFF0F0F0F),
+          scaffoldBackgroundColor: AppPalette.background,
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1A1A1A),
+            backgroundColor: AppPalette.appBar,
             foregroundColor: Colors.white,
             elevation: 0,
             systemOverlayStyle: SystemUiOverlayStyle.light,
           ),
           bottomSheetTheme: const BottomSheetThemeData(
-            backgroundColor: Color(0xFF1E1E1E),
-            modalBackgroundColor: Color(0xFF1E1E1E),
+            backgroundColor: AppPalette.surface,
+            modalBackgroundColor: AppPalette.surface,
           ),
-          snackBarTheme: const SnackBarThemeData(
-            backgroundColor: Color(0xFF4A90E2),
-            contentTextStyle: TextStyle(color: Colors.white),
-          ),
+          extensions: const [AppColors.dark],
         ),
         home: const MainApp(),
       ),

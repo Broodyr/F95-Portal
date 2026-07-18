@@ -15,6 +15,7 @@ import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../services/thread_page_service.dart';
+import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
 import '../utils/image_urls.dart';
 import 'app_toast.dart';
@@ -788,8 +789,8 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                 aspectRatio: 3.0,
                 child: thread.cover.isEmpty
                     ? Container(
-                        color: const Color(0xFF2A2A2A),
-                        child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
+                        color: AppColors.of(context).placeholderSurface,
+                        child: Icon(Icons.image_outlined, color: AppColors.of(context).mutedForeground, size: 48),
                       )
                     : SfwBlur(
                         child: RemoteImage(
@@ -798,8 +799,8 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                           decodeWidth:
                               (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
                           errorWidget: (context) => Container(
-                            color: const Color(0xFF2A2A2A),
-                            child: const Icon(Icons.image_outlined, color: Color(0xFF666666), size: 48),
+                            color: AppColors.of(context).placeholderSurface,
+                            child: Icon(Icons.image_outlined, color: AppColors.of(context).mutedForeground, size: 48),
                           ),
                         ),
                       ),
@@ -908,10 +909,10 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               fit: BoxFit.cover,
               // Decode at the 150-logical-px render size, not source size.
               decodeWidth: (150 * MediaQuery.devicePixelRatioOf(context)).round(),
-              placeholder: (context) => Container(color: const Color(0xFF2A2A2A)),
+              placeholder: (context) => Container(color: AppColors.of(context).placeholderSurface),
               errorWidget: (context) => Container(
-                color: const Color(0xFF2A2A2A),
-                child: const Icon(Icons.broken_image_outlined, color: Color(0xFF666666)),
+                color: AppColors.of(context).placeholderSurface,
+                child: Icon(Icons.broken_image_outlined, color: AppColors.of(context).mutedForeground),
               ),
             ),
           ),

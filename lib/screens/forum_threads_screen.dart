@@ -132,7 +132,6 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
     final title = (page?.title.isNotEmpty ?? false) ? page!.title : widget.node.title;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         titleSpacing: 0,
         title: Column(

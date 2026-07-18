@@ -168,7 +168,6 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(title: const Text('Alerts', style: TextStyle(fontSize: 16))),
       body: _buildBody(colorScheme),
     );
@@ -222,7 +221,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       color: colorScheme.primary,
-      backgroundColor: const Color(0xFF1C1C1E),
+      backgroundColor: colorScheme.surface,
       child: ListView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
