@@ -153,7 +153,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final tileFinder = find.widgetWithText(SwitchListTile, tileTitle);
-      await tester.ensureVisible(tileFinder);
+      await tester.scrollUntilVisible(tileFinder, 200);
       expect(tester.widget<SwitchListTile>(tileFinder).value, isTrue);
 
       await tester.tap(tileFinder);
@@ -172,7 +172,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final tileFinder = find.widgetWithText(SwitchListTile, tileTitle);
-      await tester.ensureVisible(tileFinder);
+      await tester.scrollUntilVisible(tileFinder, 200);
       await tester.tap(tileFinder);
       await tester.pumpAndSettle();
 
@@ -188,7 +188,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final tileFinder = find.widgetWithText(SwitchListTile, tileTitle);
-      await tester.ensureVisible(tileFinder);
+      await tester.scrollUntilVisible(tileFinder, 200);
       expect(tester.widget<SwitchListTile>(tileFinder).onChanged, isNull);
     });
   });

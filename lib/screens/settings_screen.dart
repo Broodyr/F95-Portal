@@ -125,8 +125,12 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
                 _sectionHeader('Appearance'),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('Text size', style: TextStyle(color: Colors.white, fontSize: 15)),
+                ),
                 Text(
-                  'Text size across the app',
+                  'Scales text across the app (default: Medium)',
                   style: TextStyle(color: Colors.grey[500], fontSize: 12),
                 ),
                 const SizedBox(height: 12),
@@ -140,7 +144,7 @@ class SettingsScreen extends StatelessWidget {
                   },
                   onSelect: (option) => SettingsService.instance.update(settings.copyWith(fontSize: option)),
                 ),
-                _sectionHeader('Privacy'),
+                const SizedBox(height: 4),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('SFW mode', style: TextStyle(color: Colors.white, fontSize: 15)),
@@ -152,14 +156,6 @@ class SettingsScreen extends StatelessWidget {
                   value: settings.sfwBlur,
                   onChanged: (value) => SettingsService.instance.update(settings.copyWith(sfwBlur: value)),
                 ),
-                if (kIsWeb || AuthService.instance.isLoggedIn) ...[
-                  _sectionHeader('Forum account'),
-                  _AlertsPopupPrefTile(
-                    loader: alertPrefsLoader ?? ForumService.fetchAlertPreferences,
-                    saver: alertPrefsSaver ?? ForumService.setAlertsPopupSkipsMarkRead,
-                  ),
-                ],
-                _sectionHeader('Performance'),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Glass effects', style: TextStyle(color: Colors.white, fontSize: 15)),
@@ -183,6 +179,13 @@ class SettingsScreen extends StatelessWidget {
                     value: settings.showPerfOverlay,
                     onChanged: (value) => SettingsService.instance.update(settings.copyWith(showPerfOverlay: value)),
                   ),
+                if (kIsWeb || AuthService.instance.isLoggedIn) ...[
+                  _sectionHeader('Forum account'),
+                  _AlertsPopupPrefTile(
+                    loader: alertPrefsLoader ?? ForumService.fetchAlertPreferences,
+                    saver: alertPrefsSaver ?? ForumService.setAlertsPopupSkipsMarkRead,
+                  ),
+                ],
                 _sectionHeader('Storage'),
                 Align(
                   alignment: Alignment.centerLeft,
