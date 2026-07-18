@@ -8,6 +8,11 @@
 /// The reliable cleanup is deleting the folder itself; the manager recreates
 /// it on the next download. Web keeps no files on disk, so its variant is a
 /// no-op (and dart:io wouldn't compile there).
+///
+/// When upgrading past 3.4.1, check whether _removeCachedFile resolves paths
+/// through the cache folder; once it does, wipeImageCacheDir is redundant
+/// (emptyCache alone suffices) — but keep trimImageCacheDir: upstream's
+/// eviction is count-based (200 entries) and has no size budget.
 library;
 
 export 'image_cache_wipe_web.dart' if (dart.library.io) 'image_cache_wipe_io.dart';
