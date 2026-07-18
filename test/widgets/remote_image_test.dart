@@ -50,6 +50,25 @@ void main() {
     expect(loads, 1);
   });
 
+  testWidgets('forgetResolved makes a rebuilt widget fetch again instead of reusing the memo', (tester) async {
+    final url = 'https://example.com/${DateTime.now().microsecondsSinceEpoch}-forget.png';
+    Future<void> pumpFresh() async {
+      // A blank frame in between fully disposes the previous RemoteImage.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(MaterialApp(home: RemoteImage(url: url)));
+      await tester.pumpAndSettle();
+    }
+
+    await pumpFresh();
+    await pumpFresh();
+    // The memoized provider served the rebuild without a second load.
+    expect(loads, 1);
+
+    RemoteImage.forgetResolved();
+    await pumpFresh();
+    expect(loads, 2);
+  });
+
   testWidgets('a failed download keeps the placeholder and retries until it succeeds', (tester) async {
     // First attempt rejected (a rate-limited CDN answers fast), later ones ok.
     RemoteImage.loadProvider = (url, decodeWidth, decodeHeight) async {

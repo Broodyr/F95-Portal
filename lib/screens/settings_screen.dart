@@ -10,8 +10,10 @@ import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
+import '../services/image_cache_wipe.dart';
 import '../services/settings_service.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/remote_image.dart';
 import '../widgets/search_options_sheet.dart';
 import '../widgets/segmented_selector.dart';
 
@@ -65,11 +67,26 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  /// Performs the actual wipe; swappable so widget tests don't touch the
+  /// real cache manager (which needs platform channels).
+  static Future<void> Function() wipeCache = _defaultWipeCache;
+
+  static Future<void> _defaultWipeCache() async {
+    // emptyCache clears the sqlite index and in-memory maps; the on-disk
+    // files need wipeImageCacheDir (see its doc for the upstream bug that
+    // leaves them all behind).
+    await DefaultCacheManager().emptyCache();
+    await wipeImageCacheDir();
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
+    RemoteImage.forgetResolved();
+  }
+
   Future<void> _clearImageCache(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await DefaultCacheManager().emptyCache();
-      PaintingBinding.instance.imageCache.clear();
+      await wipeCache();
       AppToast.showOn(messenger, 'Image cache cleared.');
     } catch (e) {
       AppToast.showOn(messenger, 'Could not clear cache: $e', error: true);

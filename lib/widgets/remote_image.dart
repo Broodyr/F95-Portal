@@ -60,6 +60,10 @@ class RemoteImage extends StatefulWidget {
   /// concurrently (a card's cover and its reflection) share one fetch.
   static final Map<String, Future<ImageProvider>> _inflight = {};
 
+  /// Drops every url→provider memo. Call after wiping the disk cache so
+  /// rebuilt widgets re-fetch instead of erroring on deleted files.
+  static void forgetResolved() => _resolved.clear();
+
   static Future<ImageProvider> _sharedResolve(String key, Future<ImageProvider> Function() create) {
     // Block body on purpose: an arrow would return the removed future to
     // whenComplete, which then waits on it — a future awaiting itself.

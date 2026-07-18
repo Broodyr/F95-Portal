@@ -193,6 +193,47 @@ void main() {
     });
   });
 
+  group('clear image cache button', () {
+    late int wipes;
+    late Object? wipeError;
+
+    setUp(() {
+      wipes = 0;
+      wipeError = null;
+      final original = SettingsScreen.wipeCache;
+      SettingsScreen.wipeCache = () async {
+        wipes++;
+        if (wipeError != null) throw wipeError!;
+      };
+      addTearDown(() => SettingsScreen.wipeCache = original);
+    });
+
+    testWidgets('runs the wipe and confirms with a toast', (tester) async {
+      await pumpSettings(tester);
+
+      final button = find.text('Clear image cache');
+      await tester.scrollUntilVisible(button, 200);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+
+      expect(wipes, 1);
+      expect(find.text('Image cache cleared.'), findsOneWidget);
+    });
+
+    testWidgets('a failed wipe surfaces an error toast', (tester) async {
+      wipeError = Exception('locked');
+      await pumpSettings(tester);
+
+      final button = find.text('Clear image cache');
+      await tester.scrollUntilVisible(button, 200);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+
+      expect(wipes, 1);
+      expect(find.textContaining('Could not clear cache'), findsOneWidget);
+    });
+  });
+
   testWidgets('defaults summary shows tag names and reset restores blank', (tester) async {
     await service.update(
       service.settings.copyWith(
