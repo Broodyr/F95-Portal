@@ -1,51 +1,34 @@
 # F95Zone Portal
 
-A Flutter mobile frontend for f95zone.to (adult game forum). Dark, glassmorphic UI; targets Android primarily (release APKs side-loaded), web builds run entirely on mock data due to CORS.
+A Flutter mobile frontend for F95zone. Dark, glassmorphic UI; targets Android primarily, web builds run entirely on mock data due to CORS.
 
 ## Project Snapshot
-- Four tabs: **Browse** (fully featured feed/search), **Forum** (directory → thread lists → light thread viewer), **Settings**, **Profile** (sign-in/out; activity feed planned).
-- Browse: infinite-scroll thread list, omni-search sheet (tags/engines/statuses/creators/title), active-filters bar with live result count, rich thread-details sheet with live-scraped content, like/bookmark actions.
-- All state services are singletons with injectable storage/clients for tests; 240 tests, `flutter analyze` clean.
+- Four tabs: **Browse** (fully featured feed/search), **Forum** (directory → thread lists → thread viewer, alerts & bookmarks), **Settings**, **Profile** (profile posts, postings, & about sections).
+- Stateful services (auth, settings) are singletons; fetch services are static with injectable clients, so tests and web builds run on mocks.
 
-## Architecture
+## Layout
 
-### Data layer
-- `lib/services/api_service.dart` — wraps `https://f95zone.to/sam/latest_alpha/latest_data.php` (`cmd=list` threads, `cmd=tags` popular tags). Sends versioned User-Agent + session cookies. Title searches strip fulltext stopwords client-side and retry zero-result multi-word searches with tokens dropped (the server has unenumerable custom stopwords — 'sex' confirmed). Web: query-filtered mock data.
-- `lib/services/thread_page_service.dart` — fetches/parses `threads/<id>/` first posts, LRU cache (20) **cleared on any auth change** (guest pages cache locked spoilers/hidden downloads). Also `postAction` for XenForo react/watch POSTs (`_xfToken` + cookies).
-- `lib/services/thread_page_parser.dart` — tolerant block parser for first posts: linearizes the bbWrapper into bold/link/spoiler lines, then interprets. Colon-bearing bold = meta field; bold sans colon mid-overview = emphasis; spoilers titled explicitly or by preceding label; downloads anchored at DOWNLOAD with per-platform groups, titled alternate **sets** (bold non-platform headers), non-bold `Label:` lines, bare host rows (separator-only lines), explicit-only Extras, standalone torrent links; first-post attachments; like/watch endpoints + CSRF (`ThreadActions`, null when fetched logged-out). Spoiler content parsed to `RichPiece`s (bold/italic/underline/strike, bullets, links, inline images), 8K char cap. TDD'd against `test/fixtures/*.htm` (8 saved thread pages covering games/animations/assets/alternate-version/torrent cases).
-- `lib/services/auth_service.dart` — XenForo session cookies (`xf_user` = logged in) in secure storage; `ApiService`/`ThreadPageService` attach them. Login = in-app webview on the real login page (`lib/screens/login_screen.dart`), captures cookies when `xf_user` appears. Lifts the anonymous hourly API rate limit.
-- `lib/services/forum_parser.dart` + `lib/models/forum.dart` — XenForo page parsers (tolerant, fixture-TDD'd like the thread parser): forum index (`block--category`/`node--forum` → categories, nodes w/ counts, last-post teasers, `subNodeLink` children, `link-forums` flagged), forum pages (subforum block + `structItem--thread` rows: sticky/unread, prefix labels via `labelLink`, replies/views, page-jump max), thread post loops (`article.message--post` → author/avatar/member title/date/#number, body split into rich/quote/spoiler blocks reusing `parseRichContent`, reaction summary: top-3 ids + combined count from "and N others" + overlay URL), and reactions overlays (per-reaction tabs w/ counts, member rows tagged with their reaction for client-side filtering; per-reaction counts are NOT in post HTML — only behind `/posts/<id>/reactions`).
-- `lib/services/forum_service.dart` — URL-keyed LRU cache (20) cleared on auth change, `page-N` URL building, mocks for web/tests (`createMockForumIndex/ForumPage/ThreadPosts/ReactionsPage`).
-- `lib/services/settings_service.dart` — shared_preferences-backed `AppSettings`: default `SearchQuery` (seeds Browse at startup; filter-bar clear-all returns to it), SFW blur, glass effects, perf overlay (non-release), suggestion source (popular vs recent tags), MRU recent-tag list.
+| Path | What lives here |
+| --- | --- |
+| `lib/services/` | Everything that talks to f95zone: the JSON list API, the XenForo page fetchers, and the tolerant HTML parsers they feed. Auth and settings live here too. |
+| `lib/models/` | Immutable data — search queries, parsed threads and forum pages, the prefix/tag vocabulary. |
+| `lib/screens/` | One file per destination: the four tabs, plus the forum drill-down, search, and login. |
+| `lib/widgets/` | Shared UI — sheets, the glass and SFW wrappers, and the pieces screens compose. |
+| `lib/theme/`, `lib/constants.dart` | Colors and shared design tokens (blur tiers, radii, motion, mock latency). Nothing else should hardcode them. |
+| `test/` | Mirrors `lib/`. `test/fixtures/` holds 28 saved forum pages the parsers are TDD'd against. |
+| `docs/api_mappings.md` | The authoritative API reference: endpoint surface, params, prefix/tag tables, and the server's quirks. Read it before touching `api_service.dart`. |
 
-### Models
-- `lib/models/search_query.dart` — immutable query: category, title/creator search, tag include/exclude (server ANDs tags, max 10/direction — an 11th silently drops ALL tag filters), prefix include/exclude (server ORs), `anyTags` (`tagtype=or`), sort (5 fixed-direction values), `dateDays` (`date=` param). JSON round-trip for persistence. Helpers `withTagAdded`/`replacedWithTag`.
-- `lib/models/f95_metadata.dart` — prefix/tag vocabulary from `assets/f95_metadata.json` (captured from the site's `latestUpdates` globals; refresh instructions in docs/api_mappings.md), loaded in `main()`. Group 4 = status prefixes everywhere.
-- `lib/models/thread_page.dart` — parsed first-post blocks (meta, overview, rich spoilers, download sets/extras, attachments, actions).
-- `lib/models/browse_thread.dart` — list API rows. All numeric/string fields parse leniently (API ships `"version": 1.3` and double-typed ints).
+## Things that will surprise you
 
-### UI
-- `lib/screens/browse_screen.dart` + `lib/widgets/browse_list.dart` — query-driven infinite list (prefetch 5-from-end, thread_id dedup), pull-to-refresh, result-count reporting, tag selections from the search sheet merge into the active query.
-- `lib/widgets/search_options_sheet.dart` — omni-search sheet: autocomplete field (tags w/ counts, engines, statuses, Creator:/Title: rows), include/exclude chips with 10-tag cap, Match all/any toggle, collapsible Category/Engine/Other/Status sections (collapsed unless holding filters, value summaries in headers), segmented Sort/Updated rows, top grab band, `onDismissSave` (settings instance saves on swipe-dismiss too).
-- `lib/widgets/browse_details_sheet.dart` — draggable sheet (top grab band drives the sheet controller): cover (tap = fullscreen), stats, screenshots (`lib/widgets/screenshot_gallery.dart`: pinch + double-tap zoom, two-finger page-swipe suppression), tag chips (tap adds to search w/ haptic, hold replaces), scraped Info/Overview/Downloads (per-set switchers or labeled rows for >6 groups)/Attachments/spoiler cards (`lib/widgets/rich_spoiler_text.dart`, selectable, login links open the in-app webview then refetch), like/bookmark buttons (optimistic, hidden when logged out), Open thread + share (link only).
-- Forum stack: `lib/screens/forum_screen.dart` (directory tab: grouped category sections, link nodes hidden) → `lib/screens/forum_threads_screen.dart` (subforum block reusing `lib/widgets/forum_node_row.dart` + splitter + infinite-scroll thread rows, stickies deduped on later pages) → `lib/screens/forum_thread_screen.dart` (full-screen viewer: post cards w/ `ForumAvatar` initials/images, quote blocks, collapsible spoilers via SlidingReveal, reaction chip → `lib/widgets/reactions_sheet.dart` w/ per-reaction filter pills; pagination pills). Reaction ids map to system emoji in `lib/widgets/reaction_icon.dart`, drawn as `Text` (each in a tinted circle). Emoji — not icon fonts — because they render reliably, carry their own color, and match f95's own reactions; Material Symbols' variable-font glyphs blank selectively under Impeller on some devices (the font data is correct, so it's a renderer bug, not tree-shaking), and Flutter's classic `Icons.*` are the frozen old design. Writes: React (emoji picker `lib/widgets/reaction_picker.dart` → `posts/N/react?reaction_id=`), Quote (client-built `[QUOTE="author, post: id"]` BBCode from the post's rich blocks), Reply FAB + New-thread FAB (`lib/widgets/forum_composer.dart` → `add-reply`/`post-thread`, plain `message` BBCode field) — all through `postAction` with the page `data-csrf`, gated on the parsed reply/post-thread URLs (absent for guests/locked threads), cache cleared + reloaded after each write. Edit on own posts (gated on the per-post `actionBar-action--edit` link; composer prefilled from the edit page's `textarea[name=message]` BBCode, saved back through the same URL). Forum search (`lib/screens/forum_search_screen.dart`, search icon on the directory): csrf from `/search/`, POST `/search/search` (`keywords`, `search_type=post`, `c[title_only]`, `order`; dart:io follows the 303, manual location fallback), post-level `contentRow` results w/ snippets, load-more via the GET-able `/search/<id>/` URL; results open in the viewer with `/post-N` stripped. The browse details sheet's "Open thread" opens the in-app viewer (external browser stays in the viewer's app bar). All fetches/senders injectable; screens run on service mocks in tests/web.
-- `lib/widgets/active_filters_bar.dart` — glass strip over the list when filtering: count, removable per-filter chips, clear-all (resets to settings defaults).
-- `lib/widgets/glass_aware.dart` — glass-effects setting hook. Blur surfaces: nav bar, FAB, filter bar, all sheets (solid near-opaque fills when off). Card pills (`engine_tag.dart`, `version_pill.dart`) are permanently solid 90% — per-pill blur was a measured frame-time killer over animated covers.
-- `lib/widgets/sfw_blur.dart` — SFW mode wrapper around every cover/screenshot/inline image.
-- `lib/widgets/sliding_reveal.dart` — `Motion` constants (180ms easeOutCubic, used by every micro-animation) + `SlidingReveal`: clip-and-slide collapse that keeps the child mounted through the slide-shut then unmounts it (hidden content stays unfindable/untappable). Used by search-sheet sections, the suggestion dropdown, and spoiler cards; overview card uses `AnimatedSize` with an overflow-gated chevron (no affordance/tap when ≤5 lines).
-
-## API knowledge
-`docs/api_mappings.md` is the authoritative reference (endpoint surface, params incl. `tagtype=or`/`date`/search+creator, prefix/tag ID tables, quirks: lax field typing, 10-tag limit, anonymous rate limit, no ascending sorts, fulltext stopword behavior partially — see SearchQuery comments). `docs/samples/` holds a live list response.
+- **Web is a dev target, not a product.** Browser builds can't reach the API (CORS), so the services return query-filtered mock data on web. Never "fix" web networking — verify real API behavior on Android.
+- **Every cache clears on auth change.** Pages fetched as a guest have locked spoilers and hidden downloads baked in; keeping them after sign-in would show a logged-in user the logged-out site.
+- **The forum half is scraped, not APId.** Only the Browse list has a JSON endpoint. Everything else parses XenForo HTML, so the parsers are deliberately tolerant and every one is TDD'd against saved fixtures — upstream markup changes break them silently otherwise.
+- **Sign-in is a real webview.** There's no auth API; login loads the actual f95 login page and captures session cookies when `xf_user` appears. It also lifts the anonymous hourly rate limit.
 
 ## Development
-- `flutter pub get && flutter run`; `flutter test` (240 tests); `flutter analyze`. Helper scripts in `tool/`.
-- TDD: tests first, mirroring lib structure. Helpers: `test/helpers/` (metadata loader, in-memory cookie/settings storages, fixtures in `test/fixtures/`). Services take injectable `client`/`packageInfoLoader`; widgets take injectable fetch/launch/action callbacks.
-- **After adding native plugins: verify `flutter build apk --release`** (AGP/AndroidX metadata checks are stricter than debug; Gradle 8.14 / AGP 8.11.1 / Kotlin 2.2.20).
-- Widget-test gotchas seen repeatedly: `scrollUntilVisible` needs `scrollable: find.byType(Scrollable).first` when a TextField is present; follow with `ensureVisible` before tapping; cached_network_image leaves pending timers (end tests with `tester.pump(Duration(minutes: 1))`) and its spinners never settle (use fixed pumps).
 
-## Next Actions
-- **Verify on device**: reply/new-thread post the plain `message` field as BBCode (edit confirmed working live). Search requires login (f95 403s guests — the screen now gates on it and shows the underlying error detail if a logged-in search still fails). Reacted-state detection (highlighting your own reaction) still unparsed — no logged-in-reacted fixture yet.
-- Forum polish: on-device pass over the new tab; consider unread-position jump (`/unread` URLs) and remembering read pages.
-- Profile enrichment: username/avatar/activity require scraping `/account/` pages (`profile_gugatron.htm` fixture already saved).
-- Cover aspect ratio still provisional (3:1 crop everywhere; tap-to-view shows full image).
-- Consider repository-level caching of list responses if usage patterns demand it.
+- `flutter pub get && flutter run`; `flutter test`; `flutter analyze`. Helper scripts in `tool/`.
+- Conventions that aren't obvious from the code — glass and segmented-control rules, theme tokens, the pinned Android toolchain, fixture traps — are in [AGENTS.md](AGENTS.md). Read it before your first change.
+- TDD: tests first, mirroring lib structure. Helpers in `test/helpers/` (metadata loader, in-memory cookie/settings storages). Services take injectable `client`/`packageInfoLoader`; widgets take injectable fetch/launch/action callbacks.
+- **After adding native plugins: verify `flutter build apk --release`** — AGP/AndroidX metadata checks are stricter than debug, and the failure doesn't reproduce in a debug build.
+- Widget-test gotchas seen repeatedly: `scrollUntilVisible` needs `scrollable: find.byType(Scrollable).first` when a TextField is present; follow with `ensureVisible` before tapping; cached_network_image leaves pending timers (end tests with `tester.pump(Duration(minutes: 1))`) and its spinners never settle (use fixed pumps).
