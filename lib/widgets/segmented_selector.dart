@@ -69,7 +69,7 @@ class SegmentedSelector<T> extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: () => onSelect(value),
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: dense ? 5 : 9),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: dense ? 6 : 10),
                       child: Center(
                         child: AnimatedDefaultTextStyle(
                           duration: Motion.duration,
