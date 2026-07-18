@@ -31,6 +31,11 @@ abstract final class AppRadii {
   /// Fully-rounded pill. The app's controls are circles and pills by
   /// identity (see `GlassFab`), so this is a shape decision, not a number.
   static const double pill = 999;
+
+  /// Outer corner of the segmented pills that overlay cover art (engine,
+  /// version). Only the run's outer corners take it — inner seams stay
+  /// square so adjacent segments read as one pill. See `SegmentedPill`.
+  static const double pillSegment = 16;
 }
 
 abstract final class AppAlphas {

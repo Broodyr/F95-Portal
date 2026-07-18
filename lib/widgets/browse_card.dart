@@ -6,7 +6,7 @@ import '../models/search_category.dart';
 import '../models/browse_thread.dart';
 import '../utils/formatters.dart';
 import 'cover_image.dart';
-import 'engine_tag.dart';
+import 'engine_pill.dart';
 import 'font_size_aware.dart';
 import 'glass_aware.dart';
 import 'metadata_row.dart';
@@ -42,11 +42,11 @@ class BrowseCard extends StatelessWidget {
                   child: CoverImage(imageUrl: thread.cover),
                 ),
 
-                // Engine tag (top-left)
+                // Engine pill (top-left)
                 Positioned(
                   top: 8,
                   left: 8,
-                  child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: category)),
+                  child: EnginePill(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: category)),
                 ),
 
                 // Version pill (top-right)

@@ -19,7 +19,7 @@ import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
 import '../utils/image_urls.dart';
 import 'app_toast.dart';
-import 'engine_tag.dart';
+import 'engine_pill.dart';
 import 'remote_image.dart';
 import 'rich_spoiler_text.dart';
 import 'screenshot_gallery.dart';
@@ -812,7 +812,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             Positioned(
               top: 8,
               left: 8,
-              child: EngineTag(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: widget.category)),
+              child: EnginePill(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: widget.category)),
             ),
             Positioned(
               top: 8,

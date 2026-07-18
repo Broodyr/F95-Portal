@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'segmented_pill.dart';
+
 enum ThreadStatus { normal, completed, abandoned, onhold }
 
 class VersionPill extends StatelessWidget {
@@ -9,7 +11,6 @@ class VersionPill extends StatelessWidget {
   final bool isCompleted;
   final bool isAbandoned;
   final bool isOnhold;
-  final double? fontSize;
 
   const VersionPill({
     super.key,
@@ -17,7 +18,6 @@ class VersionPill extends StatelessWidget {
     required this.isCompleted,
     this.isAbandoned = false,
     this.isOnhold = false,
-    this.fontSize = 12,
   });
 
   ThreadStatus get _status {
@@ -44,41 +44,25 @@ class VersionPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final badge = _statusBadge;
 
-    // Solid pills with a hint of transparency: per-pill backdrop blur was a
-    // measured frame-time killer (re-blurs every frame over animated covers).
-    return IntrinsicHeight(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (badge != null)
-            Container(
-              padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
-              decoration: BoxDecoration(
-                color: badge.$1.withValues(alpha: 0.9),
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
-                border: Border.all(color: badge.$1.withValues(alpha: 0.95)),
-              ),
-              child: Center(child: Icon(badge.$2, color: Colors.white, size: 16)),
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: _versionColor.withValues(alpha: 0.9),
-              borderRadius: badge == null
-                  ? BorderRadius.circular(12)
-                  : const BorderRadius.only(topRight: Radius.circular(12), bottomRight: Radius.circular(12)),
-              border: Border.all(color: _versionColor.withValues(alpha: 0.9)),
-            ),
-            child: Center(
-              child: Text(
-                version,
-                style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
-              ),
-            ),
+    // Stretched: the icon segment has to match the taller text segment, or
+    // the pill's edge shows a notch where they meet.
+    return SegmentedPill(
+      stretch: true,
+      segments: [
+        if (badge != null)
+          PillSegment(
+            color: badge.$1,
+            padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
+            child: Icon(badge.$2, color: Colors.white, size: 16),
           ),
-        ],
-      ),
+        PillSegment(
+          color: _versionColor,
+          // Border matches the fill: a lighter edge here read as an artifact
+          // against the cover art (aa2b0ba).
+          borderAlpha: PillSegment.fillAlpha,
+          child: Text(version, style: PillSegment.labelStyle),
+        ),
+      ],
     );
   }
 }
