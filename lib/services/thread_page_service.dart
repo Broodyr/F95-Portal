@@ -76,6 +76,25 @@ class ThreadPageService {
     Map<String, String> fields = const {},
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
+  }) {
+    return postForm(
+      url,
+      csrfToken,
+      fields: [for (final entry in fields.entries) (entry.key, entry.value)],
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
+  /// Like [postAction], but takes ordered (name, value) pairs so duplicate
+  /// field names survive — the preferences form submits checkbox arrays
+  /// (`name="...[]"`) that a Map would collapse to one entry.
+  static Future<void> postForm(
+    String url,
+    String csrfToken, {
+    List<(String, String)> fields = const [],
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
   }) async {
     final http.Client httpClient = client ?? http.Client();
     final bool shouldCloseClient = client == null;
@@ -84,6 +103,7 @@ class ThreadPageService {
       final headers = {
         'User-Agent': await ApiService.resolveUserAgent(packageInfoLoader),
         'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
       };
       final cookies = AuthService.instance.cookieHeader;
       if (cookies != null) headers['Cookie'] = cookies;
@@ -91,7 +111,10 @@ class ThreadPageService {
       final response = await httpClient.post(
         Uri.parse(url),
         headers: headers,
-        body: {'_xfToken': csrfToken, '_xfResponseType': 'json', ...fields},
+        body: [
+          for (final (name, value) in [('_xfToken', csrfToken), ('_xfResponseType', 'json'), ...fields])
+            '${Uri.encodeQueryComponent(name)}=${Uri.encodeQueryComponent(value)}',
+        ].join('&'),
       );
 
       if (response.statusCode != 200 ||

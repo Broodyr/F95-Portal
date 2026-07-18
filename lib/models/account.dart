@@ -60,6 +60,21 @@ class AlertPreferences {
   const AlertPreferences({this.popupSkipsMarkRead = false, this.pageSkipsMarkRead = false});
 }
 
+/// The account preferences form serialized the way a browser submit would
+/// send it: every successful control as an ordered (name, value) pair.
+/// XenForo's preference save treats absent checkboxes as unchecked, so
+/// changing a single option means replaying the whole form with that one
+/// field flipped. Order and duplicate names both matter — the form submits
+/// checkbox arrays (`name="...[]"`) that a map would collapse.
+class PreferencesForm {
+  /// The form's own `_xfToken` hidden input (falling back to the page-level
+  /// token); lifted out of [fields] since the POST helper supplies it.
+  final String csrfToken;
+  final List<(String, String)> fields;
+
+  const PreferencesForm({this.csrfToken = '', this.fields = const []});
+}
+
 /// One alert row: an actor, what they did, and the content it targets.
 class AlertEntry {
   final int alertId;

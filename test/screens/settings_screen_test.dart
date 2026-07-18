@@ -1,11 +1,14 @@
+import 'package:f95_portal/models/account.dart';
 import 'package:f95_portal/models/search_category.dart';
 import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/screens/settings_screen.dart';
+import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/settings_service.dart';
 import 'package:f95_portal/widgets/search_options_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/in_memory_cookie_storage.dart';
 import '../helpers/in_memory_settings_storage.dart';
 import '../helpers/metadata_test_utils.dart';
 
@@ -109,6 +112,85 @@ void main() {
 
     expect(find.byType(SearchOptionsSheet), findsNothing);
     expect(service.settings.defaultQuery.category, SearchCategory.comics);
+  });
+
+  group('alerts pop-up preference tile', () {
+    const tileTitle = 'Alerts pop-up skips mark read';
+    late AuthService previousAuth;
+
+    setUp(() async {
+      previousAuth = AuthService.instance;
+      AuthService.instance = AuthService(InMemoryCookieStorage());
+      await AuthService.instance.saveCookies({'xf_user': '123,token'});
+    });
+
+    tearDown(() {
+      AuthService.instance = previousAuth;
+    });
+
+    Future<void> pumpTile(WidgetTester tester, {required AlertPrefsLoader loader, required AlertPrefsSaver saver}) {
+      return tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: SettingsScreen(alertPrefsLoader: loader, alertPrefsSaver: saver),
+        ),
+      );
+    }
+
+    testWidgets('hidden while logged out', (tester) async {
+      await AuthService.instance.logout();
+      await pumpSettings(tester);
+      expect(find.text(tileTitle), findsNothing);
+    });
+
+    testWidgets('loads the account value and saves a toggle to the site', (tester) async {
+      final saved = <bool>[];
+      await pumpTile(
+        tester,
+        loader: () async => const AlertPreferences(popupSkipsMarkRead: true),
+        saver: (value) async => saved.add(value),
+      );
+      await tester.pumpAndSettle();
+
+      final tileFinder = find.widgetWithText(SwitchListTile, tileTitle);
+      await tester.ensureVisible(tileFinder);
+      expect(tester.widget<SwitchListTile>(tileFinder).value, isTrue);
+
+      await tester.tap(tileFinder);
+      await tester.pumpAndSettle();
+
+      expect(saved, [false]);
+      expect(tester.widget<SwitchListTile>(tileFinder).value, isFalse);
+    });
+
+    testWidgets('a failed save reverts the switch', (tester) async {
+      await pumpTile(
+        tester,
+        loader: () async => const AlertPreferences(popupSkipsMarkRead: false),
+        saver: (value) async => throw Exception('offline'),
+      );
+      await tester.pumpAndSettle();
+
+      final tileFinder = find.widgetWithText(SwitchListTile, tileTitle);
+      await tester.ensureVisible(tileFinder);
+      await tester.tap(tileFinder);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<SwitchListTile>(tileFinder).value, isFalse);
+    });
+
+    testWidgets('the switch stays disabled when the account load fails', (tester) async {
+      await pumpTile(
+        tester,
+        loader: () async => throw Exception('offline'),
+        saver: (value) async {},
+      );
+      await tester.pumpAndSettle();
+
+      final tileFinder = find.widgetWithText(SwitchListTile, tileTitle);
+      await tester.ensureVisible(tileFinder);
+      expect(tester.widget<SwitchListTile>(tileFinder).onChanged, isNull);
+    });
   });
 
   testWidgets('defaults summary shows tag names and reset restores blank', (tester) async {

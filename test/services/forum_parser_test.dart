@@ -287,6 +287,65 @@ void main() {
     });
   });
 
+  group('parsePreferencesForm', () {
+    test('serializes the live preferences form like a browser submit', () {
+      final form = parsePreferencesForm(fixture('account_preferences.htm'));
+
+      // The form's own _xfToken hidden input wins over the page-level token.
+      expect(form.csrfToken, '1784068436,524a5205d79ceb0ae3ac62847b6c4be7');
+
+      // Selected options, checked boxes, text/hidden/number values.
+      expect(form.fields, contains(('user[style_id]', '31')));
+      expect(form.fields, contains(('option[thuix_font_size]', '0')));
+      expect(form.fields, contains(('list_view_avatars', 'usernames')));
+      expect(form.fields, contains(('option[sv_default_search_order]', 'date')));
+      expect(form.fields, contains(('option[sv_alerts_summarize_threshold]', '4')));
+      expect(form.fields, contains(('option[push_on_conversation]', '')));
+      expect(form.fields, contains(('option[sv_alerts_page_skips_mark_read]', '1')));
+
+      final names = [for (final (name, _) in form.fields) name];
+      // Unchecked boxes are absent — that's how XenForo reads "off".
+      expect(names, isNot(contains('option[sv_alerts_popup_skips_mark_read]')));
+      // The token is lifted out, not replayed as a field.
+      expect(names, isNot(contains('_xfToken')));
+      // Radio groups submit exactly one value.
+      expect(names.where((name) => name == 'list_view_avatars'), hasLength(1));
+    });
+
+    test('keeps duplicate checkbox-array names, skips buttons and disabled inputs', () {
+      final form = parsePreferencesForm('''
+        <html data-csrf="page-token"><body>
+        <form action="/account/preferences" method="post">
+          <input type="checkbox" name="ids[]" value="7" checked="checked">
+          <input type="checkbox" name="ids[]" value="9" checked="checked">
+          <input type="checkbox" name="ids[]" value="11">
+          <input type="checkbox" name="bare" checked="checked">
+          <input type="text" name="disabled_text" value="x" disabled>
+          <select name="pick"><option value="a">A</option><option value="b">B</option></select>
+          <textarea name="note">hello</textarea>
+          <button type="submit" name="save">Save</button>
+        </form></body></html>
+      ''');
+
+      // No _xfToken input in the form: the page-level token is the fallback.
+      expect(form.csrfToken, 'page-token');
+      expect(form.fields, [
+        ('ids[]', '7'),
+        ('ids[]', '9'),
+        ('bare', 'on'),
+        // A single-select with nothing marked selected submits its first option.
+        ('pick', 'a'),
+        ('note', 'hello'),
+      ]);
+    });
+
+    test('a page without the form (logged out) yields an empty form', () {
+      final form = parsePreferencesForm('<html><body><p>login required</p></body></html>');
+      expect(form.csrfToken, '');
+      expect(form.fields, isEmpty);
+    });
+  });
+
   group('relative URLs', () {
     // Saved-page fixtures have browser-absolutized hrefs; the live site
     // emits relative ones, so the parsers must absolutize themselves.

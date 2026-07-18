@@ -152,6 +152,86 @@ void main() {
     expect(urls, ['https://f95zone.to/account/preferences', 'https://f95zone.to/account/alerts-popup']);
   });
 
+  test('saving the pop-up preference replays the whole form with the flag flipped', () async {
+    const formHtml = '''
+      <html data-csrf="page-token"><body>
+      <form action="/account/preferences" method="post">
+        <select name="user[style_id]"><option value="0">a</option><option value="31" selected="selected">b</option></select>
+        <input type="checkbox" name="option[prefixess_ignored_prefix_ids][]" value="7" checked="checked">
+        <input type="checkbox" name="option[prefixess_ignored_prefix_ids][]" value="9" checked="checked">
+        <input type="checkbox" name="option[sv_alerts_page_skips_mark_read]" value="1" checked="checked">
+        <input type="checkbox" name="option[sv_alerts_popup_skips_mark_read]" value="1">
+        <input type="hidden" name="_xfToken" value="form-token">
+      </form></body></html>
+    ''';
+    final gets = <String>[];
+    http.Request? post;
+    final client = MockClient((request) async {
+      if (request.method == 'POST') {
+        post = request;
+        return http.Response('{"status":"ok"}', 200);
+      }
+      gets.add(request.url.toString());
+      return http.Response(formHtml, 200);
+    });
+
+    await ForumService.setAlertsPopupSkipsMarkRead(true, client: client, packageInfoLoader: () async => _packageInfo());
+
+    expect(gets, [ForumService.preferencesUrl]);
+    expect(post!.url.toString(), ForumService.preferencesUrl);
+    expect(post!.headers['Content-Type'], startsWith('application/x-www-form-urlencoded'));
+
+    final body = Uri(query: post!.body).queryParametersAll;
+    expect(body['_xfToken'], ['form-token']);
+    // The untouched fields are replayed — a partial POST would reset them.
+    expect(body['user[style_id]'], ['31']);
+    expect(body['option[prefixess_ignored_prefix_ids][]'], ['7', '9']);
+    expect(body['option[sv_alerts_page_skips_mark_read]'], ['1']);
+    expect(body['option[sv_alerts_popup_skips_mark_read]'], ['1']);
+
+    // The per-session snapshot reflects the save without another fetch.
+    final prefs = await ForumService.fetchAlertPreferences(client: client, packageInfoLoader: () async => _packageInfo());
+    expect(prefs.popupSkipsMarkRead, isTrue);
+    expect(prefs.pageSkipsMarkRead, isTrue);
+    expect(gets, hasLength(1));
+  });
+
+  test('turning the pop-up preference off drops the checkbox from the POST', () async {
+    const formHtml = '''
+      <html><body>
+      <form action="/account/preferences" method="post">
+        <input type="checkbox" name="option[sv_alerts_popup_skips_mark_read]" value="1" checked="checked">
+        <input type="hidden" name="_xfToken" value="form-token">
+      </form></body></html>
+    ''';
+    http.Request? post;
+    final client = MockClient((request) async {
+      if (request.method == 'POST') {
+        post = request;
+        return http.Response('{"status":"ok"}', 200);
+      }
+      return http.Response(formHtml, 200);
+    });
+
+    await ForumService.setAlertsPopupSkipsMarkRead(false, client: client, packageInfoLoader: () async => _packageInfo());
+
+    final body = Uri(query: post!.body).queryParametersAll;
+    expect(body.containsKey('option[sv_alerts_popup_skips_mark_read]'), isFalse);
+    expect((await ForumService.fetchAlertPreferences(client: client)).popupSkipsMarkRead, isFalse);
+  });
+
+  test('saving the pop-up preference without a form (logged out) throws', () async {
+    final client = MockClient((request) async {
+      expect(request.method, 'GET');
+      return http.Response('<html><body><p>login required</p></body></html>', 200);
+    });
+
+    await expectLater(
+      ForumService.setAlertsPopupSkipsMarkRead(true, client: client, packageInfoLoader: () async => _packageInfo()),
+      throwsA(isA<ApiException>()),
+    );
+  });
+
   test('invalidateAccountPages drops account feeds but keeps forum pages cached', () async {
     final index = File('test/fixtures/forum_home.htm').readAsStringSync();
     final bookmarks = File('test/fixtures/account_bookmarks.htm').readAsStringSync();

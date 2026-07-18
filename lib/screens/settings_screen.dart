@@ -4,20 +4,33 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+import '../models/account.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
+import '../services/auth_service.dart';
+import '../services/forum_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/search_options_sheet.dart';
 import '../widgets/segmented_selector.dart';
+
+/// Loads the account's alert preferences (page fetch on device, mock on web).
+typedef AlertPrefsLoader = Future<AlertPreferences> Function();
+
+/// Saves the pop-up skips-mark-read preference back to the forum account.
+typedef AlertPrefsSaver = Future<void> Function(bool value);
 
 class SettingsScreen extends StatelessWidget {
   /// The list's controller; MainApp watches it to hide/show the bottom nav
   /// and route the nav bar's pass-through drags here.
   final ScrollController? scrollController;
 
-  const SettingsScreen({super.key, this.scrollController});
+  /// Test seams for the forum-account tile; default to ForumService.
+  final AlertPrefsLoader? alertPrefsLoader;
+  final AlertPrefsSaver? alertPrefsSaver;
+
+  const SettingsScreen({super.key, this.scrollController, this.alertPrefsLoader, this.alertPrefsSaver});
 
   Future<void> _editDefaults(BuildContext context) async {
     final current = SettingsService.instance.settings;
@@ -71,7 +84,8 @@ class SettingsScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF0F0F0F),
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: SettingsService.instance,
+          // Auth changes show/hide the forum-account section.
+          listenable: Listenable.merge([SettingsService.instance, AuthService.instance]),
           builder: (context, _) {
             final settings = SettingsService.instance.settings;
 
@@ -139,6 +153,13 @@ class SettingsScreen extends StatelessWidget {
                   value: settings.sfwBlur,
                   onChanged: (value) => SettingsService.instance.update(settings.copyWith(sfwBlur: value)),
                 ),
+                if (kIsWeb || AuthService.instance.isLoggedIn) ...[
+                  _sectionHeader('Forum account'),
+                  _AlertsPopupPrefTile(
+                    loader: alertPrefsLoader ?? ForumService.fetchAlertPreferences,
+                    saver: alertPrefsSaver ?? ForumService.setAlertsPopupSkipsMarkRead,
+                  ),
+                ],
                 _sectionHeader('Performance'),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -237,4 +258,71 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+}
+
+/// The site's "Alerts pop-up skips mark read" account preference: when on,
+/// alerts stay unread until visited instead of being marked read when the
+/// app displays them (see ForumService.acknowledgeAlerts). Lives on the
+/// forum account, so it loads from and saves to the site.
+class _AlertsPopupPrefTile extends StatefulWidget {
+  final AlertPrefsLoader loader;
+  final AlertPrefsSaver saver;
+
+  const _AlertsPopupPrefTile({required this.loader, required this.saver});
+
+  @override
+  State<_AlertsPopupPrefTile> createState() => _AlertsPopupPrefTileState();
+}
+
+class _AlertsPopupPrefTileState extends State<_AlertsPopupPrefTile> {
+  /// Null until the account preference loads; the switch stays disabled.
+  bool? _value;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await widget.loader();
+      if (mounted) setState(() => _value = prefs.popupSkipsMarkRead);
+    } catch (_) {
+      // Site unreachable: leave the switch disabled.
+    }
+  }
+
+  Future<void> _save(bool value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _saving = true;
+      _value = value;
+    });
+    try {
+      await widget.saver(value);
+    } catch (e) {
+      if (mounted) setState(() => _value = !value);
+      AppToast.showOn(messenger, 'Could not save to the site: $e', error: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Alerts pop-up skips mark read', style: TextStyle(color: Colors.white, fontSize: 15)),
+      subtitle: Text(
+        'Alerts stay unread until you open them, instead of being marked '
+        'read once shown. Saved to your forum account preferences.',
+        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+      ),
+      activeTrackColor: Theme.of(context).colorScheme.primary,
+      value: _value ?? false,
+      onChanged: _value == null || _saving ? null : _save,
+    );
+  }
 }

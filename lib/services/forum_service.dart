@@ -112,6 +112,45 @@ class ForumService {
     );
   }
 
+  /// Saves the "Alerts pop-up skips mark read" preference to the account.
+  ///
+  /// XenForo's preference save treats absent checkboxes as unchecked, so
+  /// the whole form is fetched fresh and replayed with just this one field
+  /// flipped; a partial POST would silently reset every other preference.
+  static Future<void> setAlertsPopupSkipsMarkRead(
+    bool value, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      _alertPrefs = AlertPreferences(
+        popupSkipsMarkRead: value,
+        pageSkipsMarkRead: _alertPrefs?.pageSkipsMarkRead ?? false,
+      );
+      return;
+    }
+    final html = await _fetchHtml(preferencesUrl, client: client, packageInfoLoader: packageInfoLoader);
+    final form = parsePreferencesForm(html);
+    if (form.fields.isEmpty) throw ApiException('Preferences form not found; are you logged in?');
+
+    const fieldName = 'option[sv_alerts_popup_skips_mark_read]';
+    await ThreadPageService.postForm(
+      preferencesUrl,
+      form.csrfToken,
+      fields: [
+        for (final field in form.fields)
+          if (field.$1 != fieldName) field,
+        if (value) (fieldName, '1'),
+      ],
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+    _alertPrefs = AlertPreferences(
+      popupSkipsMarkRead: value,
+      pageSkipsMarkRead: parseAlertPreferences(html).pageSkipsMarkRead,
+    );
+  }
+
   static Future<BookmarksPage> fetchBookmarks({
     int page = 1,
     http.Client? client,

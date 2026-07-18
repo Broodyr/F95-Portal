@@ -129,6 +129,57 @@ AlertPreferences parseAlertPreferences(String htmlSource) {
   );
 }
 
+/// Serializes the account preferences form the way a browser submit would:
+/// every successful control (unchecked boxes excluded, selected options
+/// only) as an ordered (name, value) pair. Returns an empty form when the
+/// page has no preferences form (e.g. logged out).
+PreferencesForm parsePreferencesForm(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final form = document.querySelector('form[action*="/account/preferences"]');
+  if (form == null) return const PreferencesForm();
+
+  String csrfToken = document.documentElement?.attributes['data-csrf'] ?? '';
+  final fields = <(String, String)>[];
+
+  for (final element in form.querySelectorAll('input, select, textarea')) {
+    final name = element.attributes['name'] ?? '';
+    if (name.isEmpty || element.attributes.containsKey('disabled')) continue;
+
+    if (element.localName == 'select') {
+      final options = element.querySelectorAll('option');
+      var chosen = [
+        for (final option in options)
+          if (option.attributes.containsKey('selected')) option,
+      ];
+      // A single-select with no selected option submits its first option.
+      if (chosen.isEmpty && !element.attributes.containsKey('multiple') && options.isNotEmpty) {
+        chosen = [options.first];
+      }
+      for (final option in chosen) {
+        fields.add((name, option.attributes['value'] ?? _clean(option.text)));
+      }
+      continue;
+    }
+    if (element.localName == 'textarea') {
+      fields.add((name, element.text));
+      continue;
+    }
+
+    final type = (element.attributes['type'] ?? 'text').toLowerCase();
+    if (const {'submit', 'button', 'image', 'reset', 'file'}.contains(type)) continue;
+    final bool checkable = type == 'checkbox' || type == 'radio';
+    if (checkable && !element.attributes.containsKey('checked')) continue;
+    final value = element.attributes['value'] ?? (checkable ? 'on' : '');
+    if (name == '_xfToken') {
+      csrfToken = value;
+      continue;
+    }
+    fields.add((name, value));
+  }
+
+  return PreferencesForm(csrfToken: csrfToken, fields: fields);
+}
+
 /// Parses the account bookmarks page (`/account/bookmarks`).
 BookmarksPage parseBookmarks(String htmlSource) {
   final document = html_parser.parse(htmlSource);
