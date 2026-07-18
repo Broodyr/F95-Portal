@@ -402,6 +402,20 @@ void main() {
     expect(query.prefixes, isEmpty);
   });
 
+  testWidgets('prefix groups between Engine and Status sort alphabetically', (tester) async {
+    await pumpSheet(tester);
+
+    // Animations has no Engine or Status group, so both fall in the middle
+    // band; the vocabulary lists Other before Animation.
+    await tester.tap(find.text('Animations'));
+    await tester.pumpAndSettle();
+
+    await scrollSheetTo(tester, find.text('Other'));
+    final animationY = tester.getTopLeft(find.text('Animation')).dy;
+    final otherY = tester.getTopLeft(find.text('Other')).dy;
+    expect(animationY, lessThan(otherY));
+  });
+
   testWidgets('sort selection round-trips', (tester) async {
     final getResult = await pumpSheet(tester);
 

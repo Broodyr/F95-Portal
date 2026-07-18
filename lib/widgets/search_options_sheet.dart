@@ -699,6 +699,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
   }
 
   /// Prefix groups for the selected category, Engine first, Status last,
+  /// anything between them alphabetical,
   /// preserving the vocabulary's own group names.
   List<({String name, List<F95Prefix> prefixes})> _prefixGroups() {
     final grouped = <int, ({String name, List<F95Prefix> prefixes})>{};
@@ -713,7 +714,8 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
         return 1;
       }
 
-      return rank(a).compareTo(rank(b));
+      final byRank = rank(a).compareTo(rank(b));
+      return byRank != 0 ? byRank : a.name.compareTo(b.name);
     });
     return groups;
   }
