@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
@@ -22,10 +23,14 @@ class ScreenshotGallery extends StatefulWidget {
   const ScreenshotGallery({super.key, required this.urls, this.initialIndex = 0});
 
   static void show(BuildContext context, List<String> urls, {int initialIndex = 0}) {
+    // Transparent route: the screen behind keeps painting, so the backdrop
+    // fade during a dismiss drag actually reveals it.
     Navigator.of(context).push(
-      MaterialPageRoute(
+      PageRouteBuilder(
+        opaque: false,
         fullscreenDialog: true,
-        builder: (_) => ScreenshotGallery(urls: urls, initialIndex: initialIndex),
+        pageBuilder: (_, _, _) => ScreenshotGallery(urls: urls, initialIndex: initialIndex),
+        transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ),
     );
   }
@@ -34,7 +39,7 @@ class ScreenshotGallery extends StatefulWidget {
   State<ScreenshotGallery> createState() => _ScreenshotGalleryState();
 }
 
-class _ScreenshotGalleryState extends State<ScreenshotGallery> {
+class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTickerProviderStateMixin {
   late final PageController _pageController;
   final TransformationController _transformation = TransformationController();
   Offset _doubleTapPosition = Offset.zero;
@@ -47,13 +52,29 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   /// vertically. Stop the PageView from competing the moment a second
   /// pointer is down, and keep it out of the way while zoomed in so a
   /// one-finger drag pans the image instead of changing pages.
-  bool get _pageSwipingDisabled => _pointerCount >= 2 || _zoomed;
+  bool get _pageSwipingDisabled => _pointerCount >= 2 || _zoomed || _dismissDragging;
+
+  /// Swipe-up/down-to-close. The PageView only claims predominantly
+  /// horizontal drags and InteractiveViewer's pan is inert until zoomed,
+  /// so vertical motion is tracked here on raw pointer events: once a
+  /// single-finger drag is clearly vertical it drags the pager off-screen
+  /// and a far-enough pull (or fling) pops the route. Never engages while
+  /// zoomed — a vertical drag then pans the image.
+  bool _dismissDragging = false;
+  double _dragOffset = 0;
+  double _dragDx = 0, _dragDy = 0;
+  VelocityTracker? _velocityTracker;
+  late final AnimationController _snapBack;
+  static const double _dismissDistance = 120;
+  static const double _dismissVelocity = 700;
 
   @override
   void initState() {
     super.initState();
     _index = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
+    _snapBack = AnimationController.unbounded(vsync: this)
+      ..addListener(() => setState(() => _dragOffset = _snapBack.value));
     _transformation.addListener(_onTransformationChanged);
     _prefetchBytes();
   }
@@ -77,6 +98,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   void dispose() {
     _pageController.dispose();
     _transformation.dispose();
+    _snapBack.dispose();
     super.dispose();
   }
 
@@ -91,6 +113,65 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
     setState(() => _pointerCount = (_pointerCount + delta).clamp(0, 10));
     _edgeDragAccum = 0;
     _edgeFlipTriggered = false;
+    _dragDx = 0;
+    _dragDy = 0;
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _onPointerCountChanged(1);
+    if (_pointerCount == 1) {
+      _snapBack.stop();
+      _velocityTracker = VelocityTracker.withKind(event.kind);
+    } else if (_dismissDragging) {
+      // A second finger means a pinch, not a dismiss; ease back into place.
+      _cancelDismissDrag();
+    }
+  }
+
+  void _onPointerUp() {
+    _onPointerCountChanged(-1);
+    if (_dismissDragging && _pointerCount == 0) {
+      _endDismissDrag();
+    }
+  }
+
+  void _onPointerCancel() {
+    _onPointerCountChanged(-1);
+    if (_dismissDragging && _pointerCount == 0) {
+      _cancelDismissDrag();
+    }
+  }
+
+  void _onDismissPointerMove(PointerMoveEvent event) {
+    if (_zoomed || _pointerCount != 1) return;
+    _velocityTracker?.addPosition(event.timeStamp, event.position);
+    if (!_dismissDragging) {
+      _dragDx += event.delta.dx;
+      _dragDy += event.delta.dy;
+      if (_dragDy.abs() <= kTouchSlop || _dragDy.abs() <= _dragDx.abs()) return;
+      setState(() {
+        _dismissDragging = true;
+        _dragOffset = _dragDy;
+      });
+      return;
+    }
+    setState(() => _dragOffset += event.delta.dy);
+  }
+
+  void _endDismissDrag() {
+    final vy = _velocityTracker?.getVelocity().pixelsPerSecond.dy ?? 0;
+    final flung = vy.abs() > _dismissVelocity && vy.sign == _dragOffset.sign;
+    if (_dragOffset.abs() > _dismissDistance || flung) {
+      Navigator.of(context).pop();
+    } else {
+      _cancelDismissDrag();
+    }
+  }
+
+  void _cancelDismissDrag() {
+    setState(() => _dismissDragging = false);
+    _snapBack.value = _dragOffset;
+    _snapBack.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
   }
 
   /// Horizontal drag accumulated while the zoomed image is already pinned
@@ -101,6 +182,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
   static const double _edgeFlipThreshold = 110;
 
   void _onPointerMove(PointerMoveEvent event) {
+    _onDismissPointerMove(event);
     if (!_zoomed || _pointerCount != 1 || _edgeFlipTriggered) return;
     final dx = event.delta.dx;
     if (dx == 0) return;
@@ -149,10 +231,19 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
 
   @override
   Widget build(BuildContext context) {
+    // Dragging toward dismissal fades the black backdrop so the screen
+    // behind shows through, previewing the close.
+    final backdropAlpha = (1 - _dragOffset.abs() / 500).clamp(0.0, 1.0).toDouble();
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
+          Positioned.fill(
+            child: ColoredBox(
+              key: const ValueKey('gallery-backdrop'),
+              color: Colors.black.withValues(alpha: backdropAlpha),
+            ),
+          ),
           Positioned.fill(child: _buildPager()),
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
@@ -195,10 +286,12 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
 
   Widget _buildPager() {
     return Listener(
-        onPointerDown: (_) => _onPointerCountChanged(1),
-        onPointerMove: _onPointerMove,
-      onPointerUp: (_) => _onPointerCountChanged(-1),
-        onPointerCancel: (_) => _onPointerCountChanged(-1),
+      onPointerDown: _onPointerDown,
+      onPointerMove: _onPointerMove,
+      onPointerUp: (_) => _onPointerUp(),
+      onPointerCancel: (_) => _onPointerCancel(),
+      child: Transform.translate(
+        offset: Offset(0, _dragOffset),
         child: PageView.builder(
           controller: _pageController,
           physics: _pageSwipingDisabled ? const NeverScrollableScrollPhysics() : null,
@@ -222,8 +315,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
                     child: RemoteImage(
                       url: widget.urls[index],
                       fit: BoxFit.contain,
-                      placeholder: (context) =>
-                          const Center(child: CircularProgressIndicator(color: Colors.white54)),
+                      placeholder: (context) => const Center(child: CircularProgressIndicator(color: Colors.white54)),
                       errorWidget: (context) =>
                           const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
                     ),
@@ -233,6 +325,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> {
             );
           },
         ),
+      ),
     );
   }
 }
