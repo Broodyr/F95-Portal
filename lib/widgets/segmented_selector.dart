@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
-import 'sliding_reveal.dart';
 
 /// The app's standard radio group: a borderless dark pill track holding one
 /// bordered highlight pill that slides between equal-width segments. Every

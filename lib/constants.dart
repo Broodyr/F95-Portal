@@ -1,4 +1,12 @@
+import 'package:flutter/animation.dart';
 import 'package:flutter/painting.dart';
+
+/// Shared timing for the app's micro-animations (slide reveals, segment
+/// highlights, chevrons). One knob keeps every surface in sync.
+abstract final class Motion {
+  static const Duration duration = Duration(milliseconds: 180);
+  static const Curve curve = Curves.easeOutCubic;
+}
 
 abstract final class AppDurations {
   static const Duration toastDuration = Duration(milliseconds: 2800);

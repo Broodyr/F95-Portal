@@ -7,7 +7,6 @@ import '../services/forum_service.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/segmented_selector.dart';
-import '../widgets/sliding_reveal.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
 
