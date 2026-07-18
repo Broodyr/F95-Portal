@@ -5,17 +5,22 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Widget host(ScrollController controller, double width, {void Function(int)? onTap}) => MaterialApp(
-    theme: ThemeData.dark(),
-    home: Scaffold(
-      body: Center(
-        child: SizedBox(
-          width: width,
-          child: CustomBottomNavigation(currentIndex: 0, onTap: onTap ?? (_) {}, scrollController: controller),
+  Widget host(ScrollController controller, double width, {void Function(int)? onTap, int currentIndex = 0}) =>
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: width,
+              child: CustomBottomNavigation(
+                currentIndex: currentIndex,
+                onTap: onTap ?? (_) {},
+                scrollController: controller,
+              ),
+            ),
+          ),
         ),
-      ),
-    ),
-  );
+      );
 
   testWidgets('renders all four destinations at phone width', (tester) async {
     final controller = ScrollController();
@@ -38,6 +43,24 @@ void main() {
     await tester.tap(find.byIcon(Icons.person_outline));
 
     expect(taps, [3]);
+  });
+
+  testWidgets('one shared highlight slides to the selected destination', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final highlight = find.byKey(const Key('nav-highlight'));
+
+    await tester.pumpWidget(host(controller, 375));
+    expect(highlight, findsOneWidget);
+    expect(tester.widget<AnimatedAlign>(highlight).alignment, const Alignment(-1, 0));
+
+    // Selecting the last tab re-aligns the same highlight rather than
+    // lighting up a second one.
+    await tester.pumpWidget(host(controller, 375, currentIndex: 3));
+    // pumpAndSettle would never settle over the repeating pulse animation.
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(highlight, findsOneWidget);
+    expect(tester.widget<AnimatedAlign>(highlight).alignment, const Alignment(1, 0));
   });
 
   testWidgets('a tiny first-frame width lays out without overflow errors', (tester) async {

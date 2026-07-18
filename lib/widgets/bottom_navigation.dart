@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'dart:ui';
 
 import 'glass_aware.dart';
+import 'sliding_reveal.dart';
 
 class CustomBottomNavigation extends StatelessWidget {
   final int currentIndex;
@@ -58,35 +59,55 @@ class CustomBottomNavigation extends StatelessWidget {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       if (constraints.maxWidth < 160) return const SizedBox();
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      const itemCount = 4;
+                      return Stack(
                         children: [
-                          // Browse covers games/comics/animations/assets, so a
-                          // category-neutral compass beats the old gamepad; the
-                          // search FAB keeps the magnifier.
-                          _buildNavItem(
-                            icon: Icons.explore_outlined,
-                            activeIcon: Icons.explore,
-                            index: 0,
-                            isActive: currentIndex == 0,
+                          // One shared highlight circle that slides between
+                          // equal-width segments, mirroring SegmentedSelector,
+                          // instead of each item fading its own background.
+                          Positioned.fill(
+                            child: AnimatedAlign(
+                              key: const Key('nav-highlight'),
+                              duration: Motion.duration,
+                              curve: Motion.curve,
+                              alignment: Alignment(-1 + 2 * currentIndex / (itemCount - 1), 0),
+                              child: const FractionallySizedBox(
+                                widthFactor: 1 / itemCount,
+                                heightFactor: 1,
+                                child: Center(child: _PulsingHighlight()),
+                              ),
+                            ),
                           ),
-                          _buildNavItem(
-                            icon: Icons.forum_outlined,
-                            activeIcon: Icons.forum,
-                            index: 1,
-                            isActive: currentIndex == 1,
-                          ),
-                          _buildNavItem(
-                            icon: Icons.settings_outlined,
-                            activeIcon: Icons.settings,
-                            index: 2,
-                            isActive: currentIndex == 2,
-                          ),
-                          _buildNavItem(
-                            icon: Icons.person_outline,
-                            activeIcon: Icons.person,
-                            index: 3,
-                            isActive: currentIndex == 3,
+                          Row(
+                            children: [
+                              // Browse covers games/comics/animations/assets, so a
+                              // category-neutral compass beats the old gamepad; the
+                              // search FAB keeps the magnifier.
+                              _buildNavItem(
+                                icon: Icons.explore_outlined,
+                                activeIcon: Icons.explore,
+                                index: 0,
+                                isActive: currentIndex == 0,
+                              ),
+                              _buildNavItem(
+                                icon: Icons.forum_outlined,
+                                activeIcon: Icons.forum,
+                                index: 1,
+                                isActive: currentIndex == 1,
+                              ),
+                              _buildNavItem(
+                                icon: Icons.settings_outlined,
+                                activeIcon: Icons.settings,
+                                index: 2,
+                                isActive: currentIndex == 2,
+                              ),
+                              _buildNavItem(
+                                icon: Icons.person_outline,
+                                activeIcon: Icons.person,
+                                index: 3,
+                                isActive: currentIndex == 3,
+                              ),
+                            ],
                           ),
                         ],
                       );
@@ -113,12 +134,57 @@ class CustomBottomNavigation extends StatelessWidget {
     required int index,
     required bool isActive,
   }) {
-    return _PassThroughNavItem(
-      scrollController: scrollController,
-      icon: icon,
-      activeIcon: activeIcon,
-      isActive: isActive,
-      onTap: () => onTap(index),
+    return Expanded(
+      child: _PassThroughNavItem(
+        scrollController: scrollController,
+        icon: icon,
+        activeIcon: activeIcon,
+        isActive: isActive,
+        onTap: () => onTap(index),
+      ),
+    );
+  }
+}
+
+/// The 40px circle behind the active destination. It slides between segments
+/// via the shared [AnimatedAlign] above and breathes with a slow alpha pulse.
+class _PulsingHighlight extends StatefulWidget {
+  const _PulsingHighlight();
+
+  @override
+  State<_PulsingHighlight> createState() => _PulsingHighlightState();
+}
+
+class _PulsingHighlightState extends State<_PulsingHighlight> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this)
+      ..repeat(reverse: true);
+    _pulseAnimation = CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) => Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2 + (_pulseAnimation.value * 0.1)),
+        ),
+      ),
     );
   }
 }
@@ -143,11 +209,9 @@ class _PassThroughNavItem extends StatefulWidget {
   State<_PassThroughNavItem> createState() => _PassThroughNavItemState();
 }
 
-class _PassThroughNavItemState extends State<_PassThroughNavItem> with TickerProviderStateMixin {
+class _PassThroughNavItemState extends State<_PassThroughNavItem> with SingleTickerProviderStateMixin {
   late AnimationController _scaleController;
-  late AnimationController _pulseController;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _pulseAnimation;
 
   Drag? _drag;
 
@@ -155,40 +219,16 @@ class _PassThroughNavItemState extends State<_PassThroughNavItem> with TickerPro
   void initState() {
     super.initState();
     _scaleController = AnimationController(duration: const Duration(milliseconds: 150), vsync: this);
-    _pulseController = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this);
 
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.9,
     ).animate(CurvedAnimation(parent: _scaleController, curve: Curves.easeInOut));
-
-    _pulseAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
-
-    if (widget.isActive) {
-      _pulseController.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void didUpdateWidget(_PassThroughNavItem oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isActive != oldWidget.isActive) {
-      if (widget.isActive) {
-        _pulseController.repeat(reverse: true);
-      } else {
-        _pulseController.stop();
-        _pulseController.reset();
-      }
-    }
   }
 
   @override
   void dispose() {
     _scaleController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -220,19 +260,15 @@ class _PassThroughNavItemState extends State<_PassThroughNavItem> with TickerPro
       },
 
       child: AnimatedBuilder(
-        animation: Listenable.merge([_scaleAnimation, _pulseAnimation]),
+        animation: _scaleAnimation,
         builder: (context, child) {
           return Transform.scale(
             scale: _scaleAnimation.value,
-            child: Container(
+            // The active background lives in the shared sliding highlight,
+            // so the item itself only carries the icon.
+            child: SizedBox(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: widget.isActive
-                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2 + (_pulseAnimation.value * 0.1))
-                    : Colors.transparent,
-              ),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: Icon(
