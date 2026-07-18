@@ -45,8 +45,7 @@ class AppColors extends ThemeExtension<AppColors> {
 
   /// Falls back to [dark] when the theme lacks the extension (bare
   /// MaterialApp in tests); the app is dark-only, so it's always right.
-  static AppColors of(BuildContext context) =>
-      Theme.of(context).extension<AppColors>() ?? dark;
+  static AppColors of(BuildContext context) => Theme.of(context).extension<AppColors>() ?? dark;
 
   @override
   AppColors copyWith({
@@ -69,8 +68,7 @@ class AppColors extends ThemeExtension<AppColors> {
   AppColors lerp(AppColors? other, double t) {
     if (other == null) return this;
     return AppColors(
-      placeholderSurface:
-          Color.lerp(placeholderSurface, other.placeholderSurface, t)!,
+      placeholderSurface: Color.lerp(placeholderSurface, other.placeholderSurface, t)!,
       mutedForeground: Color.lerp(mutedForeground, other.mutedForeground, t)!,
       chipSurface: Color.lerp(chipSurface, other.chipSurface, t)!,
       brightText: Color.lerp(brightText, other.brightText, t)!,

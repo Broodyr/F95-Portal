@@ -154,9 +154,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
             border: InputBorder.none,
           ),
         ),
-        actions: [
-          IconButton(tooltip: 'Search', icon: const Icon(Icons.search, size: 20), onPressed: _search),
-        ],
+        actions: [IconButton(tooltip: 'Search', icon: const Icon(Icons.search, size: 20), onPressed: _search)],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,7 +271,9 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
       );
     }
     if (_results.isEmpty) {
-      return Center(child: Text('No results', style: TextStyle(color: Colors.grey[600], fontSize: 13)));
+      return Center(
+        child: Text('No results', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+      );
     }
 
     return ListView(

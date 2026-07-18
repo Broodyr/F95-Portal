@@ -11,7 +11,8 @@ import '../widgets/reactions_sheet.dart';
 import 'forum_thread_screen.dart';
 
 typedef FetchForumPage = Future<ForumPage> Function(String url, {int page});
-typedef ThreadPoster = Future<void> Function(String url, String csrfToken, {required String title, required String message});
+typedef ThreadPoster =
+    Future<void> Function(String url, String csrfToken, {required String title, required String message});
 
 /// One forum's thread list: the subforum block above (same row style as
 /// the directory), a splitter, then infinite-scrolling thread rows.
@@ -263,9 +264,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
           if (_loadedPages < page.totalPages)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
+              child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
             ),
         ],
       ),
@@ -307,10 +306,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                                   color: colorScheme.primary.withValues(alpha: 0.18),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: Text(
-                                  prefix.label,
-                                  style: TextStyle(color: colorScheme.primary, fontSize: 9.5),
-                                ),
+                                child: Text(prefix.label, style: TextStyle(color: colorScheme.primary, fontSize: 9.5)),
                               ),
                             ),
                           ),

@@ -65,11 +65,7 @@ class _MainAppState extends State<MainApp> {
     if (index == _currentIndex) {
       final controller = _tabControllers[index];
       if (controller.hasClients && controller.offset > 0) {
-        controller.animateTo(
-          0,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutCubic,
-        );
+        controller.animateTo(0, duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
       }
       return;
     }

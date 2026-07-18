@@ -258,10 +258,11 @@ AlertsPage parseAlerts(String htmlSource) {
     // The nav bell's server-rendered counter; the app's bell mirrors it.
     // f95 renders the exact number ("69"), but tolerate capped forms
     // ("10+") that other XenForo skins emit.
-    badgeCount: int.tryParse(
-          RegExp(r'\d+')
-                  .firstMatch(document.querySelector('.js-badge--alerts')?.attributes['data-badge'] ?? '')
-                  ?.group(0) ??
+    badgeCount:
+        int.tryParse(
+          RegExp(
+                r'\d+',
+              ).firstMatch(document.querySelector('.js-badge--alerts')?.attributes['data-badge'] ?? '')?.group(0) ??
               '',
         ) ??
         0,
@@ -397,8 +398,7 @@ ForumPost _parsePost(Element post) {
     // Scoped to the user cell: body mentions carry data-user-id too.
     authorId:
         int.tryParse(
-          (post.querySelector('.message-name a[data-user-id]') ??
-                  post.querySelector('.message-avatar a[data-user-id]'))
+          (post.querySelector('.message-name a[data-user-id]') ?? post.querySelector('.message-avatar a[data-user-id]'))
                   ?.attributes['data-user-id'] ??
               '',
         ) ??
@@ -512,10 +512,7 @@ ReactionsPage parseReactionsPage(String htmlSource) {
           avatarUrl: _absoluteOrNull(row.querySelector('.contentRow-figure img')?.attributes['src']),
           memberTitle: _clean(row.querySelector('.userTitle')?.text ?? ''),
           reactionId:
-              int.tryParse(
-                row.querySelector('.contentRow-extra .reaction')?.attributes['data-reaction-id'] ?? '',
-              ) ??
-              0,
+              int.tryParse(row.querySelector('.contentRow-extra .reaction')?.attributes['data-reaction-id'] ?? '') ?? 0,
           date: _clean(row.querySelector('.contentRow-extra time')?.text ?? ''),
         ),
     ],

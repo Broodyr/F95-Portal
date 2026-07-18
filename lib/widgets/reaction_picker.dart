@@ -87,7 +87,10 @@ class ReactionPicker extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: glass
-          ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: sheet)
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel),
+              child: sheet,
+            )
           : sheet,
     );
   }

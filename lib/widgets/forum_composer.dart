@@ -132,21 +132,14 @@ class _ForumComposerState extends State<ForumComposer> {
                   const SizedBox(height: 2),
                   Text(
                     code,
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                      height: 1.35,
-                    ),
+                    style: TextStyle(color: colorScheme.primary, fontSize: 13, fontFamily: 'monospace', height: 1.35),
                   ),
                 ],
               );
             },
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Close')),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Close'))],
       ),
     );
   }
@@ -261,7 +254,10 @@ class _ForumComposerState extends State<ForumComposer> {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: glass
-          ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: sheet)
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel),
+              child: sheet,
+            )
           : sheet,
     );
   }

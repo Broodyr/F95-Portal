@@ -362,7 +362,10 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
 
   Widget _maybeBlur(bool glass, {required Widget child}) {
     if (!glass) return child;
-    return BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: child);
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel),
+      child: child,
+    );
   }
 
   // --- Scraped page sections -----------------------------------------------
@@ -796,8 +799,8 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                         child: RemoteImage(
                           url: thread.cover,
                           fit: BoxFit.cover,
-                          decodeWidth:
-                              (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
+                          decodeWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context))
+                              .round(),
                           errorWidget: (context) => Container(
                             color: AppColors.of(context).placeholderSurface,
                             child: Icon(Icons.image_outlined, color: AppColors.of(context).mutedForeground, size: 48),
@@ -894,11 +897,9 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
     return GestureDetector(
       // Thumbs stay on the low-quality preview host; the viewer gets the HD
       // variants, all of which it starts loading as soon as it opens.
-      onTap: () => ScreenshotGallery.show(
-        context,
-        [for (final url in thread.screens) toHdImageUrl(url) ?? url],
-        initialIndex: index,
-      ),
+      onTap: () => ScreenshotGallery.show(context, [
+        for (final url in thread.screens) toHdImageUrl(url) ?? url,
+      ], initialIndex: index),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(

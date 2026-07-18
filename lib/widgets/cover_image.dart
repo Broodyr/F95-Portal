@@ -90,9 +90,7 @@ class _CoverImageState extends State<CoverImage> {
         decoration: BoxDecoration(color: AppColors.of(context).placeholderSurface),
         child: ClipRRect(
           borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
-          child: url != null && url.isNotEmpty
-              ? SfwBlur(child: _buildImage(url, decodeWidth))
-              : _buildPlaceholder(),
+          child: url != null && url.isNotEmpty ? SfwBlur(child: _buildImage(url, decodeWidth)) : _buildPlaceholder(),
         ),
       ),
     );

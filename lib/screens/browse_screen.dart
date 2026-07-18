@@ -93,7 +93,10 @@ class _BrowseScreenState extends State<BrowseScreen> {
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           child: glass
-              ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: content)
+              ? BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel),
+                  child: content,
+                )
               : content,
         );
       },

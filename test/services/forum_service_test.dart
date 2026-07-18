@@ -190,7 +190,10 @@ void main() {
     expect(body['option[sv_alerts_popup_skips_mark_read]'], ['1']);
 
     // The per-session snapshot reflects the save without another fetch.
-    final prefs = await ForumService.fetchAlertPreferences(client: client, packageInfoLoader: () async => _packageInfo());
+    final prefs = await ForumService.fetchAlertPreferences(
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
     expect(prefs.popupSkipsMarkRead, isTrue);
     expect(prefs.pageSkipsMarkRead, isTrue);
     expect(gets, hasLength(1));
@@ -213,7 +216,11 @@ void main() {
       return http.Response(formHtml, 200);
     });
 
-    await ForumService.setAlertsPopupSkipsMarkRead(false, client: client, packageInfoLoader: () async => _packageInfo());
+    await ForumService.setAlertsPopupSkipsMarkRead(
+      false,
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
 
     final body = Uri(query: post!.body).queryParametersAll;
     expect(body.containsKey('option[sv_alerts_popup_skips_mark_read]'), isFalse);

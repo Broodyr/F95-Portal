@@ -32,7 +32,12 @@ void main() {
       return createApiResponse(threads: threads, count: threads.length);
     }
 
-    await tester.pumpWidget(MaterialApp(theme: ThemeData.dark(), home: MainApp(fetchThreads: mockFetch)));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: MainApp(fetchThreads: mockFetch),
+      ),
+    );
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 

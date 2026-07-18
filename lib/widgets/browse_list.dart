@@ -153,7 +153,12 @@ class _BrowseListState extends State<BrowseList> {
     if (header == null) return body;
     return Padding(
       padding: MediaQuery.of(context).padding,
-      child: Column(children: [header, Expanded(child: body)]),
+      child: Column(
+        children: [
+          header,
+          Expanded(child: body),
+        ],
+      ),
     );
   }
 
@@ -167,31 +172,34 @@ class _BrowseListState extends State<BrowseList> {
     }
 
     if (_error != null) {
-      return _withHeader(context, Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text('Failed to load threads', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadThreads,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).snackBarTheme.backgroundColor,
-                foregroundColor: Colors.white,
+      return _withHeader(
+        context,
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text('Failed to load threads', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                textAlign: TextAlign.center,
               ),
-              child: const Text('Retry'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadThreads,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).snackBarTheme.backgroundColor,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     if (_threads.isEmpty) {

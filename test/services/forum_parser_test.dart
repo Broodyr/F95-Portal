@@ -539,9 +539,9 @@ void main() {
     });
 
     test('leaves fullImageUrl null when thumbnail and full coincide', () {
-      final img = imageBlock('<img src="https://example.com/pic.png" class="bbImage">').pieces.firstWhere(
-        (p) => p.imageUrl != null,
-      );
+      final img = imageBlock(
+        '<img src="https://example.com/pic.png" class="bbImage">',
+      ).pieces.firstWhere((p) => p.imageUrl != null);
 
       expect(img.imageUrl, 'https://example.com/pic.png');
       expect(img.fullImageUrl, isNull);

@@ -11,8 +11,9 @@ void main() {
         theme: ThemeData.dark(),
         home: Scaffold(
           body: Builder(
-            builder: (context) =>
-                Center(child: TextButton(onPressed: () => onTap(context), child: const Text('go'))),
+            builder: (context) => Center(
+              child: TextButton(onPressed: () => onTap(context), child: const Text('go')),
+            ),
           ),
         ),
       ),
@@ -28,7 +29,9 @@ void main() {
 
     expect(find.text('Image cache cleared.'), findsOneWidget);
     // The pill hugs its content instead of spanning the SnackBar's width.
-    final pillWidth = tester.getSize(find.ancestor(of: find.text('Image cache cleared.'), matching: find.byType(Container)).first).width;
+    final pillWidth = tester
+        .getSize(find.ancestor(of: find.text('Image cache cleared.'), matching: find.byType(Container)).first)
+        .width;
     expect(pillWidth, lessThan(tester.getSize(find.byType(SnackBar)).width));
     expect(find.byIcon(Icons.error_outline), findsNothing);
   });

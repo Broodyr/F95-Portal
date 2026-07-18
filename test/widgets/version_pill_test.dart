@@ -14,7 +14,9 @@ void main() {
 
   testWidgets('version segment border matches its fill color', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: VersionPill(version: 'v1.0', isCompleted: false))),
+      const MaterialApp(
+        home: Scaffold(body: VersionPill(version: 'v1.0', isCompleted: false)),
+      ),
     );
 
     final decoration = versionDecoration(tester);
@@ -23,7 +25,9 @@ void main() {
 
   testWidgets('version segment border matches its fill alongside a status badge', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: VersionPill(version: 'v1.0', isCompleted: true))),
+      const MaterialApp(
+        home: Scaffold(body: VersionPill(version: 'v1.0', isCompleted: true)),
+      ),
     );
 
     expect(find.byIcon(Icons.task_alt), findsOneWidget);

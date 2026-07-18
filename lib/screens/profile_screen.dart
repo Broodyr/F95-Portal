@@ -571,7 +571,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Row(
                 children: [
                   Icon(Icons.edit_outlined, size: 15, color: Colors.grey[600]),
@@ -619,7 +622,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           post.author,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12.5, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: AppColors.of(context).brightText,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -726,7 +733,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           comment.author,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.of(context).brightText, fontSize: 11.5, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: AppColors.of(context).brightText,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -891,7 +902,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Column(
             children: [
               for (final (icon, label, value) in details)
@@ -919,7 +933,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (about.bio.isNotEmpty)
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Text(about.bio, style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12.5, height: 1.5)),
         ),
     ];

@@ -145,7 +145,8 @@ void main() {
       await signIn();
       await pumpProfile(
         tester,
-        fetchProfile: () async => const ProfilePage(username: 'Broodyr', profileUrl: 'https://example.com/members/x.1/'),
+        fetchProfile: () async =>
+            const ProfilePage(username: 'Broodyr', profileUrl: 'https://example.com/members/x.1/'),
       );
 
       expect(find.text('No messages on your profile yet.'), findsOneWidget);
@@ -156,10 +157,7 @@ void main() {
     testWidgets('posts a wall message through the composer', (tester) async {
       await signIn();
       final posted = <(String, String, String)>[];
-      await pumpProfile(
-        tester,
-        messagePoster: (url, csrf, message) async => posted.add((url, csrf, message)),
-      );
+      await pumpProfile(tester, messagePoster: (url, csrf, message) async => posted.add((url, csrf, message)));
 
       await tester.tap(find.text('Write something…'));
       await tester.pumpAndSettle();
@@ -239,10 +237,7 @@ void main() {
     testWidgets('comments on a wall post through its add-comment action', (tester) async {
       await signIn();
       final posted = <(String, String, String)>[];
-      await pumpProfile(
-        tester,
-        messagePoster: (url, csrf, message) async => posted.add((url, csrf, message)),
-      );
+      await pumpProfile(tester, messagePoster: (url, csrf, message) async => posted.add((url, csrf, message)));
 
       await tester.tap(find.text('Comment').first);
       await tester.pumpAndSettle();
@@ -533,10 +528,8 @@ void main() {
     testWidgets('signing in mid-view loads the profile over the prompt', (tester) async {
       await pumpOther(
         tester,
-        fetchProfile: () async => const ProfilePage(
-          username: 'OtherGuy',
-          profileUrl: 'https://example.com/members/otherguy.42/',
-        ),
+        fetchProfile: () async =>
+            const ProfilePage(username: 'OtherGuy', profileUrl: 'https://example.com/members/otherguy.42/'),
       );
       expect(find.text('Sign in'), findsOneWidget);
 

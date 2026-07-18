@@ -141,9 +141,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         _targetPostKey.currentContext == null &&
         _scrollController.hasClients &&
         _scrollController.offset < _scrollController.position.maxScrollExtent) {
-      _scrollController.jumpTo(
-        (_scrollController.offset + 600).clamp(0.0, _scrollController.position.maxScrollExtent),
-      );
+      _scrollController.jumpTo((_scrollController.offset + 600).clamp(0.0, _scrollController.position.maxScrollExtent));
       await WidgetsBinding.instance.endOfFrame;
     }
     final targetContext = _targetPostKey.currentContext;
@@ -169,7 +167,9 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
 
   void _openProfile(ForumPost post) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ProfileScreen(url: post.authorUrl!, username: post.author)),
+      MaterialPageRoute(
+        builder: (_) => ProfileScreen(url: post.authorUrl!, username: post.author),
+      ),
     );
   }
 
@@ -205,8 +205,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     setState(() => _watched = choice != WatchChoice.off);
 
     try {
-      final send =
-          widget.watchSender ?? (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
+      final send = widget.watchSender ?? (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
       // Bare POST watches without email; email_subscribe=1 adds email (and
       // updates an existing watch); stop=1 unwatches.
       final fields = switch (choice) {
@@ -752,8 +751,7 @@ class _PostCardState extends State<_PostCard> {
                   _buildFooterAction(Icons.edit_outlined, 'Edit', widget.onEdit!),
                   const SizedBox(width: 14),
                 ],
-                if (widget.onReact != null)
-                  _buildFooterAction(Icons.add_reaction_outlined, 'React', widget.onReact!),
+                if (widget.onReact != null) _buildFooterAction(Icons.add_reaction_outlined, 'React', widget.onReact!),
                 if (widget.onQuote != null) ...[
                   const SizedBox(width: 14),
                   _buildFooterAction(Icons.format_quote_outlined, 'Quote', widget.onQuote!),
@@ -777,7 +775,10 @@ class _PostCardState extends State<_PostCard> {
           children: [
             Icon(icon, size: 14, color: Colors.grey[500]),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 11.5, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: TextStyle(color: Colors.grey[400], fontSize: 11.5, fontWeight: FontWeight.w500),
+            ),
           ],
         ),
       ),

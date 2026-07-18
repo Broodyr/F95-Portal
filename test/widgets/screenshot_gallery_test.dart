@@ -17,7 +17,12 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: ScreenshotGallery(
-          urls: ['https://example.com/a.png', 'https://example.com/b.png', 'https://example.com/c.png', 'https://example.com/d.png'],
+          urls: [
+            'https://example.com/a.png',
+            'https://example.com/b.png',
+            'https://example.com/c.png',
+            'https://example.com/d.png',
+          ],
           initialIndex: 2,
         ),
       ),
@@ -46,21 +51,13 @@ void main() {
     addTearDown(() => ScreenshotGallery.downloadBytes = original);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ScreenshotGallery(
-          urls: [for (var i = 0; i < 6; i++) 'https://example.com/$i.png'],
-        ),
-      ),
+      MaterialApp(home: ScreenshotGallery(urls: [for (var i = 0; i < 6; i++) 'https://example.com/$i.png'])),
     );
     await tester.pump();
 
     // A burst of simultaneous requests is what gets the first images
     // rejected by the CDN; only a small window may be in flight.
-    expect(started, [
-      'https://example.com/0.png',
-      'https://example.com/1.png',
-      'https://example.com/2.png',
-    ]);
+    expect(started, ['https://example.com/0.png', 'https://example.com/1.png', 'https://example.com/2.png']);
 
     // Finishing one download frees its slot for the next queued URL.
     completers['https://example.com/1.png']!.complete();
@@ -113,10 +110,8 @@ void main() {
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
-              onPressed: () => ScreenshotGallery.show(
-                context,
-                const ['https://example.com/a.png', 'https://example.com/b.png'],
-              ),
+              onPressed: () =>
+                  ScreenshotGallery.show(context, const ['https://example.com/a.png', 'https://example.com/b.png']),
               child: const Text('open'),
             ),
           ),
@@ -176,8 +171,7 @@ void main() {
     // fade to reveal anything.
     expect(find.text('open', skipOffstage: false), findsOneWidget);
 
-    Color backdropColor() =>
-        (tester.widget<ColoredBox>(find.byKey(const ValueKey('gallery-backdrop'))).color);
+    Color backdropColor() => (tester.widget<ColoredBox>(find.byKey(const ValueKey('gallery-backdrop'))).color);
 
     expect(backdropColor().a, 1.0);
 

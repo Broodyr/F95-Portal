@@ -186,7 +186,10 @@ class ActiveFiltersBar extends StatelessWidget {
 
   Widget _maybeBlur(bool glass, {required Widget child}) {
     if (!glass) return child;
-    return BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.bar, sigmaY: AppBlur.bar), child: child);
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: AppBlur.bar, sigmaY: AppBlur.bar),
+      child: child,
+    );
   }
 
   Widget _buildChip(ColorScheme colorScheme, _BarChip chip) {

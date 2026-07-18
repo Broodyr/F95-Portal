@@ -256,14 +256,17 @@ void main() {
     }
 
     const headerKey = Key('list-header');
-    await pumpTestApp(tester, BrowseList(fetchThreads: pagedFetch, header: const SizedBox(key: headerKey, height: 44)));
+    await pumpTestApp(
+      tester,
+      BrowseList(
+        fetchThreads: pagedFetch,
+        header: const SizedBox(key: headerKey, height: 44),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(headerKey), findsOneWidget);
-    expect(
-      tester.getBottomLeft(find.byKey(headerKey)).dy,
-      lessThanOrEqualTo(tester.getTopLeft(find.text('P1 #0')).dy),
-    );
+    expect(tester.getBottomLeft(find.byKey(headerKey)).dy, lessThanOrEqualTo(tester.getTopLeft(find.text('P1 #0')).dy));
 
     await tester.drag(find.byType(ListView), const Offset(0, -3000));
     await tester.pump();
@@ -282,7 +285,13 @@ void main() {
     }
 
     const headerKey = Key('list-header');
-    await pumpTestApp(tester, BrowseList(fetchThreads: emptyFetch, header: const SizedBox(key: headerKey, height: 44)));
+    await pumpTestApp(
+      tester,
+      BrowseList(
+        fetchThreads: emptyFetch,
+        header: const SizedBox(key: headerKey, height: 44),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(headerKey), findsOneWidget);

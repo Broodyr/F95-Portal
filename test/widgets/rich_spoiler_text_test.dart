@@ -60,11 +60,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     final gallery = tester.widget<ScreenshotGallery>(find.byType(ScreenshotGallery));
-    expect(gallery.urls, [
-      'https://example.com/a.jpg',
-      'https://example.com/b.jpg',
-      'https://example.com/c.jpg',
-    ]);
+    expect(gallery.urls, ['https://example.com/a.jpg', 'https://example.com/b.jpg', 'https://example.com/c.jpg']);
     expect(gallery.initialIndex, 2);
 
     // cached_network_image leaves pending timers.

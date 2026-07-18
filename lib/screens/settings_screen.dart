@@ -59,7 +59,10 @@ class SettingsScreen extends StatelessWidget {
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           child: glass
-              ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: content)
+              ? BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel),
+                  child: content,
+                )
               : content,
         );
       },
@@ -259,8 +262,9 @@ class SettingsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: (exclude ? colorScheme.error : colorScheme.surfaceContainerHighest)
-                  .withValues(alpha: AppAlphas.chipFill),
+              color: (exclude ? colorScheme.error : colorScheme.surfaceContainerHighest).withValues(
+                alpha: AppAlphas.chipFill,
+              ),
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
                 color: exclude
@@ -280,7 +284,6 @@ class SettingsScreen extends StatelessWidget {
       ],
     );
   }
-
 }
 
 /// The site's "Alerts pop-up skips mark read" account preference: when on,

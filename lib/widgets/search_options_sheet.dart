@@ -362,7 +362,11 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
                     _buildSearchField(colorScheme),
                     _buildSuggestionDropdown(
                       suggestions.isNotEmpty || _hasCreatorSuggestion || showEmptyTags
-                          ? _buildSuggestionList(colorScheme, suggestions, emptyTags: showEmptyTags ? emptyTags : const [])
+                          ? _buildSuggestionList(
+                              colorScheme,
+                              suggestions,
+                              emptyTags: showEmptyTags ? emptyTags : const [],
+                            )
                           : null,
                     ),
                     const SizedBox(height: 16),

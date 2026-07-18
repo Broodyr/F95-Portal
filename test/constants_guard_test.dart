@@ -16,20 +16,12 @@ const _blurAllowed = {
   'lib/widgets/sfw_blur.dart',
 };
 
-const _pillAllowed = {
-  'lib/constants.dart',
-};
+const _pillAllowed = {'lib/constants.dart'};
 
-Iterable<File> _libDartFiles() => Directory('lib')
-    .listSync(recursive: true)
-    .whereType<File>()
-    .where((f) => f.path.endsWith('.dart'));
+Iterable<File> _libDartFiles() =>
+    Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
 
-void _expectNoMatch({
-  required RegExp pattern,
-  required Set<String> allowed,
-  required String reason,
-}) {
+void _expectNoMatch({required RegExp pattern, required Set<String> allowed, required String reason}) {
   final offenders = <String>[];
   for (final file in _libDartFiles()) {
     final path = file.path.replaceAll('\\', '/');
@@ -49,7 +41,8 @@ void main() {
     _expectNoMatch(
       pattern: RegExp(r'sigma[XY]: *(24|15)\b'),
       allowed: _blurAllowed,
-      reason: 'Inline glass blur sigma found. Use AppBlur.panel (sheets and '
+      reason:
+          'Inline glass blur sigma found. Use AppBlur.panel (sheets and '
           'panels) or AppBlur.bar (bars and toasts) from lib/constants.dart.',
     );
   });
@@ -58,7 +51,8 @@ void main() {
     _expectNoMatch(
       pattern: RegExp(r'circular\(999\b'),
       allowed: _pillAllowed,
-      reason: 'Inline pill radius found. Use AppRadii.pill from '
+      reason:
+          'Inline pill radius found. Use AppRadii.pill from '
           'lib/constants.dart.',
     );
   });

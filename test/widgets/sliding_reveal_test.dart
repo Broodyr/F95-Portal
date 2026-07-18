@@ -5,7 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Future<void> pumpReveal(WidgetTester tester, {required bool visible, Widget? child}) {
     return tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: SlidingReveal(visible: visible, child: child))),
+      MaterialApp(
+        home: Scaffold(
+          body: SlidingReveal(visible: visible, child: child),
+        ),
+      ),
     );
   }
 

@@ -173,18 +173,14 @@ void main() {
   });
 
   testWidgets('screenshot thumbs stay low-res while the gallery gets HD', (tester) async {
-    const screens = [
-      'https://preview.f95zone.to/2023/02/42_s1.png',
-      'https://preview.f95zone.to/2023/02/42_s2.png',
-    ];
+    const screens = ['https://preview.f95zone.to/2023/02/42_s1.png', 'https://preview.f95zone.to/2023/02/42_s2.png'];
     await pumpDetails(tester, thread: createBrowseThread(threadId: 42, screens: screens));
 
     await tester.scrollUntilVisible(find.text('Screenshots'), 150);
     await tester.pumpAndSettle();
 
     // The grid renders the low-quality preview URLs as-is.
-    thumbFinder(String url) =>
-        find.byWidgetPredicate((w) => w is RemoteImage && w.url == url);
+    thumbFinder(String url) => find.byWidgetPredicate((w) => w is RemoteImage && w.url == url);
     expect(thumbFinder(screens[1]), findsOneWidget);
 
     await tester.tap(thumbFinder(screens[1]));
@@ -295,7 +291,10 @@ void main() {
 
   testWidgets('overflowing overview shows a chevron and expands with an animated size change', (tester) async {
     final longOverview = List.filled(60, 'lorem ipsum dolor sit amet consectetur').join(' ');
-    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: longOverview));
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: longOverview),
+    );
 
     final overviewText = find.textContaining('lorem ipsum');
     await tester.scrollUntilVisible(overviewText, 150);
@@ -323,7 +322,10 @@ void main() {
   });
 
   testWidgets('short overview has no chevron and ignores taps', (tester) async {
-    await pumpDetails(tester, fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: 'Short and sweet.'));
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPage(threadId: id, overview: 'Short and sweet.'),
+    );
 
     await tester.scrollUntilVisible(find.text('Short and sweet.'), 150);
     expect(find.byKey(const Key('overview-chevron')), findsNothing);

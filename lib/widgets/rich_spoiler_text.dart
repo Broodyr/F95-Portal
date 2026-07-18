@@ -120,7 +120,11 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
                           width: 120,
                           height: 80,
                           color: AppColors.of(context).placeholderSurface,
-                          child: Icon(Icons.broken_image_outlined, color: AppColors.of(context).mutedForeground, size: 24),
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.of(context).mutedForeground,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ),

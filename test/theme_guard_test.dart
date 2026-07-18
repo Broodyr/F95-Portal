@@ -21,10 +21,7 @@ const _allowed = {
 void main() {
   test('no hardcoded Color(0x...) literals outside the theme and semantic palettes', () {
     final offenders = <String>[];
-    final files = Directory('lib')
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.dart'));
+    final files = Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
 
     for (final file in files) {
       final path = file.path.replaceAll('\\', '/');
@@ -40,7 +37,8 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason: 'Hardcoded color literals found. Use Theme.of(context).colorScheme.*, '
+      reason:
+          'Hardcoded color literals found. Use Theme.of(context).colorScheme.*, '
           'AppColors.of(context), or add a token to lib/theme/app_colors.dart '
           '(see AGENTS.md). Offenders:\n${offenders.join('\n')}',
     );

@@ -110,10 +110,7 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 for (final tab in page.tabs)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: _buildPill(colorScheme, tab),
-                  ),
+                  Padding(padding: const EdgeInsets.only(right: 6), child: _buildPill(colorScheme, tab)),
               ],
             ),
           ),
@@ -164,7 +161,10 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         child: glass
-            ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: sheet)
+            ? BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel),
+                child: sheet,
+              )
             : sheet,
       ),
     );

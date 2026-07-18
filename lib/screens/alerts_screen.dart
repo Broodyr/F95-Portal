@@ -102,8 +102,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
   /// toast: a silently stuck badge is a bug report nobody can act on.
   Future<void> _acknowledge(AlertsPage page) async {
     try {
-      final acknowledge =
-          widget.alertsAcknowledger ?? (ids) => ForumService.acknowledgeAlerts(unreadAlertIds: ids);
+      final acknowledge = widget.alertsAcknowledger ?? (ids) => ForumService.acknowledgeAlerts(unreadAlertIds: ids);
       await acknowledge([
         for (final group in page.groups)
           for (final alert in group.alerts)

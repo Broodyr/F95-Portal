@@ -5,7 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   Future<void> pumpBadge(WidgetTester tester, int reactionId) {
     return tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: Center(child: ReactionBadge(reactionId: reactionId)))),
+      MaterialApp(
+        home: Scaffold(
+          body: Center(child: ReactionBadge(reactionId: reactionId)),
+        ),
+      ),
     );
   }
 

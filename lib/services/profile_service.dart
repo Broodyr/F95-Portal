@@ -51,7 +51,11 @@ class ProfileService {
       await Future.delayed(AppDurations.mockRead);
       return createMockPostings();
     }
-    final html = await _fetchHtml(_join(profileUrl, 'recent-content'), client: client, packageInfoLoader: packageInfoLoader);
+    final html = await _fetchHtml(
+      _join(profileUrl, 'recent-content'),
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
     return parseProfilePage(html).postings;
   }
 
@@ -160,7 +164,12 @@ class ProfileService {
           date: '2 days ago',
           body: 'Thanks for the ToxiCity mod update, the gallery unlock works great now!',
           comments: [
-            ProfileComment(id: 1, author: 'ModAuthor', body: 'Glad it works — report anything odd in the thread.', date: 'Yesterday'),
+            ProfileComment(
+              id: 1,
+              author: 'ModAuthor',
+              body: 'Glad it works — report anything odd in the thread.',
+              date: 'Yesterday',
+            ),
             ProfileComment(
               id: 2,
               author: 'VoidWalker',

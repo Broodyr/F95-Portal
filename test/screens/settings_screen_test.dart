@@ -180,11 +180,7 @@ void main() {
     });
 
     testWidgets('the switch stays disabled when the account load fails', (tester) async {
-      await pumpTile(
-        tester,
-        loader: () async => throw Exception('offline'),
-        saver: (value) async {},
-      );
+      await pumpTile(tester, loader: () async => throw Exception('offline'), saver: (value) async {});
       await tester.pumpAndSettle();
 
       final tileFinder = find.widgetWithText(SwitchListTile, tileTitle);

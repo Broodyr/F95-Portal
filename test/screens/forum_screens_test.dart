@@ -53,8 +53,10 @@ Future<void> pumpForum(
         reactSender: reactSender,
         replySender: replySender,
         threadPoster: threadPoster,
-        searcher: searcher ?? (keywords, {titleOnly = false, user = '', order = 'relevance'}) async =>
-            ForumService.createMockSearchPage(),
+        searcher:
+            searcher ??
+            (keywords, {titleOnly = false, user = '', order = 'relevance'}) async =>
+                ForumService.createMockSearchPage(),
         searchPager: searchPager ?? (url, page) async => ForumService.createMockSearchPage(page: page),
         fetchBookmarks: fetchBookmarks ?? ({page = 1}) async => ForumService.createMockBookmarks(page: page),
         bookmarkDeleter: bookmarkDeleter,
@@ -632,9 +634,7 @@ void main() {
               title: 'Hidden gems',
               csrfToken: 'mock-csrf',
               replyUrl: 'https://example.com/threads/188349/add-reply',
-              posts: [
-                ForumPost(postId: 9001, number: 1, author: 'Broodyr', editUrl: editUrl),
-              ],
+              posts: [ForumPost(postId: 9001, number: 1, author: 'Broodyr', editUrl: editUrl)],
             );
           },
           fetchReactions: (url) async => ForumService.createMockReactionsPage(),

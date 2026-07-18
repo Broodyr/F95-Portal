@@ -86,9 +86,7 @@ void main() {
   });
 
   testWidgets('large font scales contents but anchors the field and headers at 16pt', (tester) async {
-    await SettingsService.instance.update(
-      SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.large),
-    );
+    await SettingsService.instance.update(SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.large));
     await pumpSheet(tester);
 
     // Anchored: section headers and the search field hold their base size.
@@ -103,9 +101,7 @@ void main() {
   });
 
   testWidgets('small font trims anchored elements by 1pt and keeps the big search button', (tester) async {
-    await SettingsService.instance.update(
-      SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.small),
-    );
+    await SettingsService.instance.update(SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.small));
     await pumpSheet(tester);
 
     expect(effectiveFontSize(tester, find.text('Sort by')), moreOrLessEquals(15));
@@ -355,9 +351,7 @@ void main() {
     tester.view.physicalSize = const Size(320, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await SettingsService.instance.update(
-      SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.large),
-    );
+    await SettingsService.instance.update(SettingsService.instance.settings.copyWith(fontSize: FontSizeOption.large));
 
     await pumpSheet(tester);
 

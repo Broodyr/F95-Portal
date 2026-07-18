@@ -167,7 +167,11 @@ class ForumService {
     );
   }
 
-  static Future<AlertsPage> fetchAlerts({int page = 1, http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
+  static Future<AlertsPage> fetchAlerts({
+    int page = 1,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
     if (kIsWeb) {
       await Future.delayed(AppDurations.mockRead);
       return createMockAlerts(page: page);
@@ -305,7 +309,11 @@ class ForumService {
       return createMockSearchPage();
     }
 
-    final formHtml = await _fetchHtml('https://f95zone.to/search/', client: client, packageInfoLoader: packageInfoLoader);
+    final formHtml = await _fetchHtml(
+      'https://f95zone.to/search/',
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
     final csrf = parseCsrfToken(formHtml);
 
     final http.Client httpClient = client ?? http.Client();
@@ -330,9 +338,7 @@ class ForumService {
 
       final location = response.headers['location'];
       if (response.statusCode >= 300 && response.statusCode < 400 && location != null) {
-        return parseSearchResults(
-          await _fetchHtml(location, client: client, packageInfoLoader: packageInfoLoader),
-        );
+        return parseSearchResults(await _fetchHtml(location, client: client, packageInfoLoader: packageInfoLoader));
       }
       if (response.statusCode != 200) {
         throw ApiException('Search failed: ${response.statusCode}');
@@ -367,7 +373,11 @@ class ForumService {
   // --- Edit -----------------------------------------------------------------
 
   /// Fetches the BBCode source of an editable post from its edit page.
-  static Future<String> fetchEditBbcode(String editUrl, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
+  static Future<String> fetchEditBbcode(
+    String editUrl, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
     if (kIsWeb) {
       await Future.delayed(AppDurations.mockWrite);
       return 'Mock post body to edit.';
