@@ -33,6 +33,9 @@ void main() {
     FetchProfilePostings? fetchPostings,
     FetchProfileAbout? fetchAbout,
     ProfileMessagePoster? messagePoster,
+    EditFetcher? editFetcher,
+    EditSaver? editSaver,
+    ProfilePostDeleter? postDeleter,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -41,6 +44,9 @@ void main() {
           fetchPostings: fetchPostings ?? (_) async => ProfileService.createMockPostings(),
           fetchAbout: fetchAbout ?? (_) async => ProfileService.createMockProfileAbout(),
           messagePoster: messagePoster,
+          editFetcher: editFetcher,
+          editSaver: editSaver,
+          postDeleter: postDeleter,
           fetchThreadPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
         ),
       ),
@@ -69,7 +75,9 @@ void main() {
       await signIn();
       await tester.pumpAndSettle();
 
-      expect(find.text('Broodyr'), findsOneWidget);
+      // Thrice: the identity header, the mock's own wall post author, and
+      // their own comment on it.
+      expect(find.text('Broodyr'), findsNWidgets(3));
       expect(find.text('Not signed in'), findsNothing);
     });
 
@@ -90,7 +98,9 @@ void main() {
       await signIn();
       await pumpProfile(tester);
 
-      expect(find.text('Broodyr'), findsOneWidget);
+      // Thrice: the identity header, the mock's own wall post author, and
+      // their own comment on it.
+      expect(find.text('Broodyr'), findsNWidgets(3));
       expect(find.text('Member'), findsOneWidget);
       expect(find.text('291 messages · Joined Dec 11, 2017'), findsOneWidget);
       expect(find.text('Last seen Today at 4:55 PM'), findsOneWidget);
@@ -115,7 +125,7 @@ void main() {
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Broodyr'), findsOneWidget);
+      expect(find.text('Broodyr'), findsNWidgets(3));
     });
   });
 
@@ -243,6 +253,173 @@ void main() {
 
       expect(posted.single.$1, 'https://example.com/profile-posts/142106/add-comment');
       expect(posted.single.$3, 'Nice one');
+    });
+  });
+
+  group('own post actions', () {
+    // A wall with one viewer-owned post (edit/delete links present) and one
+    // visitor post without them, mirroring what the parser produces.
+    ProfilePage ownPostPage() => const ProfilePage(
+      username: 'Broodyr',
+      profileUrl: 'https://example.com/members/broodyr.1957582/',
+      csrfToken: 'mock-csrf',
+      wallPosts: [
+        ProfilePost(
+          id: 146954,
+          author: 'Broodyr',
+          body: 'My own wall post',
+          commentUrl: 'https://example.com/profile-posts/146954/add-comment',
+          editUrl: 'https://example.com/profile-posts/146954/edit',
+          deleteUrl: 'https://example.com/profile-posts/146954/delete',
+          comments: [
+            ProfileComment(id: 173518, author: 'Visitor', body: 'A visitor comment'),
+            ProfileComment(
+              id: 173522,
+              author: 'Broodyr',
+              body: 'My own comment',
+              editUrl: 'https://example.com/profile-posts/comments/173522/edit',
+              deleteUrl: 'https://example.com/profile-posts/comments/173522/delete',
+            ),
+          ],
+        ),
+        ProfilePost(
+          id: 1,
+          author: 'Visitor',
+          body: 'Someone else wrote this',
+          commentUrl: 'https://example.com/profile-posts/1/add-comment',
+        ),
+      ],
+    );
+
+    testWidgets('shows Edit and Delete only on posts carrying their action URLs', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchProfile: () async => ownPostPage());
+
+      // One own post, so exactly one Edit and one Delete among two posts.
+      expect(find.widgetWithText(TextButton, 'Edit'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Delete'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Comment'), findsNWidgets(2));
+    });
+
+    testWidgets('edits an own post through the composer prefilled with its BBCode', (tester) async {
+      await signIn();
+      final fetched = <String>[];
+      final saved = <(String, String, String)>[];
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => ownPostPage(),
+        editFetcher: (url) async {
+          fetched.add(url);
+          return 'Original body';
+        },
+        editSaver: (url, csrf, message) async => saved.add((url, csrf, message)),
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, 'Edit'));
+      await tester.pumpAndSettle();
+
+      expect(fetched.single, 'https://example.com/profile-posts/146954/edit');
+      expect(find.text('Original body'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).last, 'Updated body');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(saved.single.$1, 'https://example.com/profile-posts/146954/edit');
+      expect(saved.single.$2, 'mock-csrf');
+      expect(saved.single.$3, 'Updated body');
+    });
+
+    testWidgets('deletes an own post after confirming', (tester) async {
+      await signIn();
+      final deleted = <(String, String)>[];
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => ownPostPage(),
+        postDeleter: (url, csrf) async => deleted.add((url, csrf)),
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete profile post?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(deleted.single.$1, 'https://example.com/profile-posts/146954/delete');
+      expect(deleted.single.$2, 'mock-csrf');
+    });
+
+    testWidgets('cancelling the delete confirm leaves the post alone', (tester) async {
+      await signIn();
+      final deleted = <(String, String)>[];
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => ownPostPage(),
+        postDeleter: (url, csrf) async => deleted.add((url, csrf)),
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(deleted, isEmpty);
+      expect(find.text('My own wall post'), findsOneWidget);
+    });
+
+    testWidgets('shows comment edit/delete icons only on own comments', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchProfile: () async => ownPostPage());
+
+      // One own comment among two, so exactly one icon of each.
+      expect(find.byTooltip('Edit comment'), findsOneWidget);
+      expect(find.byTooltip('Delete comment'), findsOneWidget);
+    });
+
+    testWidgets('edits an own comment through the composer', (tester) async {
+      await signIn();
+      final saved = <(String, String, String)>[];
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => ownPostPage(),
+        editFetcher: (url) async => 'Original comment',
+        editSaver: (url, csrf, message) async => saved.add((url, csrf, message)),
+      );
+
+      await tester.tap(find.byTooltip('Edit comment'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Original comment'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'Updated comment');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(saved.single.$1, 'https://example.com/profile-posts/comments/173522/edit');
+      expect(saved.single.$2, 'mock-csrf');
+      expect(saved.single.$3, 'Updated comment');
+    });
+
+    testWidgets('deletes an own comment after confirming', (tester) async {
+      await signIn();
+      final deleted = <(String, String)>[];
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => ownPostPage(),
+        postDeleter: (url, csrf) async => deleted.add((url, csrf)),
+      );
+
+      await tester.tap(find.byTooltip('Delete comment'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete comment?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(deleted.single.$1, 'https://example.com/profile-posts/comments/173522/delete');
+      expect(deleted.single.$2, 'mock-csrf');
     });
   });
 

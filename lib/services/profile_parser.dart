@@ -128,6 +128,17 @@ List<ProfilePost> _parseWallPosts(Document document) {
       }
     }
 
+    // The action bar's edit/delete links only render on the viewer's own
+    // posts. Matching on the post's own id keeps nested comment actions
+    // (/profile-posts/comments/N/...) from leaking in.
+    String? editUrl;
+    String? deleteUrl;
+    for (final anchor in article.querySelectorAll('a[href]')) {
+      final href = anchor.attributes['href'] ?? '';
+      if (href.contains('profile-posts/$id/edit')) editUrl = _absoluteUrl(href);
+      if (href.contains('profile-posts/$id/delete')) deleteUrl = _absoluteUrl(href);
+    }
+
     posts.add(
       ProfilePost(
         id: id,
@@ -138,21 +149,41 @@ List<ProfilePost> _parseWallPosts(Document document) {
         body: _clean(article.querySelector('.message-body')?.text ?? ''),
         comments: [
           for (final comment in article.querySelectorAll('.comment'))
-            if (_idFrom(comment.attributes['data-content'] ?? '', _commentIdPattern) != 0)
-              ProfileComment(
-                id: _idFrom(comment.attributes['data-content'] ?? '', _commentIdPattern),
-                author: _clean(comment.attributes['data-author'] ?? ''),
-                avatarUrl: _absoluteOrNull(comment.querySelector('.comment-avatar img')?.attributes['src']),
-                authorUrl: _absoluteOrNull(comment.querySelector('.comment-avatar a')?.attributes['href']),
-                body: _clean(comment.querySelector('.comment-body')?.text ?? ''),
-                date: _clean(comment.querySelector('.comment-footer time')?.text ?? ''),
-              ),
+            if (_idFrom(comment.attributes['data-content'] ?? '', _commentIdPattern) != 0) _parseComment(comment),
         ],
         commentUrl: commentUrl,
+        editUrl: editUrl,
+        deleteUrl: deleteUrl,
       ),
     );
   }
   return posts;
+}
+
+ProfileComment _parseComment(Element comment) {
+  final id = _idFrom(comment.attributes['data-content'] ?? '', _commentIdPattern);
+
+  // Same arrangement as the post's action bar: the edit/delete links only
+  // render on the viewer's own comments, and matching on the comment's own
+  // id keeps sibling actions out.
+  String? editUrl;
+  String? deleteUrl;
+  for (final anchor in comment.querySelectorAll('a[href]')) {
+    final href = anchor.attributes['href'] ?? '';
+    if (href.contains('profile-posts/comments/$id/edit')) editUrl = _absoluteUrl(href);
+    if (href.contains('profile-posts/comments/$id/delete')) deleteUrl = _absoluteUrl(href);
+  }
+
+  return ProfileComment(
+    id: id,
+    author: _clean(comment.attributes['data-author'] ?? ''),
+    avatarUrl: _absoluteOrNull(comment.querySelector('.comment-avatar img')?.attributes['src']),
+    authorUrl: _absoluteOrNull(comment.querySelector('.comment-avatar a')?.attributes['href']),
+    body: _clean(comment.querySelector('.comment-body')?.text ?? ''),
+    date: _clean(comment.querySelector('.comment-footer time')?.text ?? ''),
+    editUrl: editUrl,
+    deleteUrl: deleteUrl,
+  );
 }
 
 List<ProfilePosting> _parsePostings(Document document) {

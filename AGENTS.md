@@ -35,6 +35,9 @@ that aren't obvious from reading the code:
   exception list.
 - Tests first (TDD): write or extend a failing test before the implementation
   change. Run `flutter analyze` before committing.
+- Don't launch the web dev server / Browser pane to verify changes — the
+  user always tests by hand and prefers saving the usage. Tests plus
+  `flutter analyze` are sufficient verification.
 
 ## Constraints
 

@@ -105,6 +105,17 @@ class ProfileService {
     );
   }
 
+  /// Deletes a viewer-owned wall post through its delete action.
+  static Future<void> deleteProfilePost(
+    String deleteUrl,
+    String csrfToken, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    return ThreadPageService.postAction(deleteUrl, csrfToken, client: client, packageInfoLoader: packageInfoLoader);
+  }
+
   static String _join(String base, String suffix) => base.endsWith('/') ? '$base$suffix' : '$base/$suffix';
 
   static Future<String> _fetchHtml(String url, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
@@ -166,6 +177,30 @@ class ProfileService {
           date: 'Jun 25, 2026',
           body: 'Any plans to mod Echoes ep. 4 when it drops?',
           commentUrl: 'https://example.com/profile-posts/138154/add-comment',
+        ),
+        // The signed-in member's own post: carries the edit/delete actions
+        // the site only renders for the post's author.
+        ProfilePost(
+          id: 146954,
+          author: 'Broodyr',
+          authorUrl: 'https://example.com/members/broodyr.1957582/',
+          date: 'Jun 20, 2026',
+          body: 'Echoes ep. 4 mod is in the works — expect it a week after release.',
+          comments: [
+            ProfileComment(id: 173518, author: 'RenFan88', body: 'Looking forward to it!', date: 'Jun 21, 2026'),
+            // The member's own comment carries its edit/delete actions too.
+            ProfileComment(
+              id: 173522,
+              author: 'Broodyr',
+              body: 'Progress is good so far.',
+              date: 'Jun 22, 2026',
+              editUrl: 'https://example.com/profile-posts/comments/173522/edit',
+              deleteUrl: 'https://example.com/profile-posts/comments/173522/delete',
+            ),
+          ],
+          commentUrl: 'https://example.com/profile-posts/146954/add-comment',
+          editUrl: 'https://example.com/profile-posts/146954/edit',
+          deleteUrl: 'https://example.com/profile-posts/146954/delete',
         ),
       ],
       csrfToken: 'mock-csrf',

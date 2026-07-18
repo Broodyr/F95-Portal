@@ -12,6 +12,12 @@ class ProfileComment {
   final String body;
   final String date;
 
+  /// Edit action; the site renders it only on the viewer's own comments.
+  final String? editUrl;
+
+  /// Delete action; rendered alongside [editUrl] on the viewer's own comments.
+  final String? deleteUrl;
+
   const ProfileComment({
     this.id = 0,
     required this.author,
@@ -19,6 +25,8 @@ class ProfileComment {
     this.authorUrl,
     required this.body,
     this.date = '',
+    this.editUrl,
+    this.deleteUrl,
   });
 }
 
@@ -36,6 +44,12 @@ class ProfilePost {
   /// Add-comment form action; only rendered for viewers who can comment.
   final String? commentUrl;
 
+  /// Edit action; the site renders it only on the viewer's own posts.
+  final String? editUrl;
+
+  /// Delete action; rendered alongside [editUrl] on the viewer's own posts.
+  final String? deleteUrl;
+
   const ProfilePost({
     this.id = 0,
     required this.author,
@@ -45,6 +59,8 @@ class ProfilePost {
     required this.body,
     this.comments = const [],
     this.commentUrl,
+    this.editUrl,
+    this.deleteUrl,
   });
 }
 

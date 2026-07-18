@@ -84,6 +84,38 @@ void main() {
     });
   });
 
+  group('parseProfilePage — own post actions', () {
+    late ProfilePage page;
+
+    setUpAll(() => page = parseProfilePage(fixture('profile_own_post.htm')));
+
+    test('parses edit and delete URLs on the viewer-owned post', () {
+      final post = page.wallPosts.singleWhere((p) => p.id == 146954);
+      expect(post.author, 'Broodyr');
+      expect(post.editUrl, 'https://f95zone.to/profile-posts/146954/edit');
+      expect(post.deleteUrl, 'https://f95zone.to/profile-posts/146954/delete');
+    });
+
+    test("others' posts parse without edit or delete URLs", () {
+      final other = parseProfilePage(fixture('profile_invader_incubus.htm'));
+      expect(other.wallPosts, isNotEmpty);
+      expect(other.wallPosts.every((p) => p.editUrl == null && p.deleteUrl == null), isTrue);
+    });
+
+    test('parses edit and delete URLs on the viewer-owned comment only', () {
+      final page = parseProfilePage(fixture('profile_own_comment.htm'));
+      final comments = page.wallPosts.singleWhere((p) => p.id == 146954).comments;
+
+      final own = comments.singleWhere((c) => c.id == 173522);
+      expect(own.editUrl, 'https://f95zone.to/profile-posts/comments/173522/edit');
+      expect(own.deleteUrl, 'https://f95zone.to/profile-posts/comments/173522/delete');
+
+      final other = comments.singleWhere((c) => c.id == 173518);
+      expect(other.editUrl, isNull);
+      expect(other.deleteUrl, isNull);
+    });
+  });
+
   group('parseProfilePage — postings', () {
     late ProfilePage page;
 
@@ -164,7 +196,13 @@ void main() {
       <div class="comment" data-author="someone" data-content="profile-post-comment-9">
         <span class="comment-avatar"><a href="/members/someone.99/"><img src="/data/avatars/s/328/328002.jpg"></a></span>
         <article class="comment-body">Hi back</article>
+        <a href="/profile-posts/comments/9/edit" class="actionBar-action actionBar-action--edit">Edit</a>
+        <a href="/profile-posts/comments/9/delete" class="actionBar-action actionBar-action--delete">Delete</a>
       </div>
+      <footer class="message-footer"><div class="message-actionBar actionBar">
+        <a href="/profile-posts/5/edit" class="actionBar-action actionBar-action--edit">Edit</a>
+        <a href="/profile-posts/5/delete" class="actionBar-action actionBar-action--delete">Delete</a>
+      </div></footer>
     </article>
   </li>
   <li role="tabpanel" aria-labelledby="recent-content">
@@ -192,7 +230,20 @@ void main() {
       expect(page.wallPostUrl, 'https://f95zone.to/members/someone.99/post');
       expect(page.wallPosts.single.comments.single.avatarUrl, 'https://f95zone.to/data/avatars/s/328/328002.jpg');
       expect(page.wallPosts.single.comments.single.authorUrl, 'https://f95zone.to/members/someone.99/');
+      expect(page.wallPosts.single.editUrl, 'https://f95zone.to/profile-posts/5/edit');
+      expect(page.wallPosts.single.deleteUrl, 'https://f95zone.to/profile-posts/5/delete');
+      expect(page.wallPosts.single.comments.single.editUrl, 'https://f95zone.to/profile-posts/comments/9/edit');
+      expect(page.wallPosts.single.comments.single.deleteUrl, 'https://f95zone.to/profile-posts/comments/9/delete');
       expect(page.postings.single.url, 'https://f95zone.to/threads/some-game.1/post-77');
+    });
+
+    test('comment edit links never become the post edit URL', () {
+      // Only the footer's own-id action counts; the nested comment's
+      // /profile-posts/comments/9/edit anchor must not be picked up.
+      final withoutFooter = relativeHtml.replaceAll(RegExp(r'<footer class="message-footer">[\s\S]*?</footer>'), '');
+      final page = parseProfilePage(withoutFooter);
+      expect(page.wallPosts.single.editUrl, isNull);
+      expect(page.wallPosts.single.deleteUrl, isNull);
     });
 
     test('lifts engine spans without the label class into prefixes', () {

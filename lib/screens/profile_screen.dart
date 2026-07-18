@@ -5,6 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../constants.dart';
 import '../models/profile.dart';
 import '../services/auth_service.dart';
+import '../services/forum_service.dart';
 import '../services/profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
@@ -22,6 +23,9 @@ typedef FetchProfileAbout = Future<ProfileAbout> Function(String profileUrl);
 /// Wall writes: new profile posts and comments share one shape (action URL,
 /// page CSRF, message).
 typedef ProfileMessagePoster = Future<void> Function(String url, String csrfToken, String message);
+
+/// Deletes a viewer-owned wall post through its delete action.
+typedef ProfilePostDeleter = Future<void> Function(String deleteUrl, String csrfToken);
 
 /// A member profile: identity header, then the profile-post wall, recent
 /// postings, and About as segmented tabs.
@@ -46,6 +50,9 @@ class ProfileScreen extends StatefulWidget {
   final FetchProfilePostings? fetchPostings;
   final FetchProfileAbout? fetchAbout;
   final ProfileMessagePoster? messagePoster;
+  final EditFetcher? editFetcher;
+  final EditSaver? editSaver;
+  final ProfilePostDeleter? postDeleter;
   final FetchThreadPosts? fetchThreadPosts;
   final FetchReactions? fetchReactions;
   final ReactSender? reactSender;
@@ -60,6 +67,9 @@ class ProfileScreen extends StatefulWidget {
     this.fetchPostings,
     this.fetchAbout,
     this.messagePoster,
+    this.editFetcher,
+    this.editSaver,
+    this.postDeleter,
     this.fetchThreadPosts,
     this.fetchReactions,
     this.reactSender,
@@ -243,6 +253,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onSubmit: (_, message) => poster(actionUrl, page.csrfToken, message),
     );
     if (posted && mounted) _refresh();
+  }
+
+  /// Fetches a post's or comment's BBCode, then reopens it in the composer —
+  /// the same flow the thread viewer uses for forum posts.
+  Future<void> _editViaComposer(String editUrl) async {
+    final page = _page;
+    if (page == null) return;
+
+    final String bbcode;
+    try {
+      final fetch = widget.editFetcher ?? ForumService.fetchEditBbcode;
+      bbcode = await fetch(editUrl);
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.show(context, '$e', error: true);
+      return;
+    }
+    if (!mounted) return;
+
+    final posted = await ForumComposer.show(
+      context,
+      heading: 'Edit post',
+      submitLabel: 'Save',
+      initialMessage: bbcode,
+      onSubmit: (_, message) {
+        final save = widget.editSaver ?? ForumService.saveEdit;
+        return save(editUrl, page.csrfToken, message);
+      },
+    );
+    if (posted && mounted) _refresh();
+  }
+
+  Future<void> _deleteWithConfirm(String deleteUrl, {required String title, required String message}) async {
+    final page = _page;
+    if (page == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        content: Text(message, style: const TextStyle(fontSize: 13)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final delete = widget.postDeleter ?? ProfileService.deleteProfilePost;
+      await delete(deleteUrl, page.csrfToken);
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.show(context, '$e', error: true);
+      return;
+    }
+    if (mounted) _refresh();
   }
 
   /// Opens another member's profile; taps on the profile currently shown
@@ -575,21 +643,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [for (final comment in post.comments) _buildComment(comment)],
               ),
             ),
-          if (post.commentUrl != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _composeMessage(heading: 'Comment', actionUrl: post.commentUrl!),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 30),
-                  foregroundColor: Colors.grey[500],
-                ),
-                icon: Icon(Icons.mode_comment_outlined, size: 13, color: Colors.grey[600]),
-                label: const Text('Comment', style: TextStyle(fontSize: 11.5)),
-              ),
+          if (post.editUrl != null || post.deleteUrl != null || post.commentUrl != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Edit/Delete gate on the per-post action links, which the
+                // site only renders on the viewer's own posts.
+                if (post.editUrl != null)
+                  _buildWallAction(Icons.edit_outlined, 'Edit', () => _editViaComposer(post.editUrl!)),
+                if (post.deleteUrl != null)
+                  _buildWallAction(
+                    Icons.delete_outline,
+                    'Delete',
+                    () => _deleteWithConfirm(
+                      post.deleteUrl!,
+                      title: 'Delete profile post?',
+                      message: 'The post and its comments will be removed.',
+                    ),
+                  ),
+                if (post.commentUrl != null)
+                  _buildWallAction(
+                    Icons.mode_comment_outlined,
+                    'Comment',
+                    () => _composeMessage(heading: 'Comment', actionUrl: post.commentUrl!),
+                  ),
+              ],
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWallAction(IconData icon, String label, VoidCallback onPressed) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        minimumSize: const Size(0, 30),
+        foregroundColor: Colors.grey[500],
+      ),
+      icon: Icon(icon, size: 13, color: Colors.grey[600]),
+      label: Text(label, style: const TextStyle(fontSize: 11.5)),
+    );
+  }
+
+  Widget _buildCommentAction(IconData icon, String tooltip, VoidCallback onTap) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Icon(icon, size: 13, color: Colors.grey[600]),
+        ),
       ),
     );
   }
@@ -624,6 +731,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     Text(comment.date, style: TextStyle(color: Colors.grey[700], fontSize: 10)),
+                    // Icon-only actions keep the inline comment row compact;
+                    // like the post's, they gate on the per-comment links.
+                    if (comment.editUrl != null)
+                      _buildCommentAction(
+                        Icons.edit_outlined,
+                        'Edit comment',
+                        () => _editViaComposer(comment.editUrl!),
+                      ),
+                    if (comment.deleteUrl != null)
+                      _buildCommentAction(
+                        Icons.delete_outline,
+                        'Delete comment',
+                        () => _deleteWithConfirm(
+                          comment.deleteUrl!,
+                          title: 'Delete comment?',
+                          message: 'The comment will be removed.',
+                        ),
+                      ),
                   ],
                 ),
                 Text(comment.body, style: TextStyle(color: Colors.grey[400], fontSize: 11.5, height: 1.4)),

@@ -86,6 +86,25 @@ void main() {
     expect(postings, hasLength(15));
   });
 
+  test('deleteProfilePost posts to the delete action with the CSRF token', () async {
+    final requests = <http.Request>[];
+    final client = MockClient((request) async {
+      requests.add(request);
+      return http.Response('{"status":"ok"}', 200);
+    });
+
+    await ProfileService.deleteProfilePost(
+      'https://f95zone.to/profile-posts/146954/delete',
+      'tok123',
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    expect(requests.single.method, 'POST');
+    expect(requests.single.url.toString(), 'https://f95zone.to/profile-posts/146954/delete');
+    expect(requests.single.body, contains('_xfToken=tok123'));
+  });
+
   test('fetchAbout requests the about tab URL and parses its pane', () async {
     const aboutHtml = '''
 <html><body><div class="block-container"><div class="block-body">
