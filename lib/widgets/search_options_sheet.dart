@@ -586,8 +586,8 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(999),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
                 border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
               ),
               child: Row(
@@ -618,7 +618,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 240),
       child: Material(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
@@ -683,8 +683,8 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(999),
+          color: Colors.black.withValues(alpha: AppAlphas.chipFill),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -750,8 +750,8 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
         duration: Motion.duration,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: filter == null ? Colors.black.withValues(alpha: 0.35) : accent.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(999),
+          color: filter == null ? Colors.black.withValues(alpha: AppAlphas.chipFill) : accent.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: filter == null ? Colors.transparent : accent, width: 1.5),
         ),
         child: Row(
@@ -801,7 +801,7 @@ class _FilterChipPill extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(10, 2, 0, 2),
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: accent.withValues(alpha: 0.6)),
         ),
         child: Row(

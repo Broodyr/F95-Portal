@@ -33,6 +33,13 @@ that aren't obvious from reading the code:
   `utils/formatters.dart`) stay local to their widget. Enforced by
   `test/theme_guard_test.dart` — its whitelist is the authoritative
   exception list.
+- Shared magic numbers live in `lib/constants.dart` (`AppBlur`, `AppRadii`,
+  `AppAlphas`, `AppDurations`, `AppLimits`, `AppButtons`). Add a token there
+  when a value starts repeating across files; a value used once, in one file,
+  stays a private `static const` next to its use. The blur tiers and the pill
+  radius are enforced by `test/constants_guard_test.dart` — its whitelist is
+  the authoritative exception list (`sfw_blur.dart` blurs to censor, not to
+  decorate, so it keeps its own sigma).
 - Tests first (TDD): write or extend a failing test before the implementation
   change. Run `flutter analyze` before committing.
 - Don't launch the web dev server / Browser pane to verify changes — the

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/search_query.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
@@ -81,7 +82,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
+      barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
       builder: (BuildContext context) {
         final colorScheme = Theme.of(context).colorScheme;
         final bool glass = SettingsService.instance.settings.glassEffects;
@@ -91,7 +92,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
         );
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: content) : content,
+          child: glass
+              ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: content)
+              : content,
         );
       },
     );

@@ -81,6 +81,6 @@ class AppToast {
   /// Wraps [child] in a backdrop blur only when glass effects are enabled.
   static Widget _maybeBlur(bool glass, {required Widget child}) {
     if (!glass) return child;
-    return BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: child);
+    return BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.bar, sigmaY: AppBlur.bar), child: child);
   }
 }

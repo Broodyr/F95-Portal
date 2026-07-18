@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/forum.dart';
 import '../services/settings_service.dart';
 import 'reaction_icon.dart';
@@ -27,7 +28,7 @@ class ReactionsSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
+      barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
       builder: (context) => ReactionsSheet(url: url, postNumber: postNumber, fetchReactions: fetchReactions),
     );
   }
@@ -162,7 +163,9 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: sheet) : sheet,
+        child: glass
+            ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: sheet)
+            : sheet,
       ),
     );
   }
@@ -175,7 +178,7 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: selected ? colorScheme.primary.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: selected ? colorScheme.primary : Colors.transparent),
         ),
         child: Row(

@@ -73,7 +73,7 @@ class BrowseDetailsSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
+      barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
       builder: (BuildContext context) => BrowseDetailsSheet(
         thread: thread,
         category: category,
@@ -362,7 +362,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
 
   Widget _maybeBlur(bool glass, {required Widget child}) {
     if (!glass) return child;
-    return BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: child);
+    return BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: child);
   }
 
   // --- Scraped page sections -----------------------------------------------
@@ -445,7 +445,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
               borderRadius: BorderRadius.circular(12),
             ),
             child: _buildHostLinks(colorScheme, page.attachments),
@@ -503,7 +503,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
               borderRadius: BorderRadius.circular(12),
             ),
             // The card glides between the 5-line clamp and the full text.
@@ -556,7 +556,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -581,7 +581,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -658,7 +658,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
                       color: i == selectedIndex ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
                       border: Border.all(
                         color: i == selectedIndex
                             ? colorScheme.primary
@@ -724,7 +724,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -833,7 +833,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: colorScheme.primary.withValues(alpha: 0.45)),
           ),
@@ -944,8 +944,8 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(999),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
                 border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
               ),
               child: Text(

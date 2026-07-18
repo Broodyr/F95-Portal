@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/forum.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
@@ -286,7 +287,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
             ),
             Container(
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../constants.dart';
 import '../models/profile.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
@@ -15,7 +16,7 @@ class ProfileService {
   /// redirects to the canonical slug URL.
   static Future<ProfilePage> fetchOwnProfile({http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockProfilePage();
     }
     final userId = AuthService.instance.userId;
@@ -33,7 +34,7 @@ class ProfileService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockProfilePage();
     }
     return parseProfilePage(await _fetchHtml(url, client: client, packageInfoLoader: packageInfoLoader));
@@ -47,7 +48,7 @@ class ProfileService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockPostings();
     }
     final html = await _fetchHtml(_join(profileUrl, 'recent-content'), client: client, packageInfoLoader: packageInfoLoader);
@@ -61,7 +62,7 @@ class ProfileService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockProfileAbout();
     }
     return parseProfileAbout(
@@ -77,7 +78,7 @@ class ProfileService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) {
-    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
     return ThreadPageService.postAction(
       wallPostUrl,
       csrfToken,
@@ -95,7 +96,7 @@ class ProfileService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) {
-    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
     return ThreadPageService.postAction(
       commentUrl,
       csrfToken,
@@ -112,7 +113,7 @@ class ProfileService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) {
-    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
     return ThreadPageService.postAction(deleteUrl, csrfToken, client: client, packageInfoLoader: packageInfoLoader);
   }
 

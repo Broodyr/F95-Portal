@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../constants.dart';
 import '../models/account.dart';
 import '../models/forum.dart';
 import '../models/thread_page.dart';
@@ -13,12 +14,11 @@ import 'thread_page_service.dart';
 /// reaction overlays), with a small URL-keyed cache like ThreadPageService.
 class ForumService {
   static const String indexUrl = 'https://f95zone.to/';
-  static const int _cacheLimit = 20;
   static final Map<String, Object> _cache = {};
 
   static Future<ForumIndex> fetchIndex({http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockForumIndex();
     }
     return _cached(
@@ -34,7 +34,7 @@ class ForumService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockForumPage();
     }
     final pageUrl = _withPage(url, page);
@@ -51,7 +51,7 @@ class ForumService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockThreadPosts(page: page);
     }
     final pageUrl = _withPage(url, page);
@@ -77,7 +77,7 @@ class ForumService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockReactionsPage();
     }
     return _cached(
@@ -157,7 +157,7 @@ class ForumService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockBookmarks(page: page);
     }
     final pageUrl = _withQueryPage(bookmarksUrl, page);
@@ -169,7 +169,7 @@ class ForumService {
 
   static Future<AlertsPage> fetchAlerts({int page = 1, http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockAlerts(page: page);
     }
     final pageUrl = _withQueryPage(alertsUrl, page);
@@ -245,7 +245,7 @@ class ForumService {
     final cached = _cache[key];
     if (cached is T) return cached;
     final value = await load();
-    if (_cache.length >= _cacheLimit) {
+    if (_cache.length >= AppLimits.pageCacheEntries) {
       _cache.remove(_cache.keys.first);
     }
     _cache[key] = value;
@@ -301,7 +301,7 @@ class ForumService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockSearchPage();
     }
 
@@ -355,7 +355,7 @@ class ForumService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return createMockSearchPage(page: page);
     }
     final separator = searchUrl.contains('?') ? '&' : '?';
@@ -369,7 +369,7 @@ class ForumService {
   /// Fetches the BBCode source of an editable post from its edit page.
   static Future<String> fetchEditBbcode(String editUrl, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(AppDurations.mockWrite);
       return 'Mock post body to edit.';
     }
     return parseEditBbcode(await _fetchHtml(editUrl, client: client, packageInfoLoader: packageInfoLoader));
@@ -383,7 +383,7 @@ class ForumService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) {
-    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
     return ThreadPageService.postAction(
       editUrl,
       csrfToken,
@@ -405,7 +405,7 @@ class ForumService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) {
-    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
     return ThreadPageService.postAction(
       'https://f95zone.to/posts/$postId/react?reaction_id=$reactionId',
       csrfToken,
@@ -422,7 +422,7 @@ class ForumService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) {
-    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
     return ThreadPageService.postAction(
       replyUrl,
       csrfToken,
@@ -441,7 +441,7 @@ class ForumService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) {
-    if (kIsWeb) return Future.delayed(const Duration(milliseconds: 200));
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
     return ThreadPageService.postAction(
       postThreadUrl,
       csrfToken,

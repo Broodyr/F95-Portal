@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../services/settings_service.dart';
 import 'reaction_icon.dart';
 
@@ -14,7 +15,7 @@ class ReactionPicker extends StatelessWidget {
     return showModalBottomSheet<int>(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
+      barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
       builder: (context) => const ReactionPicker(),
     );
   }
@@ -63,7 +64,7 @@ class ReactionPicker extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
                         border: Border.all(color: entry.value.color.withValues(alpha: 0.45)),
                       ),
                       child: Row(
@@ -85,7 +86,9 @@ class ReactionPicker extends StatelessWidget {
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: sheet) : sheet,
+      child: glass
+          ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: sheet)
+          : sheet,
     );
   }
 }

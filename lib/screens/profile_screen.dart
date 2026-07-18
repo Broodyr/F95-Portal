@@ -518,7 +518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                       decoration: BoxDecoration(
                         color: AppColors.of(context).chipSurface,
-                        borderRadius: BorderRadius.circular(999),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
                       child: Text(page.memberTitle, style: TextStyle(color: Colors.grey[400], fontSize: 10.5)),
                     ),

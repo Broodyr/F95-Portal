@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_query.dart';
 import '../utils/formatters.dart';
@@ -185,7 +186,7 @@ class ActiveFiltersBar extends StatelessWidget {
 
   Widget _maybeBlur(bool glass, {required Widget child}) {
     if (!glass) return child;
-    return BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: child);
+    return BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.bar, sigmaY: AppBlur.bar), child: child);
   }
 
   Widget _buildChip(ColorScheme colorScheme, _BarChip chip) {
@@ -198,7 +199,7 @@ class ActiveFiltersBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: accent.withValues(alpha: 0.55)),
         ),
         child: Row(

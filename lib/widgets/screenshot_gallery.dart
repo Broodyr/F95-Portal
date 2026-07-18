@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+import '../constants.dart';
 import 'remote_image.dart';
 import 'sfw_blur.dart';
 
@@ -269,7 +270,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
                 ),
                 child: const Icon(Icons.close, color: Colors.white, size: 18),
               ),
@@ -285,7 +286,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
                   ),
                   child: Text(
                     '${_index + 1} / ${widget.urls.length}',

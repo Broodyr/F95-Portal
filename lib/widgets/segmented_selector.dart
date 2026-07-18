@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import 'sliding_reveal.dart';
 
 /// The app's standard radio group: a borderless dark pill track holding one
@@ -36,7 +37,10 @@ class SegmentedSelector<T> extends StatelessWidget {
     final track = Container(
       // Borderless dark track: the selected segment carries the only border,
       // so it does not clash with an outer outline.
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: AppAlphas.chipFill),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
       child: Stack(
         children: [
           // One shared highlight pill that slides between segments rather
@@ -54,7 +58,7 @@ class SegmentedSelector<T> extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: colorScheme.primary.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
                       border: Border.all(color: colorScheme.primary, width: 1.5),
                     ),
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
+import '../constants.dart';
 import '../models/forum.dart';
 import '../services/forum_service.dart';
 import '../services/thread_page_service.dart';
@@ -448,7 +449,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 3),
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
               ),
               child: Text(
@@ -511,7 +512,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
         decoration: BoxDecoration(
           color: current ? colorScheme.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: current ? colorScheme.primary : Colors.transparent),
         ),
         child: Text(
@@ -658,7 +659,7 @@ class _PostCardState extends State<_PostCard> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
         borderRadius: BorderRadius.circular(12),
         border: widget.highlighted ? Border.all(color: colorScheme.primary.withValues(alpha: 0.45)) : null,
       ),
@@ -907,7 +908,7 @@ class _PostCardState extends State<_PostCard> {
         padding: const EdgeInsets.fromLTRB(5, 3, 9, 3),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Row(

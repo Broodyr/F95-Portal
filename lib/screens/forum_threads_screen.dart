@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/forum.dart';
 import '../services/forum_service.dart';
 import '../widgets/forum_composer.dart';
@@ -220,7 +221,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
           if (subforums.isNotEmpty) ...[
             Container(
               decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(

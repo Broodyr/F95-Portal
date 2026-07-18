@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import '../constants.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../models/browse_thread.dart';
@@ -100,7 +101,7 @@ class ApiService {
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(AppDurations.mockRead);
       return _mockPopularTags();
     }
 

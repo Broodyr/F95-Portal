@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'dart:ui';
 
+import '../constants.dart';
 import 'glass_aware.dart';
 import 'sliding_reveal.dart';
 
@@ -125,7 +126,7 @@ class CustomBottomNavigation extends StatelessWidget {
   /// Wraps [child] in a backdrop blur only when glass effects are enabled.
   Widget _maybeBlur(bool glass, {required Widget child}) {
     if (!glass) return child;
-    return BackdropFilter(filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), child: child);
+    return BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.bar, sigmaY: AppBlur.bar), child: child);
   }
 
   Widget _buildNavItem({

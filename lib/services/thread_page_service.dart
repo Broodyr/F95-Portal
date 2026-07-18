@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../constants.dart';
 import '../models/thread_page.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
@@ -9,7 +10,6 @@ import 'thread_page_parser.dart';
 /// Fetches and parses thread first posts, with a small in-memory cache so
 /// reopening a details sheet is instant.
 class ThreadPageService {
-  static const int _cacheLimit = 20;
   static final Map<int, ThreadPage> _cache = {};
 
   static Future<ThreadPage> fetch(int threadId, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
@@ -50,7 +50,7 @@ class ThreadPageService {
   }
 
   static void _store(int threadId, ThreadPage page) {
-    if (_cache.length >= _cacheLimit) {
+    if (_cache.length >= AppLimits.pageCacheEntries) {
       _cache.remove(_cache.keys.first);
     }
     _cache[threadId] = page;

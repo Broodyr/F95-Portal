@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
+import '../constants.dart';
 import '../models/account.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
@@ -40,7 +41,7 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
+      barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
       builder: (BuildContext context) {
         final colorScheme = Theme.of(context).colorScheme;
         final bool glass = SettingsService.instance.settings.glassEffects;
@@ -57,7 +58,9 @@ class SettingsScreen extends StatelessWidget {
         );
         return ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: content) : content,
+          child: glass
+              ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: content)
+              : content,
         );
       },
     );
@@ -256,8 +259,9 @@ class SettingsScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: (exclude ? colorScheme.error : colorScheme.surfaceContainerHighest).withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(999),
+              color: (exclude ? colorScheme.error : colorScheme.surfaceContainerHighest)
+                  .withValues(alpha: AppAlphas.chipFill),
+              borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
                 color: exclude
                     ? colorScheme.error.withValues(alpha: 0.6)

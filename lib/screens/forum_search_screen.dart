@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/forum.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
@@ -195,8 +196,10 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
         duration: Motion.duration,
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
         decoration: BoxDecoration(
-          color: selected ? colorScheme.primary.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.35),
-          borderRadius: BorderRadius.circular(999),
+          color: selected
+              ? colorScheme.primary.withValues(alpha: 0.25)
+              : Colors.black.withValues(alpha: AppAlphas.chipFill),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: selected ? colorScheme.primary : Colors.transparent),
         ),
         child: Text(

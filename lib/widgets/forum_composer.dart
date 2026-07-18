@@ -37,7 +37,7 @@ class ForumComposer extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
+      barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
       builder: (context) => ForumComposer(
         heading: heading,
         onSubmit: onSubmit,
@@ -260,7 +260,9 @@ class _ForumComposerState extends State<ForumComposer> {
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      child: glass ? BackdropFilter(filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24), child: sheet) : sheet,
+      child: glass
+          ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: sheet)
+          : sheet,
     );
   }
 }

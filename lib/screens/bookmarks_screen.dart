@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/account.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
@@ -265,7 +266,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
