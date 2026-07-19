@@ -39,7 +39,7 @@ void main() {
 
     test('falls back to Others for unknown engines', () {
       final color = EngineColors.getEngineColor('Unknown Engine');
-      expect(color.toARGB32(), 0xFF6e9e37);
+      expect(color.toARGB32(), 0xFF6c9c34);
     });
   });
 

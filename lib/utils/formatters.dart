@@ -54,7 +54,7 @@ class EngineColors {
     'Poser': Color(0xFFba4545),
     'Tutorial': Color(0xFF6c9c34),
     'Unreal': Color(0xFF0d47a1),
-    'VAM': Color(0xFF0d47a1)
+    'VAM': Color(0xFF0d47a1),
   };
 
   /// Gets the color for a given engine name
