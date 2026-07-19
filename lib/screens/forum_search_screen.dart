@@ -253,13 +253,15 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
               const SizedBox(height: 8),
               Text("Couldn't search", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
               const SizedBox(height: 4),
-              // The underlying message distinguishes which stage failed.
+              // The underlying message distinguishes which stage failed. A
+              // step under the headline above it, not two — it's the same
+              // error, just the detail of it.
               Text(
                 _error!,
                 textAlign: TextAlign.center,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.grey[700], fontSize: 11),
+                style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11),
               ),
               TextButton(onPressed: _search, child: const Text('Retry')),
             ],
