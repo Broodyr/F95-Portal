@@ -6,6 +6,7 @@ import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
+import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
 import 'app_toast.dart';
 import 'segmented_selector.dart';
@@ -417,7 +418,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
                         // the button height stays put.
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
+                        foregroundColor: colorScheme.secondary,
                         textStyle: AppButtons.ctaTextStyle,
                       ),
                       icon: const Icon(Icons.search, size: AppButtons.ctaIconSize),
@@ -543,7 +544,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
         style: TextStyle(fontSize: _fontSize.anchored(16)),
         decoration: InputDecoration(
           hintText: 'Search titles, tags, creators…',
-          hintStyle: TextStyle(fontSize: _fontSize.anchored(16)),
+          hintStyle: TextStyle(color: AppColors.of(context).hintText, fontSize: _fontSize.anchored(16)),
           border: InputBorder.none,
           prefixIcon: const Icon(Icons.search),
           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),

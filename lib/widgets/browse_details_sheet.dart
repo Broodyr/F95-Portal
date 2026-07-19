@@ -314,7 +314,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                                   onPressed: _openThread,
                                   style: FilledButton.styleFrom(
                                     backgroundColor: colorScheme.primary,
-                                    foregroundColor: colorScheme.onPrimary,
+                                    foregroundColor: colorScheme.secondary,
                                     padding: const EdgeInsets.symmetric(vertical: 14),
                                     textStyle: AppButtons.ctaTextStyle,
                                   ),

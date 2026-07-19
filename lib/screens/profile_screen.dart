@@ -10,6 +10,7 @@ import '../services/profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
+import '../widgets/glass_dialog.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/segmented_selector.dart';
@@ -291,12 +292,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontSize: 16)),
-        content: Text(message, style: const TextStyle(fontSize: 13)),
+      builder: (dialogContext) => GlassDialog(
+        title: Text(title),
+        content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: GlassDialog.cancelStyle(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: GlassDialog.confirmStyle(context),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -403,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: _signIn,
               style: FilledButton.styleFrom(
                 backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
+                foregroundColor: colorScheme.secondary,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 textStyle: AppButtons.ctaTextStyle,
               ),

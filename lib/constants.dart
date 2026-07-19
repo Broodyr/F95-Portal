@@ -19,12 +19,15 @@ abstract final class AppDurations {
 }
 
 abstract final class AppBlur {
-  /// Backdrop blur for the large glass surfaces: sheets, panels, dialogs.
+  /// Backdrop blur for the large glass surfaces: sheets, panels.
   static const double panel = 24;
 
   /// Lighter blur for thin chrome — bars and toasts — where the panel value
   /// smears the content behind them into mush.
   static const double bar = 15;
+
+  /// Even lighter blur for dialogs that sit on top of low-detail content.
+  static const double dialog = 6;
 }
 
 abstract final class AppRadii {
@@ -39,7 +42,7 @@ abstract final class AppRadii {
 }
 
 abstract final class AppAlphas {
-  /// Scrim behind modal sheets.
+  /// Scrim behind modal sheets and dialogs.
   static const double sheetBarrier = 0.55;
 
   /// Fill for chips, tiles, and unselected pill tracks.

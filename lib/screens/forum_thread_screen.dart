@@ -6,8 +6,10 @@ import '../constants.dart';
 import '../models/forum.dart';
 import '../services/forum_service.dart';
 import '../services/thread_page_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
+import '../widgets/glass_dialog.dart';
 import '../widgets/glass_fab.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reaction_picker.dart';
@@ -483,19 +485,30 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     int? entered;
     final page = await showDialog<int>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Go to page', style: TextStyle(fontSize: 16)),
+      builder: (dialogContext) => GlassDialog(
+        title: const Text('Go to page'),
         content: TextField(
           key: const Key('page-jump-field'),
           autofocus: true,
           keyboardType: TextInputType.number,
           onChanged: (value) => entered = int.tryParse(value.trim()),
           onSubmitted: (value) => Navigator.of(dialogContext).pop(int.tryParse(value.trim())),
-          decoration: InputDecoration(hintText: '1–$totalPages'),
+          decoration: InputDecoration(
+            hintText: '1–$totalPages',
+            hintStyle: TextStyle(color: AppColors.of(context).hintText),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(entered), child: const Text('Go')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: GlassDialog.cancelStyle(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(entered),
+            style: GlassDialog.confirmStyle(context),
+            child: const Text('Go'),
+          ),
         ],
       ),
     );

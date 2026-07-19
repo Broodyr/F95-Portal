@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../services/settings_service.dart';
+import '../theme/app_colors.dart';
+import 'glass_dialog.dart';
 
 /// Compose sheet for replies and new threads: optional title field, a
 /// BBCode message field, and a submit that runs [onSubmit] (closing on
@@ -113,9 +115,8 @@ class _ForumComposerState extends State<ForumComposer> {
     final colorScheme = Theme.of(context).colorScheme;
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('BBCode cheatsheet', style: TextStyle(fontSize: 16)),
-        contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      builder: (dialogContext) => GlassDialog(
+        title: const Text('BBCode cheatsheet'),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView.separated(
@@ -139,7 +140,13 @@ class _ForumComposerState extends State<ForumComposer> {
             },
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Close'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: GlassDialog.cancelStyle(context),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -147,7 +154,7 @@ class _ForumComposerState extends State<ForumComposer> {
   InputDecoration _decoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
+      hintStyle: TextStyle(color: AppColors.of(context).hintText, fontSize: 13),
       filled: true,
       fillColor: Colors.black.withValues(alpha: 0.3),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -236,7 +243,7 @@ class _ForumComposerState extends State<ForumComposer> {
             onPressed: _canSubmit ? _submit : null,
             style: FilledButton.styleFrom(
               backgroundColor: colorScheme.primary,
-              foregroundColor: colorScheme.onPrimary,
+              foregroundColor: colorScheme.secondary,
               padding: const EdgeInsets.symmetric(vertical: 13),
               textStyle: AppButtons.ctaTextStyle,
             ),

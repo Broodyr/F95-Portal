@@ -18,6 +18,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.chipSurface,
     required this.brightText,
     required this.bodyText,
+    required this.hintText,
   });
 
   /// Card/image placeholders, spoiler backgrounds.
@@ -35,12 +36,17 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Softer body copy: post bodies, bios.
   final Color bodyText;
 
+  /// Placeholder text in empty input fields; dimmer than [bodyText] so a
+  /// hint never reads as something the user typed.
+  final Color hintText;
+
   static const AppColors dark = AppColors(
     placeholderSurface: Color(0xFF2A2A2A),
     mutedForeground: Color(0xFF666666),
     chipSurface: Color(0xFF262629),
     brightText: Color(0xFFE8E8E8),
     bodyText: Color(0xFFC9C9C9),
+    hintText: Color(0xFF757575),
   );
 
   /// Falls back to [dark] when the theme lacks the extension (bare
@@ -54,6 +60,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? chipSurface,
     Color? brightText,
     Color? bodyText,
+    Color? hintText,
   }) {
     return AppColors(
       placeholderSurface: placeholderSurface ?? this.placeholderSurface,
@@ -61,6 +68,7 @@ class AppColors extends ThemeExtension<AppColors> {
       chipSurface: chipSurface ?? this.chipSurface,
       brightText: brightText ?? this.brightText,
       bodyText: bodyText ?? this.bodyText,
+      hintText: hintText ?? this.hintText,
     );
   }
 
@@ -73,6 +81,7 @@ class AppColors extends ThemeExtension<AppColors> {
       chipSurface: Color.lerp(chipSurface, other.chipSurface, t)!,
       brightText: Color.lerp(brightText, other.brightText, t)!,
       bodyText: Color.lerp(bodyText, other.bodyText, t)!,
+      hintText: Color.lerp(hintText, other.hintText, t)!,
     );
   }
 }

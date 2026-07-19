@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'constants.dart';
 import 'main_app.dart';
 import 'models/f95_metadata.dart';
 import 'services/auth_service.dart';
@@ -61,10 +62,7 @@ class F95Portal extends StatelessWidget {
         theme: ThemeData(
           colorScheme: const ColorScheme.dark(
             primary: Color(0xFFDC144D),
-            // Single-accent app: secondary is a neutral grey. Its only
-            // visible surface is M3 fallbacks (secondaryContainer ->
-            // secondary), e.g. the login progress bar's track.
-            secondary: Color(0xFF3A3A3A),
+            secondary: Color(0xFF181818),
             surface: AppPalette.surface,
           ),
           scaffoldBackgroundColor: AppPalette.background,
@@ -77,6 +75,22 @@ class F95Portal extends StatelessWidget {
           bottomSheetTheme: const BottomSheetThemeData(
             backgroundColor: AppPalette.surface,
             modalBackgroundColor: AppPalette.surface,
+          ),
+          // `GlassDialog` reads these rather than inheriting them, since it
+          // can't build on [Dialog] (see its doc comment) — so this stays the
+          // one place dialog chrome is defined, for it and for any plain
+          // AlertDialog that picks the theme up for free.
+          dialogTheme: DialogThemeData(
+            backgroundColor: AppPalette.surface,
+            barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+            titleTextStyle: TextStyle(
+              color: AppColors.dark.brightText,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            contentTextStyle: TextStyle(color: AppColors.dark.bodyText, fontSize: 13),
           ),
           extensions: const [AppColors.dark],
         ),

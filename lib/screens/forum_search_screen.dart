@@ -4,6 +4,7 @@ import '../constants.dart';
 import '../models/forum.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/segmented_selector.dart';
@@ -149,7 +150,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
           style: const TextStyle(color: Colors.white, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Search the forum…',
-            hintStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
+            hintStyle: TextStyle(color: AppColors.of(context).hintText, fontSize: 14),
             border: InputBorder.none,
           ),
         ),

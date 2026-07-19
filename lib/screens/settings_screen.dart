@@ -133,7 +133,7 @@ class SettingsScreen extends StatelessWidget {
                       onPressed: () => _editDefaults(context),
                       style: FilledButton.styleFrom(
                         backgroundColor: colorScheme.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: colorScheme.secondary,
                       ),
                       icon: const Icon(Icons.tune, size: 18),
                       label: const Text('Edit defaults'),
