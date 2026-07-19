@@ -191,7 +191,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: Motion.duration,
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
         decoration: BoxDecoration(
           color: selected
               ? colorScheme.primary.withValues(alpha: 0.25)
