@@ -533,7 +533,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+        border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.3)),
       ),
       child: TextField(
         controller: _searchController,
@@ -593,7 +593,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
                 borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.5)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -626,7 +626,7 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
         color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.2)),
+          side: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.2)),
         ),
         clipBehavior: Clip.antiAlias,
         child: ListView(

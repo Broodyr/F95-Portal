@@ -43,11 +43,12 @@ void main() {
     );
   });
 
-  // ColorScheme.dark() derives no container ladder — it returns `surface`
-  // for every surfaceContainer* role. A role the app reads but the theme
-  // never pins therefore paints as whatever it sits on and disappears, which
-  // is how the detail sheet's chip fills came to render as nothing at all.
-  test('every surfaceContainer role the app reads is pinned in the ColorScheme', () {
+  // ColorScheme.dark() predates the M3 roles and fills them with junk rather
+  // than deriving them: every surfaceContainer* comes back as `surface`, and
+  // outline/outlineVariant come back pure white. Reading one the theme never
+  // pins gets you that junk — which is how the detail sheet's chip fills came
+  // to render as nothing at all, painting surface onto surface.
+  test('every M3 role the app reads is pinned in the ColorScheme', () {
     final theme = File('lib/main.dart').readAsStringSync();
     final used = <String>{};
     final files = Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
@@ -55,7 +56,7 @@ void main() {
     for (final file in files) {
       for (final line in file.readAsLinesSync()) {
         if (line.trimLeft().startsWith('//')) continue;
-        used.addAll(RegExp(r'\.(surfaceContainer[A-Za-z]*)').allMatches(line).map((m) => m[1]!));
+        used.addAll(RegExp(r'\.(surfaceContainer[A-Za-z]*|outlineVariant|outline)\b').allMatches(line).map((m) => m[1]!));
       }
     }
 
@@ -64,9 +65,11 @@ void main() {
       unpinned,
       isEmpty,
       reason:
-          'These surfaceContainer roles are read but never set on the '
-          'ColorScheme in lib/main.dart, so they resolve to `surface` and '
-          'render invisible against it: ${unpinned.join(', ')}',
+          'These roles are read but never set on the ColorScheme in '
+          'lib/main.dart, so they resolve to whatever ColorScheme.dark() '
+          'happens to leave there (surface, or pure white) rather than to '
+          'anything the theme chose: ${unpinned.join(', ')}. Either pin them '
+          'in main.dart or use a token that exists.',
     );
   });
 }

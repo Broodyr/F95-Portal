@@ -37,7 +37,10 @@ class GlassDialog extends StatelessWidget {
     return TextButton.styleFrom(
       foregroundColor: AppColors.of(context).bodyText,
       shape: StadiumBorder(
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        // Heavier than the app's hairline borders on purpose: this one has to
+        // hold its own beside a filled confirm button, and 0.5 is about where
+        // Material's own outlined-button border sits.
+        side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
     );

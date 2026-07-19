@@ -665,7 +665,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                       border: Border.all(
                         color: i == selectedIndex
                             ? colorScheme.primary
-                            : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                            : colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Text(
@@ -948,7 +948,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
                 borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.3)),
               ),
               child: Text(
                 metadata.tagName(tagId) ?? '#$tagId',

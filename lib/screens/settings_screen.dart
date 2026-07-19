@@ -269,7 +269,7 @@ class SettingsScreen extends StatelessWidget {
               border: Border.all(
                 color: exclude
                     ? colorScheme.error.withValues(alpha: 0.6)
-                    : colorScheme.outlineVariant.withValues(alpha: 0.4),
+                    : colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ),
             child: Row(
