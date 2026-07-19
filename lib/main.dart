@@ -79,6 +79,11 @@ class F95Portal extends StatelessWidget {
             // surface. Chip fills did exactly that, and since the sheets
             // they sit on are also surface, they came out invisible.
             surfaceContainerHighest: AppPalette.raisedSurface,
+            // Same trap, different role: onSurfaceVariant means the muted
+            // counterpart to onSurface, but unpinned it comes back as the
+            // same pure white, so the secondary labels and icons written
+            // against it lost the contrast step they were asking for.
+            onSurfaceVariant: AppPalette.subtleText,
           ),
           scaffoldBackgroundColor: AppPalette.background,
           appBarTheme: const AppBarTheme(

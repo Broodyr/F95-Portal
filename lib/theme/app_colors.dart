@@ -18,6 +18,13 @@ abstract final class AppPalette {
   /// has to sit well clear of [surface] to register at all — most of the
   /// gap between them is eaten by that 35%.
   static const Color raisedSurface = Color(0xFF303030);
+
+  /// Wired to `ColorScheme.onSurfaceVariant`, and the same value as
+  /// [AppColors.subtleText] — the role means the muted counterpart to
+  /// onSurface, which is what that token already is. Left unpinned it comes
+  /// back as pure white, no different from onSurface, so everything written
+  /// to read as secondary renders at full strength instead.
+  static const Color subtleText = Color(0xFF9E9E9E);
 }
 
 /// Theme extension for app-specific colors that don't map onto
@@ -63,7 +70,7 @@ class AppColors extends ThemeExtension<AppColors> {
     chipSurface: Color(0xFF262629),
     brightText: Color(0xFFE8E8E8),
     bodyText: Color(0xFFC9C9C9),
-    subtleText: Color(0xFF9E9E9E),
+    subtleText: AppPalette.subtleText,
     hintText: Color(0xFF757575),
   );
 

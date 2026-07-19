@@ -397,9 +397,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Icon(Icons.person_outline, size: 64, color: Colors.grey[600]),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Not signed in',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.of(context).brightText, fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -436,9 +436,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             children: [
               if (_isOwnProfile) ...[
-                const Text(
+                Text(
                   'Profile',
-                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: AppColors.of(context).brightText, fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 8),
                 Text('f95zone.to', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
@@ -460,7 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     _page?.username ?? widget.username ?? 'Profile',
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppColors.of(context).brightText, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -518,7 +518,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Text(
                       page.username,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.of(context).brightText, fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                   if (page.memberTitle.isNotEmpty) ...[
@@ -846,7 +846,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     TextSpan(
                       text: posting.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12.5, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),

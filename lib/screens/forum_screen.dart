@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../models/forum.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/forum_node_row.dart';
 import '../widgets/reactions_sheet.dart';
 import 'alerts_screen.dart';
@@ -173,9 +174,9 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Forum',
-                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppColors.of(context).brightText, fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(width: 8),
                   Text('f95zone.to', style: TextStyle(color: Colors.grey[600], fontSize: 11)),

@@ -45,9 +45,11 @@ void main() {
 
   // ColorScheme.dark() predates the M3 roles and fills them with junk rather
   // than deriving them: every surfaceContainer* comes back as `surface`, and
-  // outline/outlineVariant come back pure white. Reading one the theme never
-  // pins gets you that junk — which is how the detail sheet's chip fills came
-  // to render as nothing at all, painting surface onto surface.
+  // outline, outlineVariant and onSurfaceVariant all come back pure white.
+  // Reading one the theme never pins gets you that junk — which is how the
+  // detail sheet's chip fills came to render as nothing at all, painting
+  // surface onto surface, and how every muted label was drawing at the same
+  // full strength as the text it was meant to sit under.
   test('every M3 role the app reads is pinned in the ColorScheme', () {
     final theme = File('lib/main.dart').readAsStringSync();
     final used = <String>{};
@@ -56,7 +58,11 @@ void main() {
     for (final file in files) {
       for (final line in file.readAsLinesSync()) {
         if (line.trimLeft().startsWith('//')) continue;
-        used.addAll(RegExp(r'\.(surfaceContainer[A-Za-z]*|outlineVariant|outline)\b').allMatches(line).map((m) => m[1]!));
+        used.addAll(
+          RegExp(
+            r'\.(surfaceContainer[A-Za-z]*|outlineVariant|outline|onSurfaceVariant)\b',
+          ).allMatches(line).map((m) => m[1]!),
+        );
       }
     }
 

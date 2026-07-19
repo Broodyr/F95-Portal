@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/forum.dart';
+import '../theme/app_colors.dart';
 
 /// One forum row, shared by the directory and the subforum block at the
 /// top of a thread list. [compact] drops the last-post teaser line.
@@ -73,7 +74,11 @@ class ForumNodeRow extends StatelessWidget {
                           node.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            color: AppColors.of(context).brightText,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                       if (node.threads.isNotEmpty) ...[
