@@ -64,6 +64,12 @@ class F95Portal extends StatelessWidget {
             primary: Color(0xFFDC144D),
             secondary: Color(0xFF181818),
             surface: AppPalette.surface,
+            // ColorScheme.dark() derives no container ladder — it hands back
+            // `surface` for every surfaceContainer* role — so any role the
+            // app reads has to be pinned here or it silently paints as
+            // surface. Chip fills did exactly that, and since the sheets
+            // they sit on are also surface, they came out invisible.
+            surfaceContainerHighest: AppPalette.raisedSurface,
           ),
           scaffoldBackgroundColor: AppPalette.background,
           appBarTheme: const AppBarTheme(

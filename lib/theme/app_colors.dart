@@ -7,6 +7,13 @@ abstract final class AppPalette {
   static const Color surface = Color(0xFF1C1C1C);
   static const Color background = Color(0xFF0F0F0F);
   static const Color appBar = Color(0xFF1A1A1A);
+
+  /// Wired to `ColorScheme.surfaceContainerHighest` — see the note in
+  /// main.dart for why that role has to be pinned by hand. Chips paint it at
+  /// [AppAlphas.chipFill] over sheets that are themselves [surface], so it
+  /// has to sit well clear of [surface] to register at all — most of the
+  /// gap between them is eaten by that 35%.
+  static const Color raisedSurface = Color(0xFF303030);
 }
 
 /// Theme extension for app-specific colors that don't map onto

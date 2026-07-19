@@ -42,4 +42,31 @@ void main() {
           '(see AGENTS.md). Offenders:\n${offenders.join('\n')}',
     );
   });
+
+  // ColorScheme.dark() derives no container ladder — it returns `surface`
+  // for every surfaceContainer* role. A role the app reads but the theme
+  // never pins therefore paints as whatever it sits on and disappears, which
+  // is how the detail sheet's chip fills came to render as nothing at all.
+  test('every surfaceContainer role the app reads is pinned in the ColorScheme', () {
+    final theme = File('lib/main.dart').readAsStringSync();
+    final used = <String>{};
+    final files = Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
+
+    for (final file in files) {
+      for (final line in file.readAsLinesSync()) {
+        if (line.trimLeft().startsWith('//')) continue;
+        used.addAll(RegExp(r'\.(surfaceContainer[A-Za-z]*)').allMatches(line).map((m) => m[1]!));
+      }
+    }
+
+    final unpinned = used.where((role) => !theme.contains('$role:')).toList()..sort();
+    expect(
+      unpinned,
+      isEmpty,
+      reason:
+          'These surfaceContainer roles are read but never set on the '
+          'ColorScheme in lib/main.dart, so they resolve to `surface` and '
+          'render invisible against it: ${unpinned.join(', ')}',
+    );
+  });
 }
