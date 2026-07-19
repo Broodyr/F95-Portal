@@ -347,12 +347,13 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       body: Stack(
         children: [
           _buildBody(colorScheme, page, totalPages),
-          // Same spot as the browse tab's search FAB in its nav-hidden
-          // position — the bottom nav never shows on pushed screens.
+          // The browse tab's search FAB spot (the bottom nav never shows on
+          // pushed screens), lifted a row higher: at 24 the FAB sat on top
+          // of the page pills once scrolled to the end of the thread.
           if (page?.replyUrl != null)
             Positioned(
               right: 32,
-              bottom: MediaQuery.of(context).padding.bottom + 24,
+              bottom: MediaQuery.of(context).padding.bottom + 88,
               child: GlassFab(
                 icon: Icons.reply,
                 tooltip: 'Reply',
@@ -428,26 +429,19 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       totalPages,
     }.where((p) => p >= 1 && p <= totalPages).toList()..sort();
 
-    final items = <Widget>[
-      IconButton(
-        onPressed: _pageNumber > 1 ? () => _goToPage(_pageNumber - 1) : null,
-        icon: const Icon(Icons.chevron_left, size: 18),
-        tooltip: 'Previous page',
-        color: Colors.grey[400],
-      ),
-    ];
+    final pills = <Widget>[];
     int? previous;
     for (final page in pages) {
       if (previous != null && page - previous > 1) {
         // Tappable gap: jump straight to a typed page number. Styled as a
         // pill like its neighbors so it reads as tappable, with a dotted
         // outline instead of a fill to keep it subordinate to real pages.
-        items.add(
+        pills.add(
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => _promptForPage(totalPages),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 3),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -461,21 +455,45 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           ),
         );
       }
-      items.add(_buildPagePill(colorScheme, page));
+      pills.add(_buildPagePill(colorScheme, page));
       previous = page;
     }
-    items.add(
-      IconButton(
-        onPressed: _pageNumber < totalPages ? () => _goToPage(_pageNumber + 1) : null,
-        icon: const Icon(Icons.chevron_right, size: 18),
-        tooltip: 'Next page',
-        color: Colors.grey[400],
-      ),
-    );
 
     return Padding(
       padding: const EdgeInsets.only(top: 6),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: items),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildPageChevron(Icons.chevron_left, 'Previous page', _pageNumber - 1, totalPages),
+          // Only the number cluster can outgrow the row — three-digit page
+          // counts on a narrow phone run ~100px past it. Scale that down to
+          // fit rather than overflow, so the chevrons keep their size and
+          // position and no page number is ever clipped away.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(mainAxisSize: MainAxisSize.min, children: pills),
+            ),
+          ),
+          _buildPageChevron(Icons.chevron_right, 'Next page', _pageNumber + 1, totalPages),
+        ],
+      ),
+    );
+  }
+
+  /// A chevron narrowed from IconButton's 48px default: at full size the pair
+  /// ate a quarter of the row, which is what pushed it into overflow. Only the
+  /// width gives — shrinkWrap is what lets `constraints` actually apply, and
+  /// the 48px height keeps the tap target reachable.
+  Widget _buildPageChevron(IconData icon, String tooltip, int target, int totalPages) {
+    return IconButton(
+      onPressed: target >= 1 && target <= totalPages ? () => _goToPage(target) : null,
+      icon: Icon(icon, size: 18),
+      tooltip: tooltip,
+      color: Colors.grey[400],
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 34, height: 48),
+      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
     );
   }
 
@@ -520,7 +538,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     return GestureDetector(
       onTap: () => _goToPage(page),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 3),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
         decoration: BoxDecoration(
           color: current ? colorScheme.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.06),

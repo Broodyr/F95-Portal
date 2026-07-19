@@ -1,7 +1,6 @@
 import 'package:f95_portal/models/account.dart';
 import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/models/thread_page.dart';
-import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/screens/alerts_screen.dart';
 import 'package:f95_portal/screens/bookmarks_screen.dart';
 import 'package:f95_portal/screens/forum_screen.dart';
@@ -9,6 +8,7 @@ import 'package:f95_portal/screens/forum_search_screen.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/forum_threads_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
+import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/widgets/glass_fab.dart';
 import 'package:flutter/material.dart';
@@ -254,7 +254,7 @@ void main() {
     expect(replies, ['Nice thread!']);
   });
 
-  testWidgets('the reply FAB is a 56pt glass button anchored at the search FAB spot', (tester) async {
+  testWidgets('the reply FAB is a 56pt glass button riding one row above the search FAB spot', (tester) async {
     await pumpForum(tester);
     await openThreadViewer(tester);
 
@@ -264,7 +264,7 @@ void main() {
     final screen = tester.getRect(find.byType(Scaffold).last);
     expect(rect.size, const Size(56, 56));
     expect(screen.right - rect.right, 32);
-    expect(screen.bottom - rect.bottom, 24);
+    expect(screen.bottom - rect.bottom, 88);
   });
 
   testWidgets('the new-thread FAB is a 56pt glass button anchored at the search FAB spot', (tester) async {

@@ -105,4 +105,50 @@ void main() {
     // come through as their shortcode.
     expect(field.controller!.text, '[QUOTE="VoidTraveler, post: 42, member: 3590149"]\nhello there:love:\n[/QUOTE]\n');
   });
+
+  // A mid-thread page shows the widest arrangement — 1 … n-1 n n+1 … last —
+  // and at three digits it runs ~100px past a phone's width. The number
+  // cluster scales to fit instead of overflowing, so no page is ever clipped.
+  group('pagination fits the row', () {
+    Future<void> pumpAt(WidgetTester tester, {required int current, required int total, required double width}) async {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final postsPage = ThreadPostsPage(
+        title: 'Long thread',
+        currentPage: current,
+        totalPages: total,
+        posts: const [ForumPost(postId: 1, number: 1, author: 'A', blocks: [])],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          key: ValueKey('$current/$total@$width'),
+          theme: ThemeData.dark(),
+          home: ForumThreadScreen(
+            url: 'https://example.com/threads/long.1/',
+            title: 'Long thread',
+            initialPage: current,
+            fetchPosts: (url, {page = 1}) async => postsPage,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    for (final size in const [360.0, 411.0]) {
+      for (final pages in const [[10, 20], [150, 300]]) {
+        testWidgets('page ${pages[0]} of ${pages[1]} at ${size.toInt()}dp', (tester) async {
+          await pumpAt(tester, current: pages[0], total: pages[1], width: size);
+
+          expect(tester.takeException(), isNull);
+          // Every pill in the neighborhood survives the squeeze.
+          for (final label in ['1', '${pages[0] - 1}', '${pages[0]}', '${pages[0] + 1}', '${pages[1]}']) {
+            expect(find.text(label), findsOneWidget);
+          }
+        });
+      }
+    }
+  });
 }
