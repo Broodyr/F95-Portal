@@ -1,0 +1,40 @@
+name: CI
+
+# Runs on every branch, so work in progress gets the same check main does.
+# The pull_request trigger is here for the day main becomes protected and
+# changes have to arrive by PR; until then it simply never fires.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# A newer push to the same ref supersedes an in-flight run for it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the local toolchain version so a red run means the code
+      # changed, not the SDK underneath it. Bump this when you upgrade
+      # Flutter locally.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.5
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
