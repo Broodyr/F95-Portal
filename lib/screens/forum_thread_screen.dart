@@ -470,11 +470,14 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                   ),
                   child: Text(
                     '…',
+                    // No explicit `height`: it would shorten this pill's line
+                    // box while the digits beside it keep the font's own, and
+                    // the padding is already the same, so the gap would sit
+                    // 4px shorter than every pill it separates.
                     style: TextStyle(
                       color: AppColors.of(context).bodyText,
                       fontSize: _pillFontSize,
                       fontWeight: FontWeight.w600,
-                      height: 1.1,
                     ),
                   ),
                 ),

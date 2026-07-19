@@ -181,6 +181,21 @@ void main() {
       expect(pillScale(tester), 1.0);
     });
 
+    // The gap is a pill among pills, so it has to stand the same height as
+    // the numbers it separates. Easy to lose: a `height` on its text style
+    // shortens the line box without touching the padding.
+    testWidgets('the gap pill stands as tall as the page pills', (tester) async {
+      await pumpAt(tester, current: 10, total: 20, width: 411);
+
+      double pillHeight(String label) => tester
+          .renderObject<RenderBox>(find.ancestor(of: find.text(label), matching: find.byType(Container)).first)
+          .size
+          .height;
+
+      expect(pillHeight('…'), pillHeight('10'));
+      expect(pillHeight('…'), pillHeight('1'));
+    });
+
     // Scaling is the backstop for whatever the fit estimate fails to
     // anticipate — a wider font, a bumped text size, numbers past anything
     // sane. Nothing is allowed to overflow.
