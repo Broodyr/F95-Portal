@@ -664,9 +664,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (post.comments.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.only(left: 9),
+              padding: const EdgeInsets.fromLTRB(9, 6, 8, 6),
+              // The thread viewer's nested-block treatment — a faint fill
+              // behind a left rail — so the comments read as one group rather
+              // than as loose rows a thin line happens to touch. The rail
+              // stays neutral where a quote's is primary: a quote is another
+              // member's voice inserted into a post and earns the accent,
+              // while these are just the replies to the post above.
               decoration: BoxDecoration(
-                border: Border(left: BorderSide(color: Colors.grey[800]!, width: 1.5)),
+                color: colorScheme.onSurface.withValues(alpha: 0.04),
+                border: Border(left: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.15), width: 1.5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

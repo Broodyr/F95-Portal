@@ -168,7 +168,11 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
                   width: 1,
                   height: 14,
                   margin: const EdgeInsets.symmetric(horizontal: 9),
-                  color: Colors.grey[800],
+                  // The app's divider weight. Not the segmented track beside
+                  // it: that's translucent black, which recesses against a
+                  // fill but on the page background lands darker than the
+                  // page and leaves no line at all.
+                  color: colorScheme.onSurface.withValues(alpha: 0.1),
                 ),
                 SegmentedSelector<String>(
                   dense: true,
