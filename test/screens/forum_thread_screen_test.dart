@@ -4,6 +4,7 @@ import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -106,10 +107,11 @@ void main() {
     expect(field.controller!.text, '[QUOTE="VoidTraveler, post: 42, member: 3590149"]\nhello there:love:\n[/QUOTE]\n');
   });
 
-  // A mid-thread page shows the widest arrangement — 1 … n-1 n n+1 … last —
-  // and at three digits it runs ~100px past a phone's width. The number
-  // cluster scales to fit instead of overflowing, so no page is ever clipped.
-  group('pagination fits the row', () {
+  // A mid-thread page shows the widest arrangement — 1 … n-1 n n+1 … last.
+  // Long page numbers blow that past a phone's width, so the row sheds its
+  // adjacent pages and, failing that, scales; either way it never overflows
+  // and never drops first, current, or last.
+  group('pagination', () {
     Future<void> pumpAt(WidgetTester tester, {required int current, required int total, required double width}) async {
       tester.view.physicalSize = Size(width, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -137,18 +139,65 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    for (final size in const [360.0, 411.0]) {
-      for (final pages in const [[10, 20], [150, 300]]) {
-        testWidgets('page ${pages[0]} of ${pages[1]} at ${size.toInt()}dp', (tester) async {
-          await pumpAt(tester, current: pages[0], total: pages[1], width: size);
-
-          expect(tester.takeException(), isNull);
-          // Every pill in the neighborhood survives the squeeze.
-          for (final label in ['1', '${pages[0] - 1}', '${pages[0]}', '${pages[0] + 1}', '${pages[1]}']) {
-            expect(find.text(label), findsOneWidget);
-          }
-        });
-      }
+    /// How far the pills ended up shrunk; 1.0 means they render full size.
+    double pillScale(WidgetTester tester) {
+      final fitted = tester.renderObject<RenderBox>(find.byType(FittedBox)) as RenderFittedBox;
+      return fitted.size.width / fitted.child!.size.width;
     }
+
+    // Short numbers leave room for the full neighborhood on any phone.
+    for (final size in const [360.0, 411.0]) {
+      testWidgets('keeps the adjacent pages at 20 pages, ${size.toInt()}dp', (tester) async {
+        await pumpAt(tester, current: 10, total: 20, width: size);
+
+        expect(tester.takeException(), isNull);
+        for (final label in ['1', '9', '10', '11', '20']) {
+          expect(find.text(label), findsOneWidget);
+        }
+      });
+    }
+
+    testWidgets('keeps the adjacent pages at 300 pages when the width allows', (tester) async {
+      await pumpAt(tester, current: 150, total: 300, width: 411);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('149'), findsOneWidget);
+      expect(find.text('151'), findsOneWidget);
+    });
+
+    testWidgets('drops the adjacent pages at 300 pages on a narrow phone', (tester) async {
+      await pumpAt(tester, current: 150, total: 300, width: 360);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('149'), findsNothing);
+      expect(find.text('151'), findsNothing);
+      // The three that carry the navigation survive either way.
+      for (final label in ['1', '150', '300']) {
+        expect(find.text(label), findsOneWidget);
+      }
+    });
+
+    // The case that started this: five digits used to shrink the pills to
+    // roughly 3mm. Shedding n±1 buys back enough width to render full size.
+    testWidgets('a five-digit thread renders its pills unshrunk', (tester) async {
+      await pumpAt(tester, current: 10002, total: 20839, width: 411);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('10001'), findsNothing);
+      expect(find.text('10003'), findsNothing);
+      for (final label in ['1', '10002', '20839']) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(pillScale(tester), 1.0);
+    });
+
+    // Nothing above is allowed to overflow, however extreme the numbers.
+    testWidgets('scales rather than overflow when even the short row is too wide', (tester) async {
+      await pumpAt(tester, current: 100002, total: 208390, width: 320);
+
+      expect(tester.takeException(), isNull);
+      expect(pillScale(tester), lessThan(1.0));
+      expect(find.text('100002'), findsOneWidget);
+    });
   });
 }

@@ -419,66 +419,133 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     );
   }
 
+  // Pill metrics, shared by the widgets below and the width estimate that
+  // decides how many of them fit — the two must not drift apart.
+  static const double _chevronWidth = 34;
+  static const double _pillFontSize = 12;
+  static const double _pillHMargin = 2;
+  static const double _pillHPadding = 11;
+  static const double _gapHPadding = 9;
+
+  /// How far the pills may shrink before the row gives up its adjacent pages
+  /// instead. Squeezing past this trades away legibility and tap area at
+  /// exactly the page counts where n±1 is worth least.
+  static const double _minPillScale = 0.8;
+
   /// Chevrons plus a compact pill neighborhood: first, around current, last.
   Widget _buildPagination(ColorScheme colorScheme, int totalPages) {
-    final pages = <int>{
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Adjacent pages are what the row sheds first when it runs out of
+        // width. They carry the longest numbers, so they're the widest pills
+        // going — and the least worth their width, since telling 10001 from
+        // 10003 means reading five digits and diffing the last one. The
+        // chevrons already do ±1, and do it without any reading at all.
+        final double available = constraints.maxWidth - _chevronWidth * 2;
+        List<int> pages = _pageWindow(totalPages, neighbours: true);
+        if (_clusterWidth(context, pages) > available / _minPillScale) {
+          pages = _pageWindow(totalPages, neighbours: false);
+        }
+
+        final pills = <Widget>[];
+        int? previous;
+        for (final page in pages) {
+          if (previous != null && page - previous > 1) {
+            // Tappable gap: jump straight to a typed page number. Styled as a
+            // pill like its neighbors so it reads as tappable, with a dotted
+            // outline instead of a fill to keep it subordinate to real pages.
+            pills.add(
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _promptForPage(totalPages),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
+                  padding: const EdgeInsets.symmetric(horizontal: _gapHPadding, vertical: 5),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                  ),
+                  child: Text(
+                    '…',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: _pillFontSize,
+                      fontWeight: FontWeight.w600,
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+          pills.add(_buildPagePill(colorScheme, page));
+          previous = page;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildPageChevron(Icons.chevron_left, 'Previous page', _pageNumber - 1, totalPages),
+              // Dropping n±1 buys a lot of width but can't guarantee a fit on
+              // its own — five digits on a small phone still run long. Scale
+              // as the backstop so the row can never overflow, whatever the
+              // page count, font, or text scale turns out to be.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: pills),
+                ),
+              ),
+              _buildPageChevron(Icons.chevron_right, 'Next page', _pageNumber + 1, totalPages),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// The pages worth a pill: first, last, the current one, and optionally the
+  /// two either side of it.
+  List<int> _pageWindow(int totalPages, {required bool neighbours}) {
+    return <int>{
       1,
-      if (_pageNumber > 1) _pageNumber - 1,
+      if (neighbours && _pageNumber > 1) _pageNumber - 1,
       _pageNumber,
-      if (_pageNumber < totalPages) _pageNumber + 1,
+      if (neighbours && _pageNumber < totalPages) _pageNumber + 1,
       totalPages,
     }.where((p) => p >= 1 && p <= totalPages).toList()..sort();
+  }
 
-    final pills = <Widget>[];
+  /// What [pages] would take at full size, gap pills included. Measured
+  /// rather than assumed, so it holds up under a different font or a bumped
+  /// system text size.
+  double _clusterWidth(BuildContext context, List<int> pages) {
+    double width = 0;
     int? previous;
     for (final page in pages) {
       if (previous != null && page - previous > 1) {
-        // Tappable gap: jump straight to a typed page number. Styled as a
-        // pill like its neighbors so it reads as tappable, with a dotted
-        // outline instead of a fill to keep it subordinate to real pages.
-        pills.add(
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _promptForPage(totalPages),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-              ),
-              child: Text(
-                '…',
-                style: TextStyle(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.w600, height: 1.1),
-              ),
-            ),
-          ),
-        );
+        width += _labelWidth(context, '…') + (_gapHPadding + _pillHMargin) * 2;
       }
-      pills.add(_buildPagePill(colorScheme, page));
+      width += _labelWidth(context, '$page') + (_pillHPadding + _pillHMargin) * 2;
       previous = page;
     }
+    return width;
+  }
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildPageChevron(Icons.chevron_left, 'Previous page', _pageNumber - 1, totalPages),
-          // Only the number cluster can outgrow the row — three-digit page
-          // counts on a narrow phone run ~100px past it. Scale that down to
-          // fit rather than overflow, so the chevrons keep their size and
-          // position and no page number is ever clipped away.
-          Flexible(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(mainAxisSize: MainAxisSize.min, children: pills),
-            ),
-          ),
-          _buildPageChevron(Icons.chevron_right, 'Next page', _pageNumber + 1, totalPages),
-        ],
+  /// Always measured at w600 — the current page's weight, and the widest a
+  /// pill's label ever renders.
+  double _labelWidth(BuildContext context, String label) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(fontSize: _pillFontSize, fontWeight: FontWeight.w600, height: 1.1),
       ),
-    );
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    return painter.width;
   }
 
   /// A chevron narrowed from IconButton's 48px default: at full size the pair
@@ -492,7 +559,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       tooltip: tooltip,
       color: Colors.grey[400],
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 34, height: 48),
+      constraints: const BoxConstraints.tightFor(width: _chevronWidth, height: 48),
       style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
     );
   }
@@ -538,8 +605,8 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     return GestureDetector(
       onTap: () => _goToPage(page),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+        margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
+        padding: const EdgeInsets.symmetric(horizontal: _pillHPadding, vertical: 5),
         decoration: BoxDecoration(
           color: current ? colorScheme.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -548,7 +615,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         child: Text(
           '$page',
           style: TextStyle(
-            fontSize: 12,
+            fontSize: _pillFontSize,
             color: current ? Colors.white : Colors.grey[400],
             fontWeight: current ? FontWeight.w600 : FontWeight.w400,
           ),
