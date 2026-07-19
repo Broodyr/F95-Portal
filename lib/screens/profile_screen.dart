@@ -769,7 +769,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                     ),
-                    Text(comment.date, style: TextStyle(color: Colors.grey[700], fontSize: 10)),
+                    // Same colour as a top-level post's date; the smaller size
+                    // already sets a comment apart without darkening it too.
+                    Text(comment.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10)),
                     // Icon-only actions keep the inline comment row compact;
                     // like the post's, they gate on the per-comment links.
                     if (comment.editUrl != null)
