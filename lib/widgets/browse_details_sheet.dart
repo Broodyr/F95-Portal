@@ -720,7 +720,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                 children: [
                   Icon(Icons.open_in_new, size: 12, color: colorScheme.primary),
                   const SizedBox(width: 5),
-                  Text(link.host, style: TextStyle(color: Colors.grey[200], fontSize: 12)),
+                  Text(link.host, style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12)),
                 ],
               ),
             ),
