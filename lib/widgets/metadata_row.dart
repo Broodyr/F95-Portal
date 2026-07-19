@@ -22,7 +22,7 @@ class MetadataRow extends StatelessWidget {
     return Row(
       children: [
         // Time updated
-        Icon(Icons.access_time, size: 14, color: Colors.grey[400]),
+        Icon(Icons.access_time, size: 14, color: AppColors.of(context).iconDefault),
         const SizedBox(width: 4),
         Text(
           ThreadUtils.formatTime(timeUpdated),
@@ -31,7 +31,7 @@ class MetadataRow extends StatelessWidget {
         const SizedBox(width: 16),
 
         // Likes
-        Icon(Icons.favorite, size: 14, color: Colors.grey[400]),
+        Icon(Icons.favorite, size: 14, color: AppColors.of(context).iconDefault),
         const SizedBox(width: 4),
         Text(
           NumberFormatter.formatNumber(likes),
@@ -40,7 +40,7 @@ class MetadataRow extends StatelessWidget {
         const SizedBox(width: 16),
 
         // Views
-        Icon(Icons.visibility, size: 14, color: Colors.grey[400]),
+        Icon(Icons.visibility, size: 14, color: AppColors.of(context).iconDefault),
         const SizedBox(width: 4),
         Text(
           NumberFormatter.formatNumber(views),

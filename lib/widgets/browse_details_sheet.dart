@@ -395,7 +395,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
           child: Row(
             children: [
-              Icon(Icons.cloud_off, size: 16, color: Colors.grey[500]),
+              Icon(Icons.cloud_off, size: 16, color: AppColors.of(context).subtleText),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -542,7 +542,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                             turns: _overviewExpanded ? 0.5 : 0,
                             duration: Motion.duration,
                             curve: Motion.curve,
-                            child: Icon(Icons.expand_more, size: 16, color: Colors.grey[500]),
+                            child: Icon(Icons.expand_more, size: 16, color: AppColors.of(context).subtleText),
                           ),
                         ),
                       ),
@@ -570,7 +570,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         ),
         child: Row(
           children: [
-            Icon(Icons.lock_outline, size: 16, color: Colors.grey[500]),
+            Icon(Icons.lock_outline, size: 16, color: AppColors.of(context).subtleText),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -757,7 +757,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                     turns: expanded ? 0.5 : 0,
                     duration: Motion.duration,
                     curve: Motion.curve,
-                    child: Icon(Icons.expand_more, size: 18, color: Colors.grey[500]),
+                    child: Icon(Icons.expand_more, size: 18, color: AppColors.of(context).subtleText),
                   ),
                 ],
               ),
@@ -850,7 +850,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
           ),
           child: Column(
             children: [
-              Icon(icon, size: 16, color: Colors.grey[400]),
+              Icon(icon, size: 16, color: AppColors.of(context).iconDefault),
               const SizedBox(height: 4),
               Text(
                 value,

@@ -34,6 +34,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.placeholderSurface,
     required this.mutedForeground,
     required this.chipSurface,
+    required this.iconDefault,
     required this.brightText,
     required this.bodyText,
     required this.subtleText,
@@ -43,11 +44,22 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Card/image placeholders, spoiler backgrounds.
   final Color placeholderSurface;
 
-  /// Muted icons and borders.
+  /// The "nothing here" glyph: broken and missing images, avatar fallbacks,
+  /// and the large icon over an empty or failed screen. Dimmer than
+  /// [iconDefault] because those glyphs are big, and area reads as weight.
   final Color mutedForeground;
 
   /// Small raised elements: popup menus, pills.
   final Color chipSurface;
+
+  /// The app's standard icon weight: toolbar and row actions, and the small
+  /// glyphs beside metadata. Reach for this by default.
+  ///
+  /// Two deliberate exceptions. An icon paired with dimmer text steps down to
+  /// sit under it — take the text token one below its label, so a glyph beside
+  /// a [bodyText] label uses [subtleText]. And the large glyph over an empty or
+  /// failed screen uses [mutedForeground].
+  final Color iconDefault;
 
   /// Near-white emphasis text: usernames, toast messages, field values.
   final Color brightText;
@@ -68,6 +80,7 @@ class AppColors extends ThemeExtension<AppColors> {
     placeholderSurface: Color(0xFF2A2A2A),
     mutedForeground: Color(0xFF666666),
     chipSurface: Color(0xFF262629),
+    iconDefault: Color(0xFFBDBDBD),
     brightText: Color(0xFFE8E8E8),
     bodyText: Color(0xFFC9C9C9),
     subtleText: AppPalette.subtleText,
@@ -83,6 +96,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? placeholderSurface,
     Color? mutedForeground,
     Color? chipSurface,
+    Color? iconDefault,
     Color? brightText,
     Color? bodyText,
     Color? subtleText,
@@ -92,6 +106,7 @@ class AppColors extends ThemeExtension<AppColors> {
       placeholderSurface: placeholderSurface ?? this.placeholderSurface,
       mutedForeground: mutedForeground ?? this.mutedForeground,
       chipSurface: chipSurface ?? this.chipSurface,
+      iconDefault: iconDefault ?? this.iconDefault,
       brightText: brightText ?? this.brightText,
       bodyText: bodyText ?? this.bodyText,
       subtleText: subtleText ?? this.subtleText,
@@ -106,6 +121,7 @@ class AppColors extends ThemeExtension<AppColors> {
       placeholderSurface: Color.lerp(placeholderSurface, other.placeholderSurface, t)!,
       mutedForeground: Color.lerp(mutedForeground, other.mutedForeground, t)!,
       chipSurface: Color.lerp(chipSurface, other.chipSurface, t)!,
+      iconDefault: Color.lerp(iconDefault, other.iconDefault, t)!,
       brightText: Color.lerp(brightText, other.brightText, t)!,
       bodyText: Color.lerp(bodyText, other.bodyText, t)!,
       subtleText: Color.lerp(subtleText, other.subtleText, t)!,

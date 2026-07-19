@@ -196,7 +196,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline, size: 32, color: Colors.grey[600]),
+            Icon(Icons.lock_outline, size: 32, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 8),
             Text(
               'Bookmarks require an account',
@@ -223,7 +223,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
+            Icon(Icons.cloud_off, size: 32, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 8),
             Text("Couldn't load bookmarks", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),
@@ -286,7 +286,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                         Icon(
                           entry.isPost ? Icons.subdirectory_arrow_right : Icons.forum_outlined,
                           size: 12,
-                          color: Colors.grey[600],
+                          color: AppColors.of(context).hintText,
                         ),
                         const SizedBox(width: 5),
                         Text(
@@ -328,7 +328,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
               PopupMenuButton<String>(
                 tooltip: 'Bookmark tools',
                 padding: EdgeInsets.zero,
-                icon: Icon(Icons.more_vert, size: 16, color: Colors.grey[600]),
+                icon: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
                 color: AppColors.of(context).chipSurface,
                 onSelected: (_) => _delete(entry),
                 itemBuilder: (context) => const [

@@ -174,7 +174,7 @@ class ActiveFiltersBar extends StatelessWidget {
                 IconButton(
                   tooltip: 'Clear all filters',
                   visualDensity: VisualDensity.compact,
-                  icon: Icon(Icons.filter_alt_off_outlined, size: 18, color: Colors.grey[400]),
+                  icon: Icon(Icons.filter_alt_off_outlined, size: 18, color: AppColors.of(context).iconDefault),
                   onPressed: onClearAll ?? () => onQueryChanged(SearchQuery(category: query.category)),
                 ),
               ],

@@ -179,7 +179,7 @@ class _BrowseListState extends State<BrowseList> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+              Icon(Icons.error_outline, size: 64, color: AppColors.of(context).mutedForeground),
               const SizedBox(height: 16),
               Text('Failed to load threads', style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 18)),
               const SizedBox(height: 8),
@@ -210,7 +210,7 @@ class _BrowseListState extends State<BrowseList> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+              Icon(Icons.search_off, size: 64, color: AppColors.of(context).mutedForeground),
               const SizedBox(height: 16),
               Text(
                 'No threads match this search',

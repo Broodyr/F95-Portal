@@ -112,7 +112,7 @@ class ForumNodeRow extends StatelessWidget {
             else if (compact)
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Icon(Icons.chevron_right, size: 15, color: Colors.grey[700]),
+                child: Icon(Icons.chevron_right, size: 15, color: AppColors.of(context).iconDefault),
               ),
           ],
         ),

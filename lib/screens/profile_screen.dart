@@ -395,7 +395,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_outline, size: 64, color: Colors.grey[600]),
+            Icon(Icons.person_outline, size: 64, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 16),
             Text(
               'Not signed in',
@@ -446,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (AuthService.instance.isLoggedIn)
                   IconButton(
                     tooltip: 'Sign out',
-                    icon: Icon(Icons.logout, size: 20, color: Colors.grey[400]),
+                    icon: Icon(Icons.logout, size: 20, color: AppColors.of(context).iconDefault),
                     onPressed: _signOut,
                   ),
               ] else ...[
@@ -600,7 +600,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.edit_outlined, size: 15, color: Colors.grey[600]),
+                  Icon(Icons.edit_outlined, size: 15, color: AppColors.of(context).hintText),
                   const SizedBox(width: 7),
                   Text('Write something…', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 12.5)),
                 ],
@@ -704,15 +704,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// Pitched to match the thread viewer's react/quote/edit row, which is the
+  /// same kind of control: a [bodyText] label with its icon a step under.
+  /// Both sat a tier lower here for no reason beyond being written apart.
   Widget _buildWallAction(IconData icon, String label, VoidCallback onPressed) {
     return TextButton.icon(
       onPressed: onPressed,
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         minimumSize: const Size(0, 30),
-        foregroundColor: AppColors.of(context).subtleText,
+        foregroundColor: AppColors.of(context).bodyText,
       ),
-      icon: Icon(icon, size: 13, color: Colors.grey[600]),
+      icon: Icon(icon, size: 13, color: AppColors.of(context).subtleText),
       label: Text(label, style: const TextStyle(fontSize: 11.5)),
     );
   }
@@ -723,9 +726,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: onTap,
       child: Tooltip(
         message: tooltip,
+        // No visible label, but it sits alongside [_buildWallAction] on the
+        // same rows, so it takes that row's icon weight rather than its own.
         child: Padding(
           padding: const EdgeInsets.only(left: 10),
-          child: Icon(icon, size: 13, color: Colors.grey[600]),
+          child: Icon(icon, size: 13, color: AppColors.of(context).subtleText),
         ),
       ),
     );
@@ -943,7 +948,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 5),
                   child: Row(
                     children: [
-                      Icon(icon, size: 15, color: Colors.grey[600]),
+                      Icon(icon, size: 15, color: AppColors.of(context).hintText),
                       const SizedBox(width: 9),
                       Text(label, style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12)),
                       const Spacer(),

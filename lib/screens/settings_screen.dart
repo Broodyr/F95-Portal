@@ -276,7 +276,11 @@ class SettingsScreen extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(exclude ? Icons.remove : icon, size: 13, color: exclude ? colorScheme.error : Colors.grey[400]),
+                Icon(
+                  exclude ? Icons.remove : icon,
+                  size: 13,
+                  color: exclude ? colorScheme.error : AppColors.of(context).iconDefault,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   label,

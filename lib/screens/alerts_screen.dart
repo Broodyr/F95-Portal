@@ -179,7 +179,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline, size: 32, color: Colors.grey[600]),
+            Icon(Icons.lock_outline, size: 32, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 8),
             Text('Alerts require an account', style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(
@@ -203,7 +203,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
+            Icon(Icons.cloud_off, size: 32, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 8),
             Text("Couldn't load alerts", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),

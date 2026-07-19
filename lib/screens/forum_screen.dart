@@ -187,7 +187,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
                   const Spacer(),
                   IconButton(
                     tooltip: 'Bookmarks',
-                    icon: Icon(Icons.bookmark_border, size: 22, color: Colors.grey[400]),
+                    icon: Icon(Icons.bookmark_border, size: 22, color: AppColors.of(context).iconDefault),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => BookmarksScreen(
@@ -205,7 +205,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
                       isLabelVisible: _unreadAlerts > 0,
                       label: Text(_unreadAlerts > 99 ? '99+' : '$_unreadAlerts'),
                       backgroundColor: colorScheme.primary,
-                      child: Icon(Icons.notifications_none, size: 22, color: Colors.grey[400]),
+                      child: Icon(Icons.notifications_none, size: 22, color: AppColors.of(context).iconDefault),
                     ),
                     onPressed: () async {
                       await Navigator.of(context).push(
@@ -224,7 +224,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
                   ),
                   IconButton(
                     tooltip: 'Search the forum',
-                    icon: Icon(Icons.search, size: 22, color: Colors.grey[400]),
+                    icon: Icon(Icons.search, size: 22, color: AppColors.of(context).iconDefault),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => ForumSearchScreen(
@@ -258,7 +258,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
+            Icon(Icons.cloud_off, size: 32, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 8),
             Text("Couldn't load the forum", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),

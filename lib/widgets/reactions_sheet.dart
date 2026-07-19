@@ -85,7 +85,7 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            Icon(Icons.cloud_off, size: 16, color: Colors.grey[500]),
+            Icon(Icons.cloud_off, size: 16, color: AppColors.of(context).subtleText),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

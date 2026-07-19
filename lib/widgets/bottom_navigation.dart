@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
+import '../theme/app_colors.dart';
 import 'glass_aware.dart';
 
 class CustomBottomNavigation extends StatelessWidget {
@@ -278,7 +279,10 @@ class _PassThroughNavItemState extends State<_PassThroughNavItem> with SingleTic
                 child: Icon(
                   widget.isActive ? widget.activeIcon : widget.icon,
                   key: ValueKey(widget.isActive),
-                  color: widget.isActive ? Theme.of(context).colorScheme.primary : Colors.grey[500],
+                  // Deliberately under `iconDefault`, unlike the other
+                  // standalone icons: inactive marks state rather than
+                  // offering an action, and has to recede beside the crimson.
+                  color: widget.isActive ? Theme.of(context).colorScheme.primary : AppColors.of(context).subtleText,
                   size: 22,
                 ),
               ),

@@ -378,7 +378,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
+            Icon(Icons.cloud_off, size: 32, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 8),
             Text("Couldn't load the thread", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),
@@ -560,7 +560,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       onPressed: target >= 1 && target <= totalPages ? () => _goToPage(target) : null,
       icon: Icon(icon, size: 18),
       tooltip: tooltip,
-      color: Colors.grey[400],
+      color: AppColors.of(context).iconDefault,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: _chevronWidth, height: 48),
       style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
@@ -659,7 +659,7 @@ class _WatchOptionsSheet extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: selected ? colorScheme.primary : Colors.grey[500]),
+              Icon(icon, size: 19, color: selected ? colorScheme.primary : AppColors.of(context).subtleText),
               const SizedBox(width: 13),
               Expanded(
                 child: Column(
@@ -816,7 +816,9 @@ class _PostCardState extends State<_PostCard> {
                       child: Icon(
                         widget.watched ? Icons.notifications_active : Icons.notifications_none,
                         size: 17,
-                        color: widget.watched ? Theme.of(context).colorScheme.primary : Colors.grey[500],
+                        color: widget.watched
+                            ? Theme.of(context).colorScheme.primary
+                            : AppColors.of(context).subtleText,
                       ),
                     ),
                   ),
@@ -877,7 +879,7 @@ class _PostCardState extends State<_PostCard> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: Colors.grey[500]),
+            Icon(icon, size: 14, color: AppColors.of(context).subtleText),
             const SizedBox(width: 4),
             Text(
               label,
@@ -979,7 +981,7 @@ class _PostCardState extends State<_PostCard> {
                         turns: expanded ? 0.5 : 0,
                         duration: Motion.duration,
                         curve: Motion.curve,
-                        child: Icon(Icons.expand_more, size: 16, color: Colors.grey[500]),
+                        child: Icon(Icons.expand_more, size: 16, color: AppColors.of(context).subtleText),
                       ),
                     ],
                   ),

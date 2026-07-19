@@ -220,7 +220,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.lock_outline, size: 32, color: Colors.grey[600]),
+            Icon(Icons.lock_outline, size: 32, color: AppColors.of(context).mutedForeground),
             const SizedBox(height: 8),
             Text(
               'Searching requires an account',
@@ -249,7 +249,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
+              Icon(Icons.cloud_off, size: 32, color: AppColors.of(context).mutedForeground),
               const SizedBox(height: 8),
               Text("Couldn't search", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
               const SizedBox(height: 4),
