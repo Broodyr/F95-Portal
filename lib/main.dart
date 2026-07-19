@@ -101,7 +101,11 @@ class F95Portal extends StatelessWidget {
               (states) => _switchColor(states, on: AppPalette.secondary, off: AppPalette.primary),
             ),
             trackColor: WidgetStateProperty.resolveWith(
-              (states) => _switchColor(states, on: AppPalette.primary, off: Colors.black.withValues(alpha: AppAlphas.chipFill)),
+              (states) => _switchColor(
+                states,
+                on: AppPalette.primary,
+                off: Colors.black.withValues(alpha: AppAlphas.chipFill),
+              ),
             ),
             trackOutlineColor: WidgetStateProperty.resolveWith(
               (states) => states.contains(WidgetState.selected) ? Colors.transparent : AppPalette.secondary,
@@ -116,11 +120,7 @@ class F95Portal extends StatelessWidget {
             barrierColor: Colors.black.withValues(alpha: AppAlphas.sheetBarrier),
             insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            titleTextStyle: TextStyle(
-              color: AppColors.dark.brightText,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            titleTextStyle: TextStyle(color: AppColors.dark.brightText, fontSize: 16, fontWeight: FontWeight.w600),
             contentTextStyle: TextStyle(color: AppColors.dark.bodyText, fontSize: 13),
           ),
           extensions: const [AppColors.dark],

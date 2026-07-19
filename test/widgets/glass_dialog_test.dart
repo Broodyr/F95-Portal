@@ -28,11 +28,8 @@ void main() {
             builder: (context) => TextButton(
               onPressed: () => showDialog<void>(
                 context: context,
-                builder: (_) => GlassDialog(
-                  title: const Text('Go to page'),
-                  content: const Text('body'),
-                  actions: actions,
-                ),
+                builder: (_) =>
+                    GlassDialog(title: const Text('Go to page'), content: const Text('body'), actions: actions),
               ),
               child: const Text('open'),
             ),
@@ -60,10 +57,7 @@ void main() {
     // card/canvas/button types render as, and it is a compositing boundary:
     // the filter would sample that empty layer rather than the page, leaving
     // the panel flat with no visible blur. This is why Dialog is not used.
-    expect(
-      find.ancestor(of: find.byType(BackdropFilter), matching: find.byType(PhysicalShape)),
-      findsNothing,
-    );
+    expect(find.ancestor(of: find.byType(BackdropFilter), matching: find.byType(PhysicalShape)), findsNothing);
   });
 
   testWidgets('gives its content a Material ancestor for fields and buttons', (tester) async {

@@ -31,7 +31,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         builder: (context, child) => AppTextScale(child: child!),
-        home: Scaffold(body: BrowseCard(thread: createBrowseThread(), category: category)),
+        home: Scaffold(
+          body: BrowseCard(thread: createBrowseThread(), category: category),
+        ),
       ),
     );
   }

@@ -22,9 +22,7 @@ class GlassDialog extends StatelessWidget {
   /// Used only when the ambient [DialogTheme] leaves these unset — a bare
   /// MaterialApp in tests. The app's real values live in main.dart.
   static const EdgeInsets _fallbackInsetPadding = EdgeInsets.symmetric(horizontal: 40, vertical: 24);
-  static const ShapeBorder _fallbackShape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.all(Radius.circular(28)),
-  );
+  static const ShapeBorder _fallbackShape = RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(28)));
 
   final Widget? title;
   final Widget? content;
@@ -107,10 +105,7 @@ class GlassDialog extends StatelessWidget {
                             Flexible(
                               child: Padding(
                                 padding: EdgeInsets.fromLTRB(24, title == null ? 22 : 14, 24, 0),
-                                child: DefaultTextStyle.merge(
-                                  style: dialogTheme.contentTextStyle,
-                                  child: content!,
-                                ),
+                                child: DefaultTextStyle.merge(style: dialogTheme.contentTextStyle, child: content!),
                               ),
                             ),
                           if (actions.isNotEmpty)
