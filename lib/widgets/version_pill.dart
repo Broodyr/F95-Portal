@@ -27,12 +27,13 @@ class VersionPill extends StatelessWidget {
     return ThreadStatus.normal;
   }
 
+  // These colors diverge from the official site, for better distinction against engine colors
   (Color, IconData)? get _statusBadge {
     switch (_status) {
       case ThreadStatus.normal:
         return null;
       case ThreadStatus.completed:
-        return (const Color(0xFF2189FF), Icons.task_alt);
+        return (const Color(0xFF2189ff), Icons.task_alt);
       case ThreadStatus.abandoned:
         return (const Color(0xFF8f561a), Icons.cancel);
       case ThreadStatus.onhold:

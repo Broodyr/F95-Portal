@@ -20,33 +20,41 @@ class NumberFormatter {
 }
 
 class EngineColors {
+  // Colors mapped from the official site
   static const Map<String, Color> _engineColors = {
     'Unity': Color(0xFFea5201),
-    'Others': Color(0xFF6e9e37),
+    'Others': Color(0xFF6c9c34),
     'Ren\'Py': Color(0xFF9d46e3),
-    'RPGM': Color(0xFF228fe6),
+    'RPGM': Color(0xFF0b79d1),
     'Tads': Color(0xFF0b79d1),
     'ADRIFT': Color(0xFF0b79d1),
-    'Unreal Engine': Color(0xFF1152b7),
+    'Unreal Engine': Color(0xFF0d47a1),
     'HTML': Color(0xFF54812d),
     'Java': Color(0xFF52a6b0),
-    'Flash': Color(0xFF616161),
-    'QSP': Color(0xFFaa2d77),
+    'Flash': Color(0xFF0d47a1), // Used color from Animations
+    'QSP': Color(0xFFd32f2f),
     'RAGS': Color(0xFFc77700),
     'WebGL': Color(0xFFfe5901),
     'VN': Color(0xFFd32f2f),
-    'Godot': Color(0xFF478cbf),
-    'Wolf RPG': Color(0xFF4caf50),
+    'Godot': Color(0xFF03a9f4),
+    'Wolf RPG': Color(0xFF39843c),
     'Collection': Color(0xFF616161),
     'SiteRip': Color(0xFF6e9e37),
-    // Non-games categories
     'Comics': Color(0xFFc77700),
     'Manga': Color(0xFF0fb2fc),
-    'Pinup': Color(0xFF228fe6),
+    'Pinup': Color(0xFF0b79d1),
     'CG': Color(0xFFa8980b),
     'Video': Color(0xFFc77700),
     'GIF': Color(0xFF03a9f4),
-    'App': Color(0xFF4caf50),
+    'App': Color(0xFF39843c),
+    'AutoDesk': Color(0xFF39843c),
+    'Blender': Color(0xFF03a9f4),
+    'Daz': Color(0xFFc77700),
+    'Illusion': Color(0xFF6c9c34),
+    'Poser': Color(0xFFba4545),
+    'Tutorial': Color(0xFF6c9c34),
+    'Unreal': Color(0xFF0d47a1),
+    'VAM': Color(0xFF0d47a1)
   };
 
   /// Gets the color for a given engine name
