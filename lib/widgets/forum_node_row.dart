@@ -49,7 +49,7 @@ class ForumNodeRow extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 9 : 10),
         decoration: showDivider
             ? BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
+                border: Border(bottom: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.06))),
               )
             : null,
         child: Row(

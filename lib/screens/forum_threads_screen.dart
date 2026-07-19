@@ -255,7 +255,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                 children: [
                   Text('Threads', style: TextStyle(color: Colors.grey[500], fontSize: 11, letterSpacing: 0.4)),
                   const SizedBox(width: 8),
-                  Expanded(child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.08))),
+                  Expanded(child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.08))),
                 ],
               ),
             ),

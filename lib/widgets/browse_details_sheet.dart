@@ -594,14 +594,14 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             if (setIndex > 0)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+                child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.1)),
               ),
             _buildDownloadSet(colorScheme, setIndex, downloads.sets[setIndex]),
           ],
           if (downloads.extras.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 1, color: Colors.white.withValues(alpha: 0.1)),
+              child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
             Text('Extras', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
             const SizedBox(height: 6),

@@ -463,7 +463,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: _gapHPadding, vertical: 5),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadii.pill),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                    border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.18)),
                   ),
                   child: Text(
                     '…',
@@ -608,7 +608,10 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
         padding: const EdgeInsets.symmetric(horizontal: _pillHPadding, vertical: 5),
         decoration: BoxDecoration(
-          color: current ? colorScheme.primary.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.06),
+          // Opaque rather than the translucent chipFill chips elsewhere use:
+          // those sit on cards, while the pills sit on the page background,
+          // where 35% of a near-black surface all but disappears.
+          color: current ? colorScheme.primary.withValues(alpha: 0.3) : colorScheme.surface,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: current ? colorScheme.primary : Colors.transparent),
         ),
@@ -923,7 +926,7 @@ class _PostCardState extends State<_PostCard> {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: colorScheme.onSurface.withValues(alpha: 0.04),
             border: Border(left: BorderSide(color: colorScheme.primary.withValues(alpha: 0.6), width: 2)),
           ),
           child: Column(
@@ -947,7 +950,7 @@ class _PostCardState extends State<_PostCard> {
         final bool expanded = _expandedSpoilers.contains(index);
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
+            color: colorScheme.onSurface.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
@@ -1006,9 +1009,9 @@ class _PostCardState extends State<_PostCard> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(5, 3, 9, 3),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: colorScheme.onSurface.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.12)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

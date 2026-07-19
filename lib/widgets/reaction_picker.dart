@@ -63,7 +63,7 @@ class ReactionPicker extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
+                        color: colorScheme.onSurface.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                         border: Border.all(color: entry.value.color.withValues(alpha: 0.45)),
                       ),
