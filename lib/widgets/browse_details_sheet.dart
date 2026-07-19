@@ -814,16 +814,17 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               left: 8,
               child: EnginePill(engines: ThreadUtils.getEnginesFromThread(thread.prefixes, category: widget.category)),
             ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: VersionPill(
-                version: thread.version,
-                isCompleted: thread.isCompleted,
-                isAbandoned: thread.isAbandoned,
-                isOnhold: thread.isOnhold,
+            if (widget.category.hasVersions)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: VersionPill(
+                  version: thread.version,
+                  isCompleted: thread.isCompleted,
+                  isAbandoned: thread.isAbandoned,
+                  isOnhold: thread.isOnhold,
+                ),
               ),
-            ),
           ],
         ),
       ),

@@ -11,4 +11,7 @@ extension SearchCategoryX on SearchCategory {
     final value = name;
     return value[0].toUpperCase() + value.substring(1);
   }
+
+  /// Whether threads in this category should include version pills
+  bool get hasVersions => this != SearchCategory.comics && this != SearchCategory.assets;
 }

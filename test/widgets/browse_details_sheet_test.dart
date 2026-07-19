@@ -1,6 +1,7 @@
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/models/browse_thread.dart';
+import 'package:f95_portal/models/search_category.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/forum_service.dart';
@@ -8,6 +9,7 @@ import 'package:f95_portal/services/thread_page_service.dart';
 import 'package:f95_portal/widgets/screenshot_gallery.dart';
 import 'package:f95_portal/widgets/sliding_reveal.dart';
 import 'package:f95_portal/widgets/browse_details_sheet.dart';
+import 'package:f95_portal/widgets/version_pill.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,6 +53,7 @@ Future<(BrowseTagSelection? Function(), List<Uri>)> pumpDetails(
   BrowseThread? thread,
   FetchThreadPage? fetchThreadPage,
   ThreadActionSender? actionSender,
+  SearchCategory category = SearchCategory.games,
 }) async {
   BrowseTagSelection? selection;
   final launched = <Uri>[];
@@ -66,6 +69,7 @@ Future<(BrowseTagSelection? Function(), List<Uri>)> pumpDetails(
                 selection = await BrowseDetailsSheet.show(
                   context,
                   thread ?? detailedThread(),
+                  category: category,
                   urlLauncher: (uri) async {
                     launched.add(uri);
                     return true;
@@ -111,6 +115,14 @@ void main() {
     await tester.scrollUntilVisible(find.text('3dcg'), 100);
     expect(find.text('3dcg'), findsOneWidget);
     expect(find.text('harem'), findsOneWidget);
+  });
+
+  testWidgets('hides the version pill for comics and assets', (tester) async {
+    for (final category in [SearchCategory.comics, SearchCategory.assets]) {
+      await pumpDetails(tester, category: category);
+      expect(find.byType(VersionPill), findsNothing, reason: '$category should not show a version');
+      expect(find.textContaining('v0.8.2'), findsNothing, reason: '$category should not show a version');
+    }
   });
 
   testWidgets('tapping a tag pops with an additive selection and a light haptic', (tester) async {

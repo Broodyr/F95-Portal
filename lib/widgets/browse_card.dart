@@ -50,16 +50,17 @@ class BrowseCard extends StatelessWidget {
                 ),
 
                 // Version pill (top-right)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: VersionPill(
-                    version: thread.version,
-                    isCompleted: thread.isCompleted,
-                    isAbandoned: thread.isAbandoned,
-                    isOnhold: thread.isOnhold,
+                if (category.hasVersions)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: VersionPill(
+                      version: thread.version,
+                      isCompleted: thread.isCompleted,
+                      isAbandoned: thread.isAbandoned,
+                      isOnhold: thread.isOnhold,
+                    ),
                   ),
-                ),
               ],
             ),
 
