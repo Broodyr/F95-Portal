@@ -41,6 +41,46 @@ void main() {
     expect(segmentRadius(tester, 2), const BorderRadius.only(topRight: outer, bottomRight: outer));
   });
 
+  /// The padding actually applied to each segment, in order.
+  List<EdgeInsets> segmentPadding(WidgetTester tester) {
+    return tester
+        .widgetList<Container>(find.descendant(of: find.byType(SegmentedPill), matching: find.byType(Container)))
+        .map((c) => c.padding! as EdgeInsets)
+        .toList();
+  }
+
+  testWidgets('a lone segment keeps its full padding on both edges', (tester) async {
+    await pumpLabels(tester, 1);
+
+    expect(segmentPadding(tester).single, PillSegment.labelPadding);
+  });
+
+  testWidgets('abutting edges are halved, so a seam spans one outer edge', (tester) async {
+    await pumpLabels(tester, 3);
+
+    final List<EdgeInsets> padding = segmentPadding(tester);
+    final double edge = PillSegment.labelPadding.left;
+
+    expect(padding[0].left, edge, reason: 'outer');
+    expect(padding[0].right, edge / 2, reason: 'abuts segment 1');
+    expect(padding[1].left, edge / 2, reason: 'abuts segment 0');
+    expect(padding[1].right, edge / 2, reason: 'abuts segment 2');
+    expect(padding[2].left, edge / 2, reason: 'abuts segment 1');
+    expect(padding[2].right, edge, reason: 'outer');
+
+    // The point of the halving: a seam is no wider than a single outer edge.
+    expect(padding[0].right + padding[1].left, edge);
+  });
+
+  testWidgets('halving leaves vertical padding alone', (tester) async {
+    await pumpLabels(tester, 2);
+
+    for (final EdgeInsets padding in segmentPadding(tester)) {
+      expect(padding.top, PillSegment.labelPadding.top);
+      expect(padding.bottom, PillSegment.labelPadding.bottom);
+    }
+  });
+
   testWidgets('a segment paints an edge a hair brighter than its fill by default', (tester) async {
     await pumpLabels(tester, 1);
 

@@ -20,11 +20,14 @@ class PillSegment {
   static const TextStyle labelStyle = TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600);
 
   /// Padding around a text segment. Icon segments override it — a glyph needs
-  /// less breathing room than a word, and less still on the side it abuts.
+  /// less breathing room than a word.
+  ///
+  /// State the padding the segment would use standing alone; [SegmentedPill]
+  /// thins the edges that end up abutting a neighbour.
   static const EdgeInsets labelPadding = EdgeInsets.symmetric(horizontal: 8, vertical: 4);
 
   final Color color;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsets padding;
   final double borderAlpha;
   final Widget child;
 
@@ -70,8 +73,16 @@ class SegmentedPill extends StatelessWidget {
   Widget _segmentBox(PillSegment segment, {required bool isFirst, required bool isLast}) {
     const Radius outer = Radius.circular(AppRadii.pillSegment);
 
+    // A seam collects padding from the segments on both sides of it, which
+    // doubles the gap there and reads as clunky. Halve each abutting edge, so
+    // a seam spans about what a single outer edge does.
+    final EdgeInsets padding = segment.padding.copyWith(
+      left: isFirst ? segment.padding.left : segment.padding.left / 2,
+      right: isLast ? segment.padding.right : segment.padding.right / 2,
+    );
+
     return Container(
-      padding: segment.padding,
+      padding: padding,
       decoration: BoxDecoration(
         color: segment.color.withValues(alpha: PillSegment.fillAlpha),
         borderRadius: BorderRadius.only(

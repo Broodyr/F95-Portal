@@ -53,7 +53,9 @@ class VersionPill extends StatelessWidget {
         if (badge != null)
           PillSegment(
             color: badge.$1,
-            padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
+            // Tighter than a text segment: a glyph needs less room than a
+            // word. SegmentedPill thins the edge facing the version segment.
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             child: Icon(badge.$2, color: Colors.white, size: 16),
           ),
         PillSegment(
