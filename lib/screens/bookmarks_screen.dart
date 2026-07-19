@@ -300,7 +300,11 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                       entry.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        color: AppColors.of(context).brightText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     if (entry.snippet.isNotEmpty)
                       Padding(

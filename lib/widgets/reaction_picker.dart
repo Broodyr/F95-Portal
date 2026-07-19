@@ -48,7 +48,7 @@ class ReactionPicker extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
               'React',
-              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
           Padding(

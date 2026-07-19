@@ -152,7 +152,7 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Text(
               'Reactions to #${widget.postNumber}',
-              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
           Flexible(child: body),
@@ -218,7 +218,7 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(member.username, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                Text(member.username, style: TextStyle(color: AppColors.of(context).brightText, fontSize: 13)),
                 if (member.memberTitle.isNotEmpty)
                   Text(member.memberTitle, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5)),
               ],

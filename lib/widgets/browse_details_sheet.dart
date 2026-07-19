@@ -276,7 +276,11 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                             children: [
                               Text(
                                 thread.title,
-                                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  color: AppColors.of(context).brightText,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -482,7 +486,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(field.label, style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11)),
-                Text(field.value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                Text(field.value, style: TextStyle(color: AppColors.of(context).brightText, fontSize: 13)),
               ],
             ),
           ),
@@ -645,7 +649,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         if (set.title != null) ...[
           Text(
             set.title!,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+            style: TextStyle(color: AppColors.of(context).brightText, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
         ],
@@ -750,7 +754,11 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                   Expanded(
                     child: Text(
                       spoiler.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: AppColors.of(context).brightText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   AnimatedRotation(
@@ -854,7 +862,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               const SizedBox(height: 4),
               Text(
                 value,
-                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(color: AppColors.of(context).brightText, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -884,7 +892,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         children: [
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+            style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15, fontWeight: FontWeight.w600),
           ),
           if (hint != null) ...[
             const SizedBox(width: 8),

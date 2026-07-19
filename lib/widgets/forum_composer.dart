@@ -194,7 +194,7 @@ class _ForumComposerState extends State<ForumComposer> {
               Expanded(
                 child: Text(
                   widget.heading,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15, fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton.icon(
@@ -219,7 +219,7 @@ class _ForumComposerState extends State<ForumComposer> {
               controller: _titleController,
               maxLength: 150,
               onChanged: (_) => setState(() {}),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14),
               decoration: _decoration('Thread title').copyWith(counterText: ''),
             ),
             const SizedBox(height: 8),
@@ -230,7 +230,7 @@ class _ForumComposerState extends State<ForumComposer> {
             minLines: 4,
             maxLines: 10,
             onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+            style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14, height: 1.4),
             decoration: _decoration('Write your message… BBCode works: [b]bold[/b], [spoiler]…[/spoiler]'),
           ),
           if (_error != null)

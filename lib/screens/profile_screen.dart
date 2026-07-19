@@ -452,7 +452,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ] else ...[
                 IconButton(
                   tooltip: 'Back',
-                  icon: const Icon(Icons.arrow_back, size: 22, color: Colors.white),
+                  // Hand-rolled header rather than an AppBar, so it doesn't
+                  // inherit appBarTheme — match its back arrow by hand.
+                  icon: Icon(Icons.arrow_back, size: 22, color: AppColors.of(context).brightText),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 const SizedBox(width: 2),

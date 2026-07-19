@@ -598,11 +598,18 @@ class _SearchOptionsSheetState extends State<SearchOptionsSheet> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(_anyTags ? Icons.join_full : Icons.join_inner, size: 14, color: Colors.white),
+                  // A neutral chip, unlike the accent-filled tag pills below,
+                  // so its contents are ordinary text rather than a
+                  // foreground on colour.
+                  Icon(_anyTags ? Icons.join_full : Icons.join_inner, size: 14, color: colorScheme.onSurface),
                   const SizedBox(width: 4),
                   Text(
                     _anyTags ? 'Match: any' : 'Match: all',
-                    style: const TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.of(context).brightText,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),

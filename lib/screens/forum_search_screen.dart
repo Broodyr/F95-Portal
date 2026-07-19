@@ -147,7 +147,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
           autofocus: true,
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => _search(),
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Search the forum…',
             hintStyle: TextStyle(color: AppColors.of(context).hintText, fontSize: 14),
@@ -337,7 +337,11 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
                           ),
                         TextSpan(
                           text: result.title,
-                          style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            color: AppColors.of(context).brightText,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),

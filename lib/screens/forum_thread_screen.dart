@@ -668,7 +668,10 @@ class _WatchOptionsSheet extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        color: selected ? Colors.white : AppColors.of(context).brightText,
+                        // Selection is carried by the weight and the primary
+                        // icon; a brighter label on top of those was 23 points
+                        // of difference doing nothing visible.
+                        color: AppColors.of(context).brightText,
                         fontSize: 13.5,
                         fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                       ),
@@ -697,7 +700,11 @@ class _WatchOptionsSheet extends StatelessWidget {
                 children: [
                   Text(
                     current == null ? 'Watching this thread' : 'Watch thread',
-                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppColors.of(context).brightText,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   if (current == null)
                     Text(
@@ -785,7 +792,11 @@ class _PostCardState extends State<_PostCard> {
                           children: [
                             Text(
                               post.author,
-                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: AppColors.of(context).brightText,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             Text(
                               [
@@ -974,7 +985,11 @@ class _PostCardState extends State<_PostCard> {
                       Expanded(
                         child: Text(
                           block.label,
-                          style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: AppColors.of(context).brightText,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       AnimatedRotation(

@@ -272,7 +272,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
                         TextSpan(
                           text: alert.username,
                           style: TextStyle(
-                            color: alert.unread ? Colors.white : AppColors.of(context).brightText,
+                            // Read drops a step rather than unread rising: at
+                            // white-over-brightText the two were 23 points
+                            // apart and the state barely showed.
+                            color: alert.unread ? AppColors.of(context).brightText : AppColors.of(context).bodyText,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -297,7 +300,9 @@ class _AlertsScreenState extends State<AlertsScreen> {
                           ),
                         TextSpan(
                           text: alert.title,
-                          style: TextStyle(color: alert.unread ? Colors.white : AppColors.of(context).brightText),
+                          style: TextStyle(
+                            color: alert.unread ? AppColors.of(context).brightText : AppColors.of(context).bodyText,
+                          ),
                         ),
                       ],
                     ),
