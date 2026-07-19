@@ -427,11 +427,6 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   static const double _pillHPadding = 11;
   static const double _gapHPadding = 9;
 
-  /// How far the pills may shrink before the row gives up its adjacent pages
-  /// instead. Squeezing past this trades away legibility and tap area at
-  /// exactly the page counts where n±1 is worth least.
-  static const double _minPillScale = 0.8;
-
   /// Chevrons plus a compact pill neighborhood: first, around current, last.
   Widget _buildPagination(ColorScheme colorScheme, int totalPages) {
     return LayoutBuilder(
@@ -441,9 +436,14 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         // going — and the least worth their width, since telling 10001 from
         // 10003 means reading five digits and diffing the last one. The
         // chevrons already do ±1, and do it without any reading at all.
+        //
+        // The bar is a plain fit, not some allowance to shrink into: a pill
+        // is only ~23dp tall to begin with, which is already under a
+        // comfortable touch target on a phone, so there's no headroom to
+        // trade. Width goes to keeping the remaining pills full size.
         final double available = constraints.maxWidth - _chevronWidth * 2;
         List<int> pages = _pageWindow(totalPages, neighbours: true);
-        if (_clusterWidth(context, pages) > available / _minPillScale) {
+        if (_clusterWidth(context, pages) > available) {
           pages = _pageWindow(totalPages, neighbours: false);
         }
 

@@ -145,53 +145,45 @@ void main() {
       return fitted.size.width / fitted.child!.size.width;
     }
 
-    // Short numbers leave room for the full neighborhood on any phone.
-    for (final size in const [360.0, 411.0]) {
-      testWidgets('keeps the adjacent pages at 20 pages, ${size.toInt()}dp', (tester) async {
-        await pumpAt(tester, current: 10, total: 20, width: size);
+    // Where the row gives up its neighbours depends on the font: the test
+    // font draws every glyph a full font-size wide, so clusters measure
+    // ~40% wider here than they do in Roboto on a device. Cases near the
+    // crossover would therefore prove nothing about the real thing — these
+    // stay on whichever side of it both fonts agree on.
 
-        expect(tester.takeException(), isNull);
-        for (final label in ['1', '9', '10', '11', '20']) {
-          expect(find.text(label), findsOneWidget);
-        }
-      });
-    }
-
-    testWidgets('keeps the adjacent pages at 300 pages when the width allows', (tester) async {
-      await pumpAt(tester, current: 150, total: 300, width: 411);
+    testWidgets('keeps the adjacent pages when they fit', (tester) async {
+      await pumpAt(tester, current: 10, total: 20, width: 411);
 
       expect(tester.takeException(), isNull);
-      expect(find.text('149'), findsOneWidget);
-      expect(find.text('151'), findsOneWidget);
-    });
-
-    testWidgets('drops the adjacent pages at 300 pages on a narrow phone', (tester) async {
-      await pumpAt(tester, current: 150, total: 300, width: 360);
-
-      expect(tester.takeException(), isNull);
-      expect(find.text('149'), findsNothing);
-      expect(find.text('151'), findsNothing);
-      // The three that carry the navigation survive either way.
-      for (final label in ['1', '150', '300']) {
+      for (final label in ['1', '9', '10', '11', '20']) {
         expect(find.text(label), findsOneWidget);
       }
     });
 
-    // The case that started this: five digits used to shrink the pills to
-    // roughly 3mm. Shedding n±1 buys back enough width to render full size.
-    testWidgets('a five-digit thread renders its pills unshrunk', (tester) async {
-      await pumpAt(tester, current: 10002, total: 20839, width: 411);
+    testWidgets('drops the adjacent pages at five digits', (tester) async {
+      await pumpAt(tester, current: 10002, total: 20839, width: 360);
 
       expect(tester.takeException(), isNull);
       expect(find.text('10001'), findsNothing);
       expect(find.text('10003'), findsNothing);
+      // The three that carry the navigation survive either way.
       for (final label in ['1', '10002', '20839']) {
         expect(find.text(label), findsOneWidget);
       }
+    });
+
+    // The case that started this: five digits shrank the pills to roughly
+    // 3mm. Shedding n±1 buys back the width to render them full size.
+    testWidgets('a five-digit thread renders its pills unshrunk', (tester) async {
+      await pumpAt(tester, current: 10002, total: 20839, width: 411);
+
+      expect(tester.takeException(), isNull);
       expect(pillScale(tester), 1.0);
     });
 
-    // Nothing above is allowed to overflow, however extreme the numbers.
+    // Scaling is the backstop for whatever the fit estimate fails to
+    // anticipate — a wider font, a bumped text size, numbers past anything
+    // sane. Nothing is allowed to overflow.
     testWidgets('scales rather than overflow when even the short row is too wide', (tester) async {
       await pumpAt(tester, current: 100002, total: 208390, width: 320);
 
@@ -199,5 +191,18 @@ void main() {
       expect(pillScale(tester), lessThan(1.0));
       expect(find.text('100002'), findsOneWidget);
     });
+
+    for (final size in const [320.0, 360.0, 411.0]) {
+      for (final total in const [20, 300, 20839]) {
+        testWidgets('page ${total ~/ 2} of $total at ${size.toInt()}dp stays in its row', (tester) async {
+          await pumpAt(tester, current: total ~/ 2, total: total, width: size);
+
+          expect(tester.takeException(), isNull);
+          for (final label in ['1', '${total ~/ 2}', '$total']) {
+            expect(find.text(label), findsOneWidget);
+          }
+        });
+      }
+    }
   });
 }
