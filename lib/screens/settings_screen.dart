@@ -13,6 +13,7 @@ import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../services/image_cache_wipe.dart';
 import '../services/settings_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/remote_image.dart';
 import '../widgets/search_options_sheet.dart';
@@ -115,14 +116,14 @@ class SettingsScreen extends StatelessWidget {
               controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
               children: [
-                const Text(
+                Text(
                   'Settings',
-                  style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: AppColors.of(context).brightText, fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                _sectionHeader('Search defaults'),
+                _sectionHeader(context, 'Search defaults'),
                 Text(
                   'Every new search starts from these. Clearing the filter bar returns to them.',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
                 _buildDefaultsSummary(colorScheme, settings.defaultQuery),
@@ -147,14 +148,14 @@ class SettingsScreen extends StatelessWidget {
                       ),
                   ],
                 ),
-                _sectionHeader('Appearance'),
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text('Text size', style: TextStyle(color: Colors.white, fontSize: 15)),
+                _sectionHeader(context, 'Appearance'),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('Text size', style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15)),
                 ),
                 Text(
                   'Scales text across the app (default: Medium)',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
                 SegmentedSelector<FontSizeOption>(
@@ -170,46 +171,46 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('SFW mode', style: TextStyle(color: Colors.white, fontSize: 15)),
+                  title: Text('SFW mode', style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15)),
                   subtitle: Text(
                     'Blur all covers and screenshots',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
                   ),
-                  activeTrackColor: colorScheme.primary,
                   value: settings.sfwBlur,
                   onChanged: (value) => SettingsService.instance.update(settings.copyWith(sfwBlur: value)),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Glass effects', style: TextStyle(color: Colors.white, fontSize: 15)),
+                  title: Text('Glass effects', style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15)),
                   subtitle: Text(
                     'Backdrop blur on sheets, nav bar, overlays, and card reflections; disable if animations lag',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
                   ),
-                  activeTrackColor: colorScheme.primary,
                   value: settings.glassEffects,
                   onChanged: (value) => SettingsService.instance.update(settings.copyWith(glassEffects: value)),
                 ),
                 if (!kReleaseMode)
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Performance overlay', style: TextStyle(color: Colors.white, fontSize: 15)),
+                    title: Text(
+                      'Performance overlay',
+                      style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15),
+                    ),
                     subtitle: Text(
                       'Flutter frame-time graphs (debug/profile builds only)',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
                     ),
-                    activeTrackColor: colorScheme.primary,
                     value: settings.showPerfOverlay,
                     onChanged: (value) => SettingsService.instance.update(settings.copyWith(showPerfOverlay: value)),
                   ),
                 if (kIsWeb || AuthService.instance.isLoggedIn) ...[
-                  _sectionHeader('Forum account'),
+                  _sectionHeader(context, 'Forum account'),
                   _AlertsPopupPrefTile(
                     loader: alertPrefsLoader ?? ForumService.fetchAlertPreferences,
                     saver: alertPrefsSaver ?? ForumService.setAlertsPopupSkipsMarkRead,
                   ),
                 ],
-                _sectionHeader('Storage'),
+                _sectionHeader(context, 'Storage'),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
@@ -230,12 +231,12 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _sectionHeader(String label) {
+  Widget _sectionHeader(BuildContext context, String label) {
     return Padding(
       padding: const EdgeInsets.only(top: 28, bottom: 4),
       child: Text(
         label,
-        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+        style: TextStyle(color: AppColors.of(context).brightText, fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -340,13 +341,15 @@ class _AlertsPopupPrefTileState extends State<_AlertsPopupPrefTile> {
   Widget build(BuildContext context) {
     return SwitchListTile(
       contentPadding: EdgeInsets.zero,
-      title: const Text('Alerts pop-up skips mark read', style: TextStyle(color: Colors.white, fontSize: 15)),
+      title: Text(
+        'Alerts pop-up skips mark read',
+        style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15),
+      ),
       subtitle: Text(
         'Alerts stay unread until you open them, instead of being marked '
         'read once shown. Saved to your forum account preferences.',
-        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+        style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
       ),
-      activeTrackColor: Theme.of(context).colorScheme.primary,
       value: _value ?? false,
       onChanged: _value == null || _saving ? null : _save,
     );

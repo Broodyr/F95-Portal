@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
+
 /// Core palette constants referenced by the [ThemeData] in main.dart.
 /// All other code should read colors from the theme
 /// ([ColorScheme] or [AppColors.of]) rather than these constants.
 abstract final class AppPalette {
+  static const Color primary = Color(0xFFDC144D);
+  static const Color secondary = Color(0xFF181818);
   static const Color surface = Color(0xFF1C1C1C);
   static const Color background = Color(0xFF0F0F0F);
   static const Color appBar = Color(0xFF1A1A1A);
@@ -25,6 +29,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.chipSurface,
     required this.brightText,
     required this.bodyText,
+    required this.subtleText,
     required this.hintText,
   });
 
@@ -43,6 +48,11 @@ class AppColors extends ThemeExtension<AppColors> {
   /// Softer body copy: post bodies, bios.
   final Color bodyText;
 
+  /// The supporting line under a heading: setting subtitles, section blurbs,
+  /// row metadata. Reads as secondary to [bodyText] without receding as far
+  /// as [hintText], which has to stay distinguishable from real input.
+  final Color subtleText;
+
   /// Placeholder text in empty input fields; dimmer than [bodyText] so a
   /// hint never reads as something the user typed.
   final Color hintText;
@@ -53,6 +63,7 @@ class AppColors extends ThemeExtension<AppColors> {
     chipSurface: Color(0xFF262629),
     brightText: Color(0xFFE8E8E8),
     bodyText: Color(0xFFC9C9C9),
+    subtleText: Color(0xFF9E9E9E),
     hintText: Color(0xFF757575),
   );
 
@@ -67,6 +78,7 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? chipSurface,
     Color? brightText,
     Color? bodyText,
+    Color? subtleText,
     Color? hintText,
   }) {
     return AppColors(
@@ -75,6 +87,7 @@ class AppColors extends ThemeExtension<AppColors> {
       chipSurface: chipSurface ?? this.chipSurface,
       brightText: brightText ?? this.brightText,
       bodyText: bodyText ?? this.bodyText,
+      subtleText: subtleText ?? this.subtleText,
       hintText: hintText ?? this.hintText,
     );
   }
@@ -88,6 +101,7 @@ class AppColors extends ThemeExtension<AppColors> {
       chipSurface: Color.lerp(chipSurface, other.chipSurface, t)!,
       brightText: Color.lerp(brightText, other.brightText, t)!,
       bodyText: Color.lerp(bodyText, other.bodyText, t)!,
+      subtleText: Color.lerp(subtleText, other.subtleText, t)!,
       hintText: Color.lerp(hintText, other.hintText, t)!,
     );
   }

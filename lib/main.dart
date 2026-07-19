@@ -47,6 +47,15 @@ Future<void> main() async {
   runApp(const F95Portal());
 }
 
+/// A switch part's colour for the state it's in. Spelling out thumb and track
+/// costs the framework's own disabled styling, so fade it back in here — the
+/// alerts tile switches off while it loads and saves, and without this it
+/// would look live the whole time.
+Color _switchColor(Set<WidgetState> states, {required Color on, required Color off}) {
+  final base = states.contains(WidgetState.selected) ? on : off;
+  return states.contains(WidgetState.disabled) ? base.withValues(alpha: 0.4) : base;
+}
+
 class F95Portal extends StatelessWidget {
   const F95Portal({super.key});
 
@@ -61,8 +70,8 @@ class F95Portal extends StatelessWidget {
         builder: (context, child) => AppTextScale(child: child!),
         theme: ThemeData(
           colorScheme: const ColorScheme.dark(
-            primary: Color(0xFFDC144D),
-            secondary: Color(0xFF181818),
+            primary: AppPalette.primary,
+            secondary: AppPalette.secondary,
             surface: AppPalette.surface,
             // ColorScheme.dark() derives no container ladder — it hands back
             // `surface` for every surfaceContainer* role — so any role the
@@ -81,6 +90,17 @@ class F95Portal extends StatelessWidget {
           bottomSheetTheme: const BottomSheetThemeData(
             backgroundColor: AppPalette.surface,
             modalBackgroundColor: AppPalette.surface,
+          ),
+          switchTheme: SwitchThemeData(
+            thumbColor: WidgetStateProperty.resolveWith(
+              (states) => _switchColor(states, on: AppPalette.secondary, off: AppPalette.primary),
+            ),
+            trackColor: WidgetStateProperty.resolveWith(
+              (states) => _switchColor(states, on: AppPalette.primary, off: Colors.black.withValues(alpha: AppAlphas.chipFill)),
+            ),
+            trackOutlineColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.selected) ? Colors.transparent : AppPalette.secondary,
+            ),
           ),
           // `GlassDialog` reads these rather than inheriting them, since it
           // can't build on [Dialog] (see its doc comment) — so this stays the
