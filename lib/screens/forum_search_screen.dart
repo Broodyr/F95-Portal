@@ -204,7 +204,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
           label,
           style: TextStyle(
             fontSize: 11.5,
-            color: selected ? colorScheme.primary : Colors.grey[400],
+            color: selected ? colorScheme.primary : AppColors.of(context).bodyText,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),

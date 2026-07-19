@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../models/forum.dart';
 import '../services/settings_service.dart';
+import '../theme/app_colors.dart';
 import 'reaction_icon.dart';
 
 typedef FetchReactions = Future<ReactionsPage> Function(String url);
@@ -181,9 +182,7 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
           // itself surface, so surface-derived tokens land back on its own
           // colour and the pill disappears. Staying translucent also keeps
           // the blur reading through it.
-          color: selected
-              ? colorScheme.primary.withValues(alpha: 0.25)
-              : colorScheme.onSurface.withValues(alpha: 0.06),
+          color: selected ? colorScheme.primary.withValues(alpha: 0.25) : colorScheme.onSurface.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: selected ? colorScheme.primary : Colors.transparent),
         ),
@@ -195,7 +194,7 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
               '${tab.name} ${tab.count}',
               style: TextStyle(
                 fontSize: 11.5,
-                color: selected ? Colors.white : Colors.grey[400],
+                color: selected ? Colors.white : AppColors.of(context).bodyText,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),

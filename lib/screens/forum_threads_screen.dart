@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../models/forum.dart';
 import '../services/forum_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/forum_node_row.dart';
 import '../widgets/glass_fab.dart';
@@ -313,7 +314,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                         TextSpan(
                           text: row.title,
                           style: TextStyle(
-                            color: row.unread ? Colors.white : Colors.grey[400],
+                            color: row.unread ? Colors.white : AppColors.of(context).bodyText,
                             fontSize: 12.5,
                             fontWeight: row.unread ? FontWeight.w500 : FontWeight.w400,
                           ),

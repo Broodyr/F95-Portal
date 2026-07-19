@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/account.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
+import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
@@ -271,7 +272,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                         TextSpan(
                           text: alert.username,
                           style: TextStyle(
-                            color: alert.unread ? Colors.white : Colors.grey[300],
+                            color: alert.unread ? Colors.white : AppColors.of(context).brightText,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -296,7 +297,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                           ),
                         TextSpan(
                           text: alert.title,
-                          style: TextStyle(color: alert.unread ? Colors.white : Colors.grey[300]),
+                          style: TextStyle(color: alert.unread ? Colors.white : AppColors.of(context).brightText),
                         ),
                       ],
                     ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../models/f95_metadata.dart';
 import '../models/search_query.dart';
+import '../theme/app_colors.dart';
 import '../utils/formatters.dart';
 import 'glass_aware.dart';
 
@@ -156,7 +157,7 @@ class ActiveFiltersBar extends StatelessWidget {
                 if (resultCount != null) ...[
                   Text(
                     '${NumberFormatter.formatNumber(resultCount!)} results',
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.w500),
+                    style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(width: 8),
                 ],

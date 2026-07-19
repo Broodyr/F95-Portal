@@ -51,7 +51,7 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
     _recognizers.clear();
 
     final colorScheme = Theme.of(context).colorScheme;
-    final baseStyle = TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45);
+    final baseStyle = TextStyle(color: AppColors.of(context).brightText, fontSize: 13, height: 1.45);
 
     // Tapping any image opens the gallery positioned on it with the rest
     // swipeable: the caller-provided set when given, else this block's own
@@ -156,7 +156,7 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
               if (piece.underline || url != null) TextDecoration.underline,
               if (piece.strike) TextDecoration.lineThrough,
             ]),
-            decorationColor: url != null ? colorScheme.primary : Colors.grey[300],
+            decorationColor: url != null ? colorScheme.primary : AppColors.of(context).brightText,
           ),
         ),
       );

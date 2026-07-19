@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../models/search_query.dart';
 import '../models/browse_thread.dart';
 import '../services/api_service.dart';
+import '../theme/app_colors.dart';
 import 'browse_card.dart';
 import 'browse_details_sheet.dart';
 
@@ -180,7 +181,7 @@ class _BrowseListState extends State<BrowseList> {
             children: [
               Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
-              Text('Failed to load threads', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
+              Text('Failed to load threads', style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 18)),
               const SizedBox(height: 8),
               Text(
                 _error!,
@@ -211,7 +212,10 @@ class _BrowseListState extends State<BrowseList> {
             children: [
               Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
-              Text('No threads match this search', style: TextStyle(color: Colors.grey[400], fontSize: 18)),
+              Text(
+                'No threads match this search',
+                style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 18),
+              ),
             ],
           ),
         ),
@@ -262,7 +266,7 @@ class _BrowseListState extends State<BrowseList> {
         padding: const EdgeInsets.symmetric(vertical: 24),
         child: Column(
           children: [
-            Text('Failed to load more', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+            Text('Failed to load more', style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 14)),
             const SizedBox(height: 8),
             TextButton(onPressed: _loadMore, child: const Text('Retry')),
           ],

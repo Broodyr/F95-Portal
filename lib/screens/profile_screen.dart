@@ -405,7 +405,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               'Anonymous browsing is limited, including the omission of download links.\nSign in to lift the limit and see your profile.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[400], fontSize: 14),
+              style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 14),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -460,7 +460,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Text(
                     _page?.username ?? widget.username ?? 'Profile',
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: AppColors.of(context).brightText, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: AppColors.of(context).brightText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -518,7 +522,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Text(
                       page.username,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.of(context).brightText, fontSize: 16, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        color: AppColors.of(context).brightText,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   if (page.memberTitle.isNotEmpty) ...[
@@ -529,7 +537,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: AppColors.of(context).chipSurface,
                         borderRadius: BorderRadius.circular(AppRadii.pill),
                       ),
-                      child: Text(page.memberTitle, style: TextStyle(color: Colors.grey[400], fontSize: 10.5)),
+                      child: Text(
+                        page.memberTitle,
+                        style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 10.5),
+                      ),
                     ),
                   ],
                 ],
@@ -771,7 +782,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                   ],
                 ),
-                Text(comment.body, style: TextStyle(color: Colors.grey[400], fontSize: 11.5, height: 1.4)),
+                Text(
+                  comment.body,
+                  style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5, height: 1.4),
+                ),
               ],
             ),
           ),
@@ -846,7 +860,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     TextSpan(
                       text: posting.title,
-                      style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12.5, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        color: AppColors.of(context).brightText,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),

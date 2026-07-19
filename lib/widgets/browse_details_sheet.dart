@@ -279,7 +279,10 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                                 style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
-                              Text('by ${thread.creator}', style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+                              Text(
+                                'by ${thread.creator}',
+                                style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 14),
+                              ),
                             ],
                           ),
                         ),
@@ -485,7 +488,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
   }
 
   Widget _buildOverviewCard(ColorScheme colorScheme, String overview) {
-    final style = TextStyle(color: Colors.grey[300], fontSize: 13, height: 1.45);
+    final style = TextStyle(color: AppColors.of(context).brightText, fontSize: 13, height: 1.45);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -567,7 +570,10 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             Icon(Icons.lock_outline, size: 16, color: Colors.grey[500]),
             const SizedBox(width: 10),
             Expanded(
-              child: Text('Sign in to see download links', style: TextStyle(color: Colors.grey[300], fontSize: 13)),
+              child: Text(
+                'Sign in to see download links',
+                style: TextStyle(color: AppColors.of(context).brightText, fontSize: 13),
+              ),
             ),
             Text(
               'Sign in',
@@ -609,7 +615,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               if (extra.label.toLowerCase() != 'extras' && extra.label.toLowerCase() != 'extra')
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(extra.label, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                  child: Text(extra.label, style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12)),
                 ),
               _buildHostLinks(colorScheme, extra.links),
               const SizedBox(height: 6),
@@ -644,7 +650,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
           for (final group in groups) ...[
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(group.label, style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+              child: Text(group.label, style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12)),
             ),
             _buildHostLinks(colorScheme, group.links),
             const SizedBox(height: 8),
@@ -663,16 +669,14 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                       color: i == selectedIndex ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                       border: Border.all(
-                        color: i == selectedIndex
-                            ? colorScheme.primary
-                            : colorScheme.onSurface.withValues(alpha: 0.4),
+                        color: i == selectedIndex ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Text(
                       groups[i].label,
                       style: TextStyle(
                         fontSize: 12,
-                        color: i == selectedIndex ? colorScheme.primary : Colors.grey[400],
+                        color: i == selectedIndex ? colorScheme.primary : AppColors.of(context).bodyText,
                         fontWeight: i == selectedIndex ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
@@ -952,7 +956,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               ),
               child: Text(
                 metadata.tagName(tagId) ?? '#$tagId',
-                style: TextStyle(color: Colors.grey[300], fontSize: 13),
+                style: TextStyle(color: AppColors.of(context).brightText, fontSize: 13),
               ),
             ),
           ),

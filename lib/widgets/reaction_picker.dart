@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../services/settings_service.dart';
+import '../theme/app_colors.dart';
 import 'reaction_icon.dart';
 
 /// Bottom sheet listing every reaction; pops with the picked reaction id
@@ -72,7 +73,10 @@ class ReactionPicker extends StatelessWidget {
                         children: [
                           ReactionBadge(reactionId: entry.key, size: 20),
                           const SizedBox(width: 6),
-                          Text(entry.value.label, style: TextStyle(color: Colors.grey[300], fontSize: 12)),
+                          Text(
+                            entry.value.label,
+                            style: TextStyle(color: AppColors.of(context).brightText, fontSize: 12),
+                          ),
                         ],
                       ),
                     ),

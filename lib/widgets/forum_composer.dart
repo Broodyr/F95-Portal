@@ -129,7 +129,7 @@ class _ForumComposerState extends State<ForumComposer> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: TextStyle(color: Colors.grey[400], fontSize: 11)),
+                  Text(label, style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11)),
                   const SizedBox(height: 2),
                   Text(
                     code,

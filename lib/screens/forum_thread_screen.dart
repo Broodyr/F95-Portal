@@ -468,7 +468,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                   child: Text(
                     '…',
                     style: TextStyle(
-                      color: Colors.grey[400],
+                      color: AppColors.of(context).bodyText,
                       fontSize: _pillFontSize,
                       fontWeight: FontWeight.w600,
                       height: 1.1,
@@ -557,7 +557,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       onPressed: target >= 1 && target <= totalPages ? () => _goToPage(target) : null,
       icon: Icon(icon, size: 18),
       tooltip: tooltip,
-      color: Colors.grey[400],
+      color: AppColors.of(context).bodyText,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: _chevronWidth, height: 48),
       style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
@@ -619,7 +619,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           '$page',
           style: TextStyle(
             fontSize: _pillFontSize,
-            color: current ? Colors.white : Colors.grey[400],
+            color: current ? Colors.white : AppColors.of(context).bodyText,
             fontWeight: current ? FontWeight.w600 : FontWeight.w400,
           ),
         ),
@@ -665,7 +665,7 @@ class _WatchOptionsSheet extends StatelessWidget {
                     Text(
                       label,
                       style: TextStyle(
-                        color: selected ? Colors.white : Colors.grey[300],
+                        color: selected ? Colors.white : AppColors.of(context).brightText,
                         fontSize: 13.5,
                         fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                       ),
@@ -878,7 +878,7 @@ class _PostCardState extends State<_PostCard> {
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyle(color: Colors.grey[400], fontSize: 11.5, fontWeight: FontWeight.w500),
+              style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -1030,7 +1030,7 @@ class _PostCardState extends State<_PostCard> {
             const SizedBox(width: 6),
             Text(
               '${reactions.count}',
-              style: TextStyle(color: Colors.grey[300], fontSize: 11.5, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.of(context).brightText, fontSize: 11.5, fontWeight: FontWeight.w600),
             ),
           ],
         ),

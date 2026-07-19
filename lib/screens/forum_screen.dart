@@ -176,7 +176,11 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
                 children: [
                   Text(
                     'Forum',
-                    style: TextStyle(color: AppColors.of(context).brightText, fontSize: 22, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: AppColors.of(context).brightText,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text('f95zone.to', style: TextStyle(color: Colors.grey[600], fontSize: 11)),

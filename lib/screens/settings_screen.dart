@@ -126,7 +126,7 @@ class SettingsScreen extends StatelessWidget {
                   style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
-                _buildDefaultsSummary(colorScheme, settings.defaultQuery),
+                _buildDefaultsSummary(context, colorScheme, settings.defaultQuery),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -241,7 +241,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDefaultsSummary(ColorScheme colorScheme, SearchQuery query) {
+  Widget _buildDefaultsSummary(BuildContext context, ColorScheme colorScheme, SearchQuery query) {
     final metadata = F95Metadata.instance;
     final entries = <(IconData, String, bool)>[
       (Icons.category_outlined, query.category.displayLabel, false),
@@ -278,7 +278,10 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 Icon(exclude ? Icons.remove : icon, size: 13, color: exclude ? colorScheme.error : Colors.grey[400]),
                 const SizedBox(width: 4),
-                Text(label, style: TextStyle(fontSize: 12, color: exclude ? colorScheme.error : Colors.grey[300])),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12, color: exclude ? colorScheme.error : AppColors.of(context).brightText),
+                ),
               ],
             ),
           ),
