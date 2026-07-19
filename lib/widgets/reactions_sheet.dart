@@ -88,7 +88,10 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
             Icon(Icons.cloud_off, size: 16, color: Colors.grey[500]),
             const SizedBox(width: 8),
             Expanded(
-              child: Text("Couldn't load reactions", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+              child: Text(
+                "Couldn't load reactions",
+                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13),
+              ),
             ),
             TextButton(onPressed: _load, child: const Text('Retry')),
           ],
@@ -217,13 +220,16 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
               children: [
                 Text(member.username, style: const TextStyle(color: Colors.white, fontSize: 13)),
                 if (member.memberTitle.isNotEmpty)
-                  Text(member.memberTitle, style: TextStyle(color: Colors.grey[600], fontSize: 10.5)),
+                  Text(member.memberTitle, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5)),
               ],
             ),
           ),
           ReactionBadge(reactionId: member.reactionId, size: 15),
           const SizedBox(width: 5),
-          Text(_reactionName(member.reactionId), style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+          Text(
+            _reactionName(member.reactionId),
+            style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11),
+          ),
         ],
       ),
     );

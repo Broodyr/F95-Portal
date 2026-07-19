@@ -198,7 +198,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
           children: [
             Icon(Icons.lock_outline, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text('Bookmarks require an account', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text(
+              'Bookmarks require an account',
+              style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13),
+            ),
             TextButton(
               onPressed: () async {
                 final success = await Navigator.of(
@@ -222,7 +225,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
           children: [
             Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text("Couldn't load bookmarks", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text("Couldn't load bookmarks", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
@@ -232,7 +235,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     final entries = _visibleEntries;
     if (entries.isEmpty) {
       return Center(
-        child: Text('No bookmarks yet', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        child: Text('No bookmarks yet', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13)),
       );
     }
 
@@ -288,7 +291,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                         const SizedBox(width: 5),
                         Text(
                           entry.isPost ? 'POST' : 'THREAD',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 9.5),
+                          style: TextStyle(color: AppColors.of(context).hintText, fontSize: 9.5),
                         ),
                       ],
                     ),
@@ -306,7 +309,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                           entry.snippet,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey[500], fontSize: 11.5, height: 1.35),
+                          style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5, height: 1.35),
                         ),
                       ),
                     Padding(
@@ -316,7 +319,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                           if (entry.author.isNotEmpty) entry.author,
                           if (entry.date.isNotEmpty) 'bookmarked ${entry.date}',
                         ].join(' · '),
-                        style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
+                        style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
                       ),
                     ),
                   ],

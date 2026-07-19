@@ -333,7 +333,10 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           children: [
             Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
             if (totalPages > 1)
-              Text('page $_pageNumber of $totalPages', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+              Text(
+                'page $_pageNumber of $totalPages',
+                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11),
+              ),
           ],
         ),
         actions: [
@@ -377,7 +380,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           children: [
             Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text("Couldn't load the thread", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text("Couldn't load the thread", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
@@ -557,7 +560,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       onPressed: target >= 1 && target <= totalPages ? () => _goToPage(target) : null,
       icon: Icon(icon, size: 18),
       tooltip: tooltip,
-      color: AppColors.of(context).bodyText,
+      color: Colors.grey[400],
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: _chevronWidth, height: 48),
       style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
@@ -670,7 +673,7 @@ class _WatchOptionsSheet extends StatelessWidget {
                         fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
-                    Text(hint, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                    Text(hint, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11)),
                   ],
                 ),
               ),
@@ -699,7 +702,7 @@ class _WatchOptionsSheet extends StatelessWidget {
                   if (current == null)
                     Text(
                       "The site doesn't report whether emails are on; picking a mode sets it.",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                      style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11),
                     ),
                 ],
               ),
@@ -789,7 +792,7 @@ class _PostCardState extends State<_PostCard> {
                                 if (post.memberTitle.isNotEmpty) post.memberTitle,
                                 if (post.date.isNotEmpty) post.date,
                               ].join(' · '),
-                              style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
+                              style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
                             ),
                           ],
                         ),
@@ -830,10 +833,10 @@ class _PostCardState extends State<_PostCard> {
                     child: Text(
                       '#${post.number}',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: AppColors.of(context).hintText,
                         fontSize: 11,
                         decoration: TextDecoration.underline,
-                        decorationColor: Colors.grey[600],
+                        decorationColor: AppColors.of(context).hintText,
                       ),
                     ),
                   ),
@@ -935,7 +938,10 @@ class _PostCardState extends State<_PostCard> {
               if (block.label.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: Text('${block.label} said:', style: TextStyle(color: Colors.grey[500], fontSize: 10.5)),
+                  child: Text(
+                    '${block.label} said:',
+                    style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 10.5),
+                  ),
                 ),
               RichSpoilerText(
                 pieces: block.pieces,

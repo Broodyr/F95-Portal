@@ -382,7 +382,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             children: [
               const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
               const SizedBox(width: 10),
-              Text('Loading thread details…', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+              Text('Loading thread details…', style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             ],
           ),
         ),
@@ -398,7 +398,10 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               Icon(Icons.cloud_off, size: 16, color: Colors.grey[500]),
               const SizedBox(width: 8),
               Expanded(
-                child: Text("Couldn't load thread details", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                child: Text(
+                  "Couldn't load thread details",
+                  style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13),
+                ),
               ),
               TextButton(onPressed: _loadPage, child: const Text('Retry')),
             ],
@@ -478,7 +481,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(field.label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+                Text(field.label, style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11)),
                 Text(field.value, style: const TextStyle(color: Colors.white, fontSize: 13)),
               ],
             ),
@@ -609,7 +612,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.1)),
             ),
-            Text('Extras', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+            Text('Extras', style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11)),
             const SizedBox(height: 6),
             for (final extra in downloads.extras) ...[
               if (extra.label.toLowerCase() != 'extras' && extra.label.toLowerCase() != 'extra')
@@ -688,7 +691,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
           _buildHostLinks(colorScheme, groups[selectedIndex].links),
         ] else if (groups.length == 1) ...[
           if (groups.single.label != 'Links') ...[
-            Text(groups.single.label, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+            Text(groups.single.label, style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11)),
             const SizedBox(height: 6),
           ],
           _buildHostLinks(colorScheme, groups.single.links),
@@ -888,7 +891,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             Expanded(
               child: Text(
                 hint,
-                style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

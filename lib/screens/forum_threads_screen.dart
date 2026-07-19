@@ -142,7 +142,10 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
           children: [
             Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
             if (widget.node.threads.isNotEmpty)
-              Text('${widget.node.threads} threads', style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+              Text(
+                '${widget.node.threads} threads',
+                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11),
+              ),
           ],
         ),
       ),
@@ -199,7 +202,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
           children: [
             Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text("Couldn't load the forum", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text("Couldn't load the forum", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
@@ -254,7 +257,10 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
               padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
               child: Row(
                 children: [
-                  Text('Threads', style: TextStyle(color: Colors.grey[500], fontSize: 11, letterSpacing: 0.4)),
+                  Text(
+                    'Threads',
+                    style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11, letterSpacing: 0.4),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.08))),
                 ],
@@ -330,7 +336,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                       if (row.replies.isNotEmpty) '${row.replies} replies',
                       if (row.lastPostDate.isNotEmpty) row.lastPostDate,
                     ].join(' · '),
-                    style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
+                    style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
                   ),
                 ],
               ),

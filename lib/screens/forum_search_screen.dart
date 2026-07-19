@@ -222,7 +222,10 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
           children: [
             Icon(Icons.lock_outline, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text('Searching requires an account', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text(
+              'Searching requires an account',
+              style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13),
+            ),
             TextButton(
               onPressed: () async {
                 final success = await Navigator.of(
@@ -248,7 +251,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
             children: [
               Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
               const SizedBox(height: 8),
-              Text("Couldn't search", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+              Text("Couldn't search", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
               const SizedBox(height: 4),
               // The underlying message distinguishes which stage failed.
               Text(
@@ -267,12 +270,12 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
     final page = _page;
     if (page == null) {
       return Center(
-        child: Text('Search threads and posts', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        child: Text('Search threads and posts', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13)),
       );
     }
     if (_results.isEmpty) {
       return Center(
-        child: Text('No results', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        child: Text('No results', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13)),
       );
     }
 
@@ -337,7 +340,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
                       result.snippet,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 11.5, height: 1.35),
+                      style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5, height: 1.35),
                     ),
                   Text(
                     [
@@ -345,7 +348,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
                       if (result.date.isNotEmpty) result.date,
                       if (result.forum.isNotEmpty) result.forum,
                     ].join(' · '),
-                    style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
+                    style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
                   ),
                 ],
               ),

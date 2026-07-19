@@ -181,7 +181,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
           children: [
             Icon(Icons.lock_outline, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text('Alerts require an account', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text('Alerts require an account', style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(
               onPressed: () async {
                 final success = await Navigator.of(
@@ -205,7 +205,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
           children: [
             Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text("Couldn't load alerts", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text("Couldn't load alerts", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
@@ -213,7 +213,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     }
     if (_groups.isEmpty) {
       return Center(
-        child: Text('No alerts yet', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        child: Text('No alerts yet', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13)),
       );
     }
 
@@ -232,7 +232,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
               padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
               child: Text(
                 group.title,
-                style: TextStyle(color: Colors.grey[500], fontSize: 11.5, fontWeight: FontWeight.w600),
+                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5, fontWeight: FontWeight.w600),
               ),
             ),
             for (final alert in group.alerts) _buildRow(colorScheme, alert),
@@ -278,7 +278,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                         ),
                         TextSpan(
                           text: ' ${alert.action} ',
-                          style: TextStyle(color: Colors.grey[500]),
+                          style: TextStyle(color: AppColors.of(context).subtleText),
                         ),
                         for (final label in alert.labels)
                           WidgetSpan(
@@ -308,7 +308,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                   if (alert.time.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
-                      child: Text(alert.time, style: TextStyle(color: Colors.grey[600], fontSize: 10.5)),
+                      child: Text(alert.time, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5)),
                     ),
                 ],
               ),

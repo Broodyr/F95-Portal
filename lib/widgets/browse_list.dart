@@ -185,7 +185,7 @@ class _BrowseListState extends State<BrowseList> {
               const SizedBox(height: 8),
               Text(
                 _error!,
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                style: TextStyle(color: AppColors.of(context).hintText, fontSize: 14),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),

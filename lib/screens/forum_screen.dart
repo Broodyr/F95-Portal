@@ -183,7 +183,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('f95zone.to', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                  Text('f95zone.to', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11)),
                   const Spacer(),
                   IconButton(
                     tooltip: 'Bookmarks',
@@ -260,7 +260,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
           children: [
             Icon(Icons.cloud_off, size: 32, color: Colors.grey[600]),
             const SizedBox(height: 8),
-            Text("Couldn't load the forum", style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+            Text("Couldn't load the forum", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
             TextButton(onPressed: _load, child: const Text('Retry')),
           ],
         ),
@@ -286,7 +286,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
               padding: const EdgeInsets.fromLTRB(6, 10, 6, 4),
               child: Text(
                 section.category.title,
-                style: TextStyle(color: Colors.grey[500], fontSize: 11, letterSpacing: 0.4),
+                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11, letterSpacing: 0.4),
               ),
             ),
             Container(

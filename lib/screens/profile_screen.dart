@@ -441,7 +441,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(color: AppColors.of(context).brightText, fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 8),
-                Text('f95zone.to', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                Text('f95zone.to', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11)),
                 const Spacer(),
                 if (AuthService.instance.isLoggedIn)
                   IconButton(
@@ -548,10 +548,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (meta.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 3),
-                  child: Text(meta, style: TextStyle(color: Colors.grey[500], fontSize: 11.5)),
+                  child: Text(meta, style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5)),
                 ),
               if (page.lastSeen.isNotEmpty)
-                Text('Last seen ${page.lastSeen}', style: TextStyle(color: Colors.grey[600], fontSize: 11.5)),
+                Text(
+                  'Last seen ${page.lastSeen}',
+                  style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11.5),
+                ),
             ],
           ),
         ),
@@ -599,7 +602,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Icon(Icons.edit_outlined, size: 15, color: Colors.grey[600]),
                   const SizedBox(width: 7),
-                  Text('Write something…', style: TextStyle(color: Colors.grey[600], fontSize: 12.5)),
+                  Text('Write something…', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 12.5)),
                 ],
               ),
             ),
@@ -611,7 +614,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Center(
             child: Text(
               _isOwnProfile ? 'No messages on your profile yet.' : 'No messages on this profile yet.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13),
             ),
           ),
         )
@@ -653,7 +656,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-              Text(post.date, style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+              Text(post.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11)),
             ],
           ),
           const SizedBox(height: 6),
@@ -707,7 +710,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 8),
         minimumSize: const Size(0, 30),
-        foregroundColor: Colors.grey[500],
+        foregroundColor: AppColors.of(context).subtleText,
       ),
       icon: Icon(icon, size: 13, color: Colors.grey[600]),
       label: Text(label, style: const TextStyle(fontSize: 11.5)),
@@ -813,7 +816,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 32),
           child: Center(
-            child: Text('No postings yet.', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            child: Text('No postings yet.', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13)),
           ),
         ),
       ];
@@ -878,13 +881,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     posting.snippet,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.grey[500], fontSize: 11.5, height: 1.35),
+                    style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5, height: 1.35),
                   ),
                 ),
               if (footer.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 5),
-                  child: Text(footer, style: TextStyle(color: Colors.grey[600], fontSize: 10.5)),
+                  child: Text(footer, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5)),
                 ),
             ],
           ),
@@ -912,7 +915,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 32),
           child: Center(
-            child: Text('Nothing here yet.', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+            child: Text('Nothing here yet.', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13)),
           ),
         ),
       ];
@@ -942,7 +945,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Icon(icon, size: 15, color: Colors.grey[600]),
                       const SizedBox(width: 9),
-                      Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                      Text(label, style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12)),
                       const Spacer(),
                       Flexible(
                         child: Text(
@@ -991,7 +994,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               TextSpan(
                 text: ' to view member profiles.',
-                style: TextStyle(color: Colors.grey[500], fontSize: 13.5),
+                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13.5),
               ),
             ],
           ),
@@ -1011,7 +1014,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[500], fontSize: 12.5),
+              style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12.5),
             ),
             const SizedBox(height: 10),
             OutlinedButton(onPressed: retry, child: const Text('Retry')),

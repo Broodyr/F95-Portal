@@ -85,7 +85,7 @@ class ForumNodeRow extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           compact ? node.threads : '${node.threads} threads',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 10.5),
+                          style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
                         ),
                       ],
                     ],
@@ -95,7 +95,7 @@ class ForumNodeRow extends StatelessWidget {
                       '${lastPost.title} — ${lastPost.date}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                      style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11),
                     ),
                 ],
               ),
