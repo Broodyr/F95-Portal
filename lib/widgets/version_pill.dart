@@ -5,7 +5,7 @@ import 'segmented_pill.dart';
 enum ThreadStatus { normal, completed, abandoned, onhold }
 
 class VersionPill extends StatelessWidget {
-  static const Color _versionColor = Color(0xFF404040);
+  static const Color _versionColor = Color.fromRGBO(40, 40, 40, 1);
 
   final String version;
   final bool isCompleted;
