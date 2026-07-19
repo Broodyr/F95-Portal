@@ -43,26 +43,41 @@ void main() {
     );
   });
 
-  // ColorScheme.dark() predates the M3 roles and fills them with junk rather
-  // than deriving them: every surfaceContainer* comes back as `surface`, and
-  // outline, outlineVariant and onSurfaceVariant all come back pure white.
-  // Reading one the theme never pins gets you that junk — which is how the
-  // detail sheet's chip fills came to render as nothing at all, painting
-  // surface onto surface, and how every muted label was drawing at the same
-  // full strength as the text it was meant to sit under.
+  // ColorScheme.dark() predates the M3 roles and hands back a placeholder for
+  // each rather than deriving one. Reading a role the theme never pins gets
+  // that placeholder — which is how the detail sheet's chip fills came to
+  // render as nothing at all, painting surface onto surface, and how every
+  // muted label drew at the same full strength as the text above it.
+  //
+  // Grouped by what the constructor actually leaves behind. Anything not
+  // listed here (primary, onSurface, error, the scrim and shadow) gets a
+  // sensible value and is fine to read unpinned.
+  const junkRoles = <String>[
+    // All eight come back identical to `surface`, so a fill drawn with one
+    // over a surface-coloured parent is invisible.
+    'surfaceDim', 'surfaceBright',
+    'surfaceContainerLowest', 'surfaceContainerLow', 'surfaceContainer',
+    'surfaceContainerHigh', 'surfaceContainerHighest',
+    // Pure white, so the contrast step they exist to provide is absent.
+    'onSurfaceVariant', 'outline', 'outlineVariant',
+    // The 2014 Material purple and teal, unrelated to the app's crimson.
+    'surfaceTint', 'primaryContainer', 'onPrimaryContainer',
+    'secondaryContainer', 'onSecondaryContainer',
+    'tertiary', 'onTertiary', 'tertiaryContainer', 'onTertiaryContainer',
+    // White, and surface, swapped in for each other.
+    'inverseSurface', 'onInverseSurface', 'inversePrimary',
+  ];
+
   test('every M3 role the app reads is pinned in the ColorScheme', () {
     final theme = File('lib/main.dart').readAsStringSync();
+    final pattern = RegExp(r'\.(' + junkRoles.join('|') + r')\b');
     final used = <String>{};
     final files = Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'));
 
     for (final file in files) {
       for (final line in file.readAsLinesSync()) {
         if (line.trimLeft().startsWith('//')) continue;
-        used.addAll(
-          RegExp(
-            r'\.(surfaceContainer[A-Za-z]*|outlineVariant|outline|onSurfaceVariant)\b',
-          ).allMatches(line).map((m) => m[1]!),
-        );
+        used.addAll(pattern.allMatches(line).map((m) => m[1]!));
       }
     }
 
@@ -73,9 +88,10 @@ void main() {
       reason:
           'These roles are read but never set on the ColorScheme in '
           'lib/main.dart, so they resolve to whatever ColorScheme.dark() '
-          'happens to leave there (surface, or pure white) rather than to '
-          'anything the theme chose: ${unpinned.join(', ')}. Either pin them '
-          'in main.dart or use a token that exists.',
+          'happens to leave there — surface, pure white, or a legacy Material '
+          'accent — rather than to anything this theme chose: '
+          '${unpinned.join(', ')}. Pin them in main.dart (ask first: the value '
+          'is a design decision) or use a token that already exists.',
     );
   });
 }

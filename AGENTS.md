@@ -33,6 +33,20 @@ that aren't obvious from reading the code:
   `utils/formatters.dart`) stay local to their widget. Enforced by
   `test/theme_guard_test.dart` — its whitelist is the authoritative
   exception list.
+- Reading a `colorScheme.*` token is only safe if `main.dart` pins it. The
+  theme is built with `ColorScheme.dark()`, which predates the Material 3
+  roles and returns a placeholder for each instead of deriving one: every
+  `surfaceContainer*` comes back equal to `surface`, `outline` /
+  `outlineVariant` / `onSurfaceVariant` come back pure white, and the
+  container/tertiary family comes back the old Material purple and teal. The
+  compiler is happy and the result is invisible or off-palette. So before
+  using a Material token, check it's set in the `ColorScheme` in `main.dart`;
+  if it isn't, ask what it should be rather than picking a value — which
+  colors this app uses is a design decision, not an implementation one. The
+  same goes for adding an `AppColors` token. `test/theme_guard_test.dart`
+  catches the roles known to be junk, but it can't know your intent, and a
+  role with a *plausible* default (`error`, `onSurface`) will pass while
+  still not being anything anyone chose.
 - Shared magic numbers live in `lib/constants.dart` (`AppBlur`, `AppRadii`,
   `AppAlphas`, `AppDurations`, `AppLimits`, `AppButtons`). Add a token there
   when a value starts repeating across files; a value used once, in one file,
