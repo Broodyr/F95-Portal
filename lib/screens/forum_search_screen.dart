@@ -204,11 +204,14 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: selected ? colorScheme.primary : Colors.transparent),
         ),
+        // A one-option selector in everything but name: same track fill, pill
+        // radius, selected treatment and size as the `SegmentedSelector` it
+        // sits beside, so it takes that control's inactive label colour too.
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11.5,
-            color: selected ? colorScheme.primary : AppColors.of(context).bodyText,
+            color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           ),
         ),

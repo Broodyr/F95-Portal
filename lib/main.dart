@@ -86,9 +86,13 @@ class F95Portal extends StatelessWidget {
             onSurfaceVariant: AppPalette.subtleText,
           ),
           scaffoldBackgroundColor: AppPalette.background,
-          appBarTheme: const AppBarTheme(
+          appBarTheme: AppBarTheme(
             backgroundColor: AppPalette.appBar,
-            foregroundColor: Colors.white,
+            // Titles here are the same rank as a root screen's heading, which
+            // reads brightText — so pushed screens match rather than being the
+            // only pure white left. Carries the back arrow and action icons
+            // with it, which is the point: they were the brightest chrome.
+            foregroundColor: AppColors.dark.brightText,
             elevation: 0,
             systemOverlayStyle: SystemUiOverlayStyle.light,
           ),

@@ -320,7 +320,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                         TextSpan(
                           text: row.title,
                           style: TextStyle(
-                            color: row.unread ? Colors.white : AppColors.of(context).bodyText,
+                            color: row.unread ? AppColors.of(context).brightText : AppColors.of(context).bodyText,
                             fontSize: 12.5,
                             fontWeight: row.unread ? FontWeight.w500 : FontWeight.w400,
                           ),
