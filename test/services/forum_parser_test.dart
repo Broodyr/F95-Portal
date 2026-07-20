@@ -41,6 +41,14 @@ void main() {
       expect(sub.title, 'Trending Games');
       expect(sub.isLink, isTrue);
     });
+
+    test('skips redirect nodes, which carry node--link instead of node--forum', () {
+      final ids = index.categories.expand((c) => c.forums).map((f) => f.id).toSet();
+      // The promo /explore/ nodes and the link-forums ones alike.
+      expect(ids, isNot(contains(129)));
+      expect(ids, isNot(contains(145)));
+      expect(ids, contains(2));
+    });
   });
 
   group('parseForumPage', () {

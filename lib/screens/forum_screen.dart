@@ -18,8 +18,8 @@ import 'forum_threads_screen.dart';
 typedef FetchForumIndex = Future<ForumIndex> Function();
 
 /// The Forum tab: the site's forum directory as grouped category sections.
-/// Link-forum redirect nodes (Trending Games etc.) are hidden — they don't
-/// hold threads.
+/// Redirect nodes (Trending Games etc.) never arrive — the parser only
+/// admits node--forum, and they carry node--link instead.
 class ForumScreen extends StatefulWidget {
   /// The directory list's controller; MainApp watches it to hide/show the
   /// bottom nav and route the nav bar's pass-through drags here.
@@ -267,10 +267,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
       );
     }
 
-    final sections = [
-      for (final category in index.categories)
-        (category: category, forums: category.forums.where((f) => !f.isLink).toList()),
-    ].where((s) => s.forums.isNotEmpty).toList();
+    final sections = index.categories.where((c) => c.forums.isNotEmpty).toList();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -285,7 +282,7 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 10, 6, 4),
               child: Text(
-                section.category.title,
+                section.title,
                 style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11, letterSpacing: 0.4),
               ),
             ),
