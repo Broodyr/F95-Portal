@@ -8,6 +8,7 @@ import 'constants.dart';
 import 'main_app.dart';
 import 'models/f95_metadata.dart';
 import 'services/auth_service.dart';
+import 'services/draft_service.dart';
 import 'services/forum_service.dart';
 import 'services/image_cache_wipe.dart';
 import 'services/settings_service.dart';
@@ -35,6 +36,7 @@ Future<void> main() async {
   await F95Metadata.load();
   await AuthService.instance.load();
   await SettingsService.instance.load();
+  await DraftService.instance.load();
   ThreadPageService.bindToAuthChanges();
   ForumService.bindToAuthChanges();
   // The app's own image-cache eviction (the package's never deletes files);

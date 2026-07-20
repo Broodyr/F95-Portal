@@ -264,6 +264,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final posted = await ForumComposer.show(
       context,
       heading: heading,
+      // The action URL already tells a profile's wall apart from the comment
+      // box on one of its posts, so drafts for the two don't collide.
+      draftKey: actionUrl,
       onSubmit: (_, message) => poster(actionUrl, page.csrfToken, message),
     );
     if (posted && mounted) _refresh();

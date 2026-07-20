@@ -3,6 +3,7 @@ import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/services/draft_service.dart';
 import 'package:f95_portal/services/site_error.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/profile_service.dart';
@@ -11,20 +12,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_cookie_storage.dart';
+import '../helpers/in_memory_draft_storage.dart';
 import '../helpers/widget_test_utils.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late AuthService previous;
+  late DraftService previousDrafts;
 
   setUp(() {
     previous = AuthService.instance;
     AuthService.instance = AuthService(InMemoryCookieStorage());
+    // Composer drafts are persisted; keep them off the real backing store.
+    previousDrafts = DraftService.instance;
+    installTestDrafts();
   });
 
   tearDown(() {
     AuthService.instance = previous;
+    DraftService.instance = previousDrafts;
   });
 
   Future<void> signIn() => AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
@@ -250,6 +257,37 @@ void main() {
 
       expect(posted.single.$1, 'https://example.com/profile-posts/142106/add-comment');
       expect(posted.single.$3, 'Nice one');
+    });
+
+    testWidgets('an abandoned wall post and comment keep separate drafts', (tester) async {
+      await signIn();
+      await pumpProfile(tester);
+
+      // Start a wall post, then back out of it.
+      await tester.tap(find.text('Write something…'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('composer-message')), 'a wall post in progress');
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(400, 20));
+      await tester.pumpAndSettle();
+
+      // The comment box on one of that profile's posts is its own draft.
+      await tester.tap(find.text('Comment').first);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byKey(const Key('composer-message'))).controller!.text,
+        '',
+      );
+      await tester.tapAt(const Offset(400, 20));
+      await tester.pumpAndSettle();
+
+      // Reopening the wall composer brings the abandoned text back.
+      await tester.tap(find.text('Write something…'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byKey(const Key('composer-message'))).controller!.text,
+        'a wall post in progress',
+      );
     });
   });
 

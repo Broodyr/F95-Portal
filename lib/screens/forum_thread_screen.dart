@@ -312,6 +312,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       heading: 'Reply',
       submitLabel: 'Post reply',
       initialMessage: initialMessage,
+      draftKey: replyUrl,
       onSubmit: (_, message) {
         final send = widget.replySender ?? ForumService.sendReply;
         return send(replyUrl, page.csrfToken, message);

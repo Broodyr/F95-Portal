@@ -1,20 +1,29 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
+import '../services/draft_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_colors.dart';
 import 'glass_dialog.dart';
 
-/// Compose sheet for replies and new threads: optional title field, a
-/// BBCode message field, and a submit that runs [onSubmit] (closing on
-/// success, surfacing errors inline).
+/// Compose sheet for replies, new threads, profile posts and comments on
+/// them: optional title field, a BBCode message field, and a submit that runs
+/// [onSubmit] (closing on success, surfacing errors inline).
+///
+/// Pass a [draftKey] — the destination's form action URL — to have unsent
+/// text survive dismissing the sheet, and app restarts.
 class ForumComposer extends StatefulWidget {
   final String heading;
   final String submitLabel;
   final bool withTitle;
   final String initialMessage;
+
+  /// Identifies the posting destination for draft storage; null disables
+  /// drafts (edits, which are seeded from the post's existing BBCode).
+  final String? draftKey;
   final Future<void> Function(String title, String message) onSubmit;
 
   const ForumComposer({
@@ -24,6 +33,7 @@ class ForumComposer extends StatefulWidget {
     this.submitLabel = 'Post',
     this.withTitle = false,
     this.initialMessage = '',
+    this.draftKey,
   });
 
   /// Returns true when something was posted.
@@ -34,6 +44,7 @@ class ForumComposer extends StatefulWidget {
     String submitLabel = 'Post',
     bool withTitle = false,
     String initialMessage = '',
+    String? draftKey,
   }) async {
     final posted = await showModalBottomSheet<bool>(
       context: context,
@@ -46,6 +57,7 @@ class ForumComposer extends StatefulWidget {
         submitLabel: submitLabel,
         withTitle: withTitle,
         initialMessage: initialMessage,
+        draftKey: draftKey,
       ),
     );
     return posted == true;
@@ -56,16 +68,53 @@ class ForumComposer extends StatefulWidget {
 }
 
 class _ForumComposerState extends State<ForumComposer> {
-  late final TextEditingController _titleController = TextEditingController();
-  late final TextEditingController _messageController = TextEditingController(text: widget.initialMessage);
+  /// The draft this sheet opened with, if any. Read once in the initialisers
+  /// below; after that the controllers are the source of truth.
+  late final ComposerDraft? _draft = widget.draftKey == null ? null : DraftService.instance.read(widget.draftKey!);
+
+  late final TextEditingController _titleController = TextEditingController(text: _draft?.title ?? '');
+
+  // A quote arrives as initialMessage while a draft may already hold the
+  // user's own half-written reply; keep both, quote first.
+  late final TextEditingController _messageController = TextEditingController(
+    text: widget.initialMessage + (_draft?.message ?? ''),
+  );
+
   bool _sending = false;
+  bool _posted = false;
   String? _error;
+  Timer? _saveDebounce;
 
   @override
   void dispose() {
+    _saveDebounce?.cancel();
+    // Covers every way out that isn't a successful post: the drag-down, the
+    // barrier tap, the back gesture.
+    if (!_posted) _saveDraft();
     _titleController.dispose();
     _messageController.dispose();
     super.dispose();
+  }
+
+  /// Debounced so a fast typist doesn't write to disk on every keystroke;
+  /// [dispose] flushes whatever the last tick missed.
+  void _scheduleDraftSave() {
+    if (widget.draftKey == null) return;
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(AppDurations.draftSave, _saveDraft);
+  }
+
+  void _saveDraft() {
+    final key = widget.draftKey;
+    if (key == null) return;
+    // Fire-and-forget: nothing in the UI waits on the write, and dispose
+    // can't await it anyway.
+    unawaited(DraftService.instance.save(key, title: _titleController.text, message: _messageController.text));
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+    _scheduleDraftSave();
   }
 
   bool get _canSubmit =>
@@ -80,6 +129,11 @@ class _ForumComposerState extends State<ForumComposer> {
     });
     try {
       await widget.onSubmit(_titleController.text.trim(), _messageController.text.trim());
+      // The text has left for the site; the draft has done its job.
+      _posted = true;
+      _saveDebounce?.cancel();
+      final key = widget.draftKey;
+      if (key != null) unawaited(DraftService.instance.clear(key));
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
@@ -218,7 +272,11 @@ class _ForumComposerState extends State<ForumComposer> {
               key: const Key('composer-title'),
               controller: _titleController,
               maxLength: 150,
-              onChanged: (_) => setState(() {}),
+              // Read-only rather than disabled: the text stays legible and
+              // selectable while the request is out, it just can't change
+              // under a submission that has already left.
+              readOnly: _sending,
+              onChanged: (_) => _onFieldChanged(),
               style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14),
               decoration: _decoration('Thread title').copyWith(counterText: ''),
             ),
@@ -229,7 +287,8 @@ class _ForumComposerState extends State<ForumComposer> {
             controller: _messageController,
             minLines: 4,
             maxLines: 10,
-            onChanged: (_) => setState(() {}),
+            readOnly: _sending,
+            onChanged: (_) => _onFieldChanged(),
             style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14, height: 1.4),
             decoration: _decoration('Write your message… BBCode works: [b]bold[/b], [spoiler]…[/spoiler]'),
           ),

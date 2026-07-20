@@ -16,6 +16,9 @@ abstract final class AppDurations {
   /// (list and page fetches) feel slower than writes by design.
   static const Duration mockRead = Duration(milliseconds: 300);
   static const Duration mockWrite = Duration(milliseconds: 200);
+
+  /// Idle time before an in-progress composer draft is written to disk.
+  static const Duration draftSave = Duration(milliseconds: 400);
 }
 
 abstract final class AppBlur {
@@ -52,6 +55,10 @@ abstract final class AppAlphas {
 abstract final class AppLimits {
   /// URL-keyed LRU page caches in the forum and thread-page services.
   static const int pageCacheEntries = 20;
+
+  /// Unsent composer drafts kept on disk; past this the least-recently-saved
+  /// destination is dropped.
+  static const int composerDrafts = 30;
 }
 
 abstract final class AppButtons {

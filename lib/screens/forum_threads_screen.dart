@@ -197,6 +197,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
       heading: 'New thread',
       submitLabel: 'Post thread',
       withTitle: true,
+      draftKey: postThreadUrl,
       onSubmit: (title, message) {
         final send = widget.threadPoster ?? ForumService.postThread;
         return send(postThreadUrl, page.csrfToken, title: title, message: message);

@@ -10,6 +10,7 @@ import 'package:f95_portal/screens/forum_threads_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/services/draft_service.dart';
 import 'package:f95_portal/services/site_error.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/widgets/glass_fab.dart';
@@ -17,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_cookie_storage.dart';
+import '../helpers/in_memory_draft_storage.dart';
 import '../helpers/widget_test_utils.dart';
 
 /// Swaps in a signed-in in-memory auth session for one test.
@@ -25,6 +27,14 @@ Future<void> signIn() async {
   addTearDown(() => AuthService.instance = previousAuth);
   AuthService.instance = AuthService(InMemoryCookieStorage());
   await AuthService.instance.saveCookies({'xf_user': 'tok'});
+}
+
+/// Keeps composer drafts, which the composer persists, off the real backing
+/// store for one test.
+void useTestDrafts() {
+  final previousDrafts = DraftService.instance;
+  addTearDown(() => DraftService.instance = previousDrafts);
+  installTestDrafts();
 }
 
 /// The whole forum stack pumped with the service's mock data, so the tests
@@ -44,6 +54,7 @@ Future<void> pumpForum(
   FetchAlerts? fetchAlerts,
   AlertsAcknowledger? alertsAcknowledger,
 }) async {
+  useTestDrafts();
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData.dark(),
@@ -368,6 +379,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(replies, ['Nice thread!']);
+  });
+
+  testWidgets('a reply abandoned mid-sentence is waiting on the next open', (tester) async {
+    await pumpForum(tester);
+    await openThreadViewer(tester);
+
+    await tester.tap(find.byTooltip('Reply'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('composer-message')), 'half a thought');
+    await tester.pumpAndSettle();
+    // Dismiss without posting.
+    await tester.tapAt(const Offset(400, 20));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Reply'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('composer-message'))).controller!.text,
+      'half a thought',
+    );
   });
 
   testWidgets('the reply FAB is a 56pt glass button riding one row above the search FAB spot', (tester) async {
