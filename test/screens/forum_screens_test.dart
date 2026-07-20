@@ -165,6 +165,61 @@ void main() {
     expect(find.textContaining('The witch did it'), findsOneWidget);
   });
 
+  testWidgets('deleting an own post confirms first, then reloads the thread', (tester) async {
+    final deleted = <(String, String)>[];
+    int fetches = 0;
+    const thread = ThreadPostsPage(
+      title: 'T',
+      csrfToken: 'tok',
+      posts: [
+        ForumPost(postId: 1, number: 1, author: 'Someone'),
+        ForumPost(
+          postId: 2,
+          number: 2,
+          author: 'Broodyr',
+          editUrl: 'https://f95zone.to/posts/2/edit',
+          deleteUrl: 'https://f95zone.to/posts/2/delete',
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/t.1/',
+          title: 'T',
+          fetchPosts: (url, {page = 1}) async {
+            fetches++;
+            return thread;
+          },
+          deleteSender: (url, csrf) async => deleted.add((url, csrf)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Only the viewer's own post offers it.
+    expect(find.text('Delete'), findsOneWidget);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete post?'), findsOneWidget);
+
+    // Backing out sends nothing.
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    expect(deleted, isEmpty);
+
+    final before = fetches;
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(deleted.single, ('https://f95zone.to/posts/2/delete', 'tok'));
+    expect(fetches, greaterThan(before), reason: 'the thread refetches so the post disappears');
+  });
+
   // The dialog has its own tests; this covers the wiring between them — that
   // the overflow exists on a post and hands the dialog that post's permalink.
   testWidgets('a post overflow opens the report dialog for that post', (tester) async {

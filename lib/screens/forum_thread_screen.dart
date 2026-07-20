@@ -26,6 +26,7 @@ typedef ReplySender = Future<void> Function(String replyUrl, String csrfToken, S
 typedef EditFetcher = Future<String> Function(String editUrl);
 typedef EditSaver = Future<void> Function(String editUrl, String csrfToken, String message);
 typedef WatchSender = Future<void> Function(String url, String csrfToken, Map<String, String> fields);
+typedef PostDeleter = Future<void> Function(String deleteUrl, String csrfToken);
 
 /// The three watch modes the long-press sheet offers.
 enum WatchChoice { off, alerts, email }
@@ -47,6 +48,7 @@ class ForumThreadScreen extends StatefulWidget {
   final WatchSender? watchSender;
   final ReportFormFetcher? reportFormFetcher;
   final ReportSender? reportSender;
+  final PostDeleter? deleteSender;
   final Future<bool> Function(Uri uri)? urlLauncher;
 
   const ForumThreadScreen({
@@ -63,6 +65,7 @@ class ForumThreadScreen extends StatefulWidget {
     this.watchSender,
     this.reportFormFetcher,
     this.reportSender,
+    this.deleteSender,
     this.urlLauncher,
   });
 
@@ -170,6 +173,46 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     ForumService.clearCache();
     if (page != null) _pageNumber = page;
     await _load();
+  }
+
+  /// Confirms, then deletes. XenForo's own delete is an overlay with a reason
+  /// field; posting the action bare does the same thing, so this asks in the
+  /// app's dialog rather than sending the user through a webview.
+  Future<void> _deletePost(ForumPost post) async {
+    final page = _page;
+    final deleteUrl = post.deleteUrl;
+    if (page == null || deleteUrl == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => GlassDialog(
+        title: const Text('Delete post?', style: TextStyle(fontSize: 16)),
+        content: const Text('The post will be removed from the thread.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: GlassDialog.cancelStyle(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: GlassDialog.confirmStyle(context),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final send = widget.deleteSender ?? (url, csrf) => ThreadPageService.postAction(url, csrf);
+      await send(deleteUrl, page.csrfToken);
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.show(context, "Couldn't delete the post: $e", error: true);
+      return;
+    }
+    if (mounted) await _reload();
   }
 
   Future<void> _reportPost(ForumPost post) {
@@ -429,6 +472,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               onReact: page.replyUrl == null ? null : () => _react(post),
               onQuote: page.replyUrl == null ? null : () => _openComposer(initialMessage: _quoteBbcode(post)),
               onEdit: post.editUrl == null ? null : () => _editPost(post),
+              onDelete: post.deleteUrl == null ? null : () => _deletePost(post),
               // Unlike the others this needs no per-post link: the report
               // overlay hangs off the permalink, which every real post has.
               onReport: post.postId > 0 ? () => _reportPost(post) : null,
@@ -772,6 +816,7 @@ class _PostCard extends StatefulWidget {
   final VoidCallback? onReact;
   final VoidCallback? onQuote;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final VoidCallback? onReport;
   final bool watched;
   final VoidCallback? onWatchToggle;
@@ -788,6 +833,7 @@ class _PostCard extends StatefulWidget {
     this.onReact,
     this.onQuote,
     this.onEdit,
+    this.onDelete,
     this.onReport,
     this.watched = false,
     this.onWatchToggle,
@@ -903,14 +949,24 @@ class _PostCardState extends State<_PostCard> {
           ),
           const SizedBox(height: 8),
           ..._buildBlocks(colorScheme, post),
-          if ((post.reactions?.count ?? 0) > 0 || widget.onReact != null || widget.onEdit != null) ...[
+          if ((post.reactions?.count ?? 0) > 0 ||
+              widget.onReact != null ||
+              widget.onEdit != null ||
+              widget.onDelete != null) ...[
             const SizedBox(height: 9),
             Row(
               children: [
                 if ((post.reactions?.count ?? 0) > 0) _buildReactionChip(colorScheme, post.reactions!),
                 const Spacer(),
+                // Edit and Delete sit here rather than in the overflow, as on
+                // a profile wall post: they are the author's own actions on
+                // their own post, and both confirm before doing anything.
                 if (widget.onEdit != null) ...[
                   _buildFooterAction(Icons.edit_outlined, 'Edit', widget.onEdit!),
+                  const SizedBox(width: 14),
+                ],
+                if (widget.onDelete != null) ...[
+                  _buildFooterAction(Icons.delete_outline, 'Delete', widget.onDelete!),
                   const SizedBox(width: 14),
                 ],
                 if (widget.onReact != null) _buildFooterAction(Icons.add_reaction_outlined, 'React', widget.onReact!),

@@ -153,6 +153,10 @@ class ForumPost {
   /// The action-bar Edit link; present only on the viewer's own posts.
   final String? editUrl;
 
+  /// The action-bar Delete link, rendered alongside [editUrl] on the viewer's
+  /// own posts. Opens the site's confirm overlay rather than deleting outright.
+  final String? deleteUrl;
+
   const ForumPost({
     required this.postId,
     this.number = 0,
@@ -165,6 +169,7 @@ class ForumPost {
     this.blocks = const [],
     this.reactions,
     this.editUrl,
+    this.deleteUrl,
   });
 }
 

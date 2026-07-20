@@ -444,6 +444,7 @@ ForumPost _parsePost(Element post) {
     blocks: _parsePostBlocks(post.querySelector('.message-body .bbWrapper')),
     reactions: _parseReactionSummary(post.querySelector('.reactionsBar')),
     editUrl: _absoluteOrNull(post.querySelector('a.actionBar-action--edit')?.attributes['href']),
+    deleteUrl: _absoluteOrNull(post.querySelector('a.actionBar-action--delete')?.attributes['href']),
   );
 }
 

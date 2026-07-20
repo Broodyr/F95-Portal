@@ -745,6 +745,37 @@ void main() {
     });
   });
 
+  // The viewer's own posts are the only ones the site renders edit and delete
+  // links on, so this is the fixture that covers both. Its hrefs are relative
+  // where the profile fixtures' are absolute (see AGENTS.md) — the same save
+  // habit does not produce the same markup twice.
+  group('parseThreadPosts own-post actions', () {
+    late ThreadPostsPage page;
+
+    setUpAll(() => page = parseThreadPosts(fixture('thread_own_post.htm')));
+
+    test('carries edit and delete only on the viewerposts', () {
+      final own = [
+        for (final post in page.posts)
+          if (post.editUrl != null || post.deleteUrl != null) post,
+      ];
+      expect(own.map((p) => p.postId).toList(), [18025346, 18035017]);
+      expect(own.every((p) => p.editUrl != null && p.deleteUrl != null), isTrue);
+    });
+
+    test('absolutizes both action URLs', () {
+      final post = page.posts.firstWhere((p) => p.postId == 18025346);
+      expect(post.editUrl, 'https://f95zone.to/posts/18025346/edit');
+      expect(post.deleteUrl, 'https://f95zone.to/posts/18025346/delete');
+    });
+
+    test('leaves other members posts without either', () {
+      final others = page.posts.where((p) => p.postId != 18025346 && p.postId != 18035017);
+      expect(others, isNotEmpty);
+      expect(others.every((p) => p.editUrl == null && p.deleteUrl == null), isTrue);
+    });
+  });
+
   group('parseReportForm', () {
     late ReportForm form;
 
