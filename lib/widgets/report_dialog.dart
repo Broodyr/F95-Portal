@@ -167,6 +167,9 @@ class _ReportDialogState extends State<ReportDialog> {
           controller: _message,
           maxLines: 3,
           minLines: 2,
+          // The pills and buttons already refuse input while sending; without
+          // this the note was still editable after the report had gone out.
+          readOnly: _sending,
           style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Anything the moderators should know (optional)',

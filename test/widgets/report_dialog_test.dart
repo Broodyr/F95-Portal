@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/widgets/report_dialog.dart';
 import 'package:flutter/material.dart';
@@ -123,6 +125,36 @@ void main() {
     expect(find.byType(ReportDialog), findsOneWidget);
     expect(closedWith, isNull);
     expect(find.textContaining("Couldn't send the report"), findsOneWidget);
+  });
+
+  testWidgets('the message field locks while the report is in flight', (tester) async {
+    // The reason pills and both buttons already refuse input while sending;
+    // the message field was the one way left to edit a report that had
+    // already gone out.
+    final inFlight = Completer<void>();
+    await pumpDialog(
+      tester,
+      sendReport: (action, csrf, {required reasonId, required message}) => inFlight.future,
+    );
+
+    await tester.tap(find.text('Game update'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('report-message-field')), 'the real message');
+    await tester.tap(find.text('Send report'));
+    // Not pumpAndSettle: the send is still open.
+    await tester.pump();
+
+    expect(tester.widget<TextField>(find.byKey(const Key('report-message-field'))).readOnly, isTrue);
+
+    // A failed send hands the field back so the report can be retried.
+    inFlight.completeError(Exception('offline'));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(find.byKey(const Key('report-message-field'))).readOnly, isFalse);
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('report-message-field'))).controller!.text,
+      'the real message',
+    );
   });
 
   testWidgets('says so rather than offering a form when the content cannot be reported', (tester) async {

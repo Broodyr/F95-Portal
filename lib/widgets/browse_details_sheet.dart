@@ -95,6 +95,10 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
   bool _loadingPage = true;
   String? _pageError;
   bool _bookmarked = false;
+
+  /// A bookmark round trip is out; further taps are dropped until it lands.
+  /// Not read by build — see [_toggleBookmark] for why the button stays lit.
+  bool _togglingBookmark = false;
   bool _overviewExpanded = false;
   final Set<int> _expandedSpoilers = {};
 
@@ -197,9 +201,17 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
 
   /// Optimistically toggles the bookmark, reverting on failure. The page
   /// cache is invalidated so a reopened sheet refetches the real state.
+  ///
+  /// Taps during a round trip are dropped rather than queued: two of them
+  /// would put opposing bookmark/delete requests in flight at once, and
+  /// whichever came back failed would revert to a snapshot the other had
+  /// already moved past, leaving the icon disagreeing with the server. The
+  /// button deliberately keeps its enabled look — the optimistic icon flip
+  /// is the feedback, and grey-flashing it on every tap would cost more
+  /// than the dropped second tap does.
   Future<void> _toggleBookmark() async {
     final actions = _page?.actions;
-    if (actions == null) return;
+    if (actions == null || _togglingBookmark) return;
 
     if (!AuthService.instance.isLoggedIn) {
       AppToast.show(context, 'Sign in from the Profile tab to bookmark threads.');
@@ -208,6 +220,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
 
     HapticFeedback.selectionClick();
     final bool wasBookmarked = _bookmarked;
+    _togglingBookmark = true;
     setState(() => _bookmarked = !wasBookmarked);
 
     try {
@@ -217,7 +230,9 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
       // menu confirms deletes through the same endpoint with ?delete=1).
       await send(actions.bookmarkUrl, actions.csrfToken, wasBookmarked ? const {'delete': '1'} : const {});
       ThreadPageService.invalidate(thread.threadId);
+      _togglingBookmark = false;
     } catch (e) {
+      _togglingBookmark = false;
       if (!mounted) return;
       setState(() => _bookmarked = wasBookmarked);
       AppToast.show(context, '$e', error: true);

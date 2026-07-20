@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/models/browse_thread.dart';
@@ -444,6 +446,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+  });
+
+  testWidgets('a second tap while the toggle is in flight is ignored', (tester) async {
+    final previousAuth = AuthService.instance;
+    addTearDown(() => AuthService.instance = previousAuth);
+    AuthService.instance = AuthService(InMemoryCookieStorage());
+    await AuthService.instance.saveCookies({'xf_user': 'tok'});
+
+    // Two taps racing would send opposing bookmark/delete requests, and
+    // whichever failed would revert to its own stale snapshot — leaving the
+    // icon disagreeing with the server.
+    final sent = <Map<String, String>>[];
+    final inFlight = Completer<void>();
+    await pumpDetails(
+      tester,
+      fetchThreadPage: (id) async => ThreadPageService.createMockThreadPage(id),
+      actionSender: (url, csrf, fields) {
+        sent.add(fields);
+        return inFlight.future;
+      },
+    );
+
+    await tester.scrollUntilVisible(find.byTooltip('Bookmark'), 150);
+    await tester.ensureVisible(find.byTooltip('Bookmark'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Bookmark'));
+    await tester.pump();
+    // Optimistically bookmarked, request still open.
+    expect(sent, hasLength(1));
+
+    await tester.tap(find.byTooltip('Remove bookmark'));
+    await tester.pump();
+    expect(sent, hasLength(1));
+
+    // Once it settles the control is live again.
+    inFlight.complete();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Remove bookmark'));
+    await tester.pump();
+    expect(sent, hasLength(2));
+    expect(sent.last, {'delete': '1'});
   });
 
   testWidgets('logged-out taps prompt for sign-in instead of posting', (tester) async {
