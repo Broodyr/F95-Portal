@@ -414,6 +414,9 @@ class ApiException implements Exception {
 
   ApiException(this.message);
 
+  /// The bare message, as [ContentUnavailableException] gives: screens put
+  /// this straight in front of the user under a headline naming what failed,
+  /// and a class name prefixed onto it reads as a crash.
   @override
-  String toString() => 'ApiException: $message';
+  String toString() => message;
 }
