@@ -84,6 +84,10 @@ class F95Portal extends StatelessWidget {
             // same pure white, so the secondary labels and icons written
             // against it lost the contrast step they were asking for.
             onSurfaceVariant: AppPalette.subtleText,
+            // Read by Material rather than by us — an unstyled OutlinedButton
+            // takes its border from here, and unset that border is white.
+            outline: AppPalette.outline,
+            outlineVariant: AppPalette.outline,
           ),
           scaffoldBackgroundColor: AppPalette.background,
           appBarTheme: AppBarTheme(

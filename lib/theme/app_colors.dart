@@ -19,6 +19,14 @@ abstract final class AppPalette {
   /// gap between them is eaten by that 35%.
   static const Color raisedSurface = Color(0xFF303030);
 
+  /// Wired to `ColorScheme.outline` and `outlineVariant`. Nothing in the app
+  /// reads these — its own borders are [AppColors.brightText]'s counterpart
+  /// `onSurface` at a low alpha — but Material's widgets do, and unpinned
+  /// they come back pure white. An unstyled `OutlinedButton` drew exactly
+  /// that. Set to the weight the app's own outlined control uses, the glass
+  /// dialog's cancel button.
+  static const Color outline = Color(0xFF8E8E8E);
+
   /// Wired to `ColorScheme.onSurfaceVariant`, and the same value as
   /// [AppColors.subtleText] — the role means the muted counterpart to
   /// onSurface, which is what that token already is. Left unpinned it comes

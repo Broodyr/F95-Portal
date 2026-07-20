@@ -1,6 +1,7 @@
 import 'package:f95_portal/models/profile.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
+import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/profile_service.dart';
@@ -595,6 +596,33 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Nothing here yet.'), findsOneWidget);
+    });
+  });
+
+  group('a profile the member closed off', () {
+    testWidgets('states the reason under the empty-state glyph, with no retry', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async =>
+            throw ProfileRestrictedException('This member limits who may view their full profile.'),
+      );
+
+      expect(find.text('This member limits who may view their full profile.'), findsOneWidget);
+      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      // Retrying only earns the same 403.
+      expect(find.widgetWithText(TextButton, 'Retry'), findsNothing);
+      // Never the raw exception the user saw before.
+      expect(find.textContaining('ApiException'), findsNothing);
+      expect(find.textContaining('403'), findsNothing);
+    });
+
+    testWidgets('an ordinary failure still offers a retry', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchProfile: () async => throw ApiException('Failed to load profile page: 500'));
+
+      expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
+      expect(find.byIcon(Icons.lock_outline), findsNothing);
     });
   });
 }

@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../services/profile_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/error_view.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
@@ -91,6 +92,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = false;
   String? _error;
 
+  /// [_error] came from the member closing their profile, not from a
+  /// failure: it gets the stated reason and no retry.
+  bool _restricted = false;
+
   int _tab = 0;
 
   List<ProfilePosting>? _postings;
@@ -170,6 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _restricted = e is ProfileRestrictedException;
         _loading = false;
       });
     }
@@ -483,7 +489,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         else if (_loading)
           const Expanded(child: Center(child: CircularProgressIndicator()))
         else if (_error != null)
-          Expanded(child: _buildError(_error!, _loadProfile))
+          Expanded(child: _restricted ? _buildRestricted(_error!) : _buildError(_error!, _loadProfile))
         else if (page != null)
           Expanded(
             child: RefreshIndicator(
@@ -1064,23 +1070,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// The member closed their profile. The site's own wording carries the
+  /// detail, and there is no retry — refetching earns the same 403.
+  Widget _buildRestricted(String message) {
+    return ErrorView(icon: Icons.lock_outline, headline: 'Profile is private', detail: message);
+  }
+
   Widget _buildError(String message, Future<void> Function() retry) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12.5),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton(onPressed: retry, child: const Text('Retry')),
-          ],
-        ),
-      ),
-    );
+    return ErrorView(headline: "Couldn't load this profile", detail: message, onRetry: retry);
   }
 }

@@ -7,6 +7,7 @@ import '../models/forum.dart';
 import '../services/forum_service.dart';
 import '../services/thread_page_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/error_view.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
@@ -431,17 +432,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       return const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
     }
     if (_error != null || page == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cloud_off, size: 32, color: AppColors.of(context).mutedForeground),
-            const SizedBox(height: 8),
-            Text("Couldn't load the thread", style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 13)),
-            TextButton(onPressed: _load, child: const Text('Retry')),
-          ],
-        ),
-      );
+      return ErrorView(headline: "Couldn't load the thread", detail: _error, onRetry: _load);
     }
 
     return ListView(
