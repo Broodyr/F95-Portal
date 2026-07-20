@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
@@ -73,10 +74,10 @@ class CustomBottomNavigation extends StatelessWidget {
                               duration: Motion.duration,
                               curve: Motion.curve,
                               alignment: Alignment(-1 + 2 * currentIndex / (itemCount - 1), 0),
-                              child: const FractionallySizedBox(
+                              child: FractionallySizedBox(
                                 widthFactor: 1 / itemCount,
                                 heightFactor: 1,
-                                child: Center(child: _PulsingHighlight()),
+                                child: Center(child: _PulsingHighlight(selectedIndex: currentIndex)),
                               ),
                             ),
                           ),
@@ -152,24 +153,56 @@ class CustomBottomNavigation extends StatelessWidget {
 }
 
 /// The 40px circle behind the active destination. It slides between segments
-/// via the shared [AnimatedAlign] above and breathes with a slow alpha pulse.
+/// via the shared [AnimatedAlign] above, and swells once when the destination
+/// changes before settling back to its resting fill.
 class _PulsingHighlight extends StatefulWidget {
-  const _PulsingHighlight();
+  final int selectedIndex;
+
+  const _PulsingHighlight({required this.selectedIndex});
 
   @override
   State<_PulsingHighlight> createState() => _PulsingHighlightState();
 }
 
 class _PulsingHighlightState extends State<_PulsingHighlight> with SingleTickerProviderStateMixin {
+  /// Alpha rasterises to 8 bits, so the swing between these is also the
+  /// pulse's colour budget: it can only ever render `(peak - rest) * 255`
+  /// distinct fills. Too few and the circle visibly steps between them, which
+  /// reads as a stuttering framerate rather than as a pulse — the original
+  /// 0.2..0.3 swing bought only 27 for a 1200ms sweep. 0.20 buys 51.
+  static const double restAlpha = 0.25;
+  static const double peakAlpha = 0.45;
+
+  /// The pulse used to `repeat()` forever. Nothing else in the app animates
+  /// perpetually, so that one widget alone kept the engine producing frames —
+  /// and re-rasterising the nav bar's backdrop blur — on every screen for as
+  /// long as the app was open. Firing it only on a change lets the app idle.
+  ///
+  /// One beat, not two: a second swell reads as a notification badge asking
+  /// for attention rather than as acknowledgement of the tap.
+  static const int _beats = 1;
+  static const Duration _beatDuration = Duration(milliseconds: 600);
+
   late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(duration: const Duration(milliseconds: 1200), vsync: this)
-      ..repeat(reverse: true);
-    _pulseAnimation = CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut);
+    _pulseController = AnimationController(duration: _beatDuration * _beats, vsync: this);
+    // Deliberately not fired here: on launch the highlight settles at rest
+    // rather than flourishing over a destination the user did not pick.
+  }
+
+  @override
+  void didUpdateWidget(_PulsingHighlight oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedIndex == widget.selectedIndex) return;
+    // Reduced motion collapses a controller's duration to 5% rather than to
+    // nothing, which would cram both beats into ~7 frames — a rapid flash is
+    // the opposite of what the setting asks for, so skip the pulse outright
+    // and leave the highlight at rest.
+    if (MediaQuery.disableAnimationsOf(context)) return;
+    _pulseController.forward(from: 0);
   }
 
   @override
@@ -181,15 +214,22 @@ class _PulsingHighlightState extends State<_PulsingHighlight> with SingleTickerP
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) => Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2 + (_pulseAnimation.value * 0.1)),
-        ),
-      ),
+      animation: _pulseController,
+      builder: (context, child) {
+        // A raised cosine gives [_beats] swells that both start and end at
+        // rest, so the flourish settles instead of snapping back.
+        final swell = (1 - math.cos(_pulseController.value * _beats * 2 * math.pi)) / 2;
+        return Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: restAlpha + swell * (peakAlpha - restAlpha)),
+          ),
+        );
+      },
     );
   }
 }
