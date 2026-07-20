@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/services/thread_page_parser.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:html/parser.dart' as html_parser;
 
 ThreadPage parseFixture(String name) => parseThreadPage(File('test/fixtures/$name').readAsStringSync(), threadId: 1);
 
@@ -226,6 +227,43 @@ void main() {
     test('guest pages without a bookmark link yield no actions', () {
       final page = synthetic(anchor: '');
       expect(page.actions, isNull);
+    });
+  });
+
+  group('parseRichContent line breaks', () {
+    // The source newlines matter: XenForo emits them between the <br/>s,
+    // and they are what used to leak through as spaces.
+    List<RichPiece> rich(String body) =>
+        parseRichContent(html_parser.parse('<div class="bbWrapper">$body</div>').querySelector('.bbWrapper')!);
+
+    String render(String body) => [
+      for (final piece in rich(body))
+        if (piece.newline) '\n' else piece.text,
+    ].join();
+
+    test('keeps a paragraph break as a blank line, with no leaked indent', () {
+      expect(render('Line one.<br />\n<br />\nLine two.'), 'Line one.\n\nLine two.');
+    });
+
+    test('keeps a single break single', () {
+      expect(render('Line one.<br />\nLine two.'), 'Line one.\nLine two.');
+    });
+
+    test('caps a run of breaks at one blank line', () {
+      expect(render('Line one.<br />\n<br />\n<br />\n<br />\nLine two.'), 'Line one.\n\nLine two.');
+    });
+
+    test('does not turn a block boundary into a blank line', () {
+      expect(render('<div>Line one.</div>\n<div>Line two.</div>'), 'Line one.\nLine two.');
+      expect(render('<div>Line one.<br />\n</div>\n<div>Line two.</div>'), 'Line one.\nLine two.');
+    });
+
+    test('leaves an ordinary wrapped line untouched', () {
+      expect(render('Some words\nwrapped in source.'), 'Some words wrapped in source.');
+    });
+
+    test('does not double the space after a bullet', () {
+      expect(render('<ul><li>\nFirst</li><li>\nSecond</li></ul>'), '• First\n• Second');
     });
   });
 

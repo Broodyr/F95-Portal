@@ -404,8 +404,16 @@ List<RichPiece> parseRichContent(Element content) {
   bool capped = false;
   bool afterMaskedLink = false;
 
-  void addNewline() {
-    if (pieces.isNotEmpty && !pieces.last.newline) pieces.add(const RichPiece.newline());
+  /// Breaks stack to at most [max]. Authors write <br><br> for a paragraph,
+  /// so an explicit break allows one blank line; a block's own boundary
+  /// break allows none, or a </div><div> pair would open a gap of its own.
+  void addNewline({int max = 1}) {
+    if (pieces.isEmpty) return;
+    var trailing = 0;
+    for (var i = pieces.length - 1; i >= 0 && pieces[i].newline; i--) {
+      trailing++;
+    }
+    if (trailing < max) pieces.add(const RichPiece.newline());
   }
 
   void visit(
@@ -435,7 +443,7 @@ List<RichPiece> parseRichContent(Element content) {
       if (node.classes.contains('bbCodeSpoiler-button')) return;
       if (tag == 'script' || tag == 'style' || tag == 'noscript') return;
       if (tag == 'br') {
-        addNewline();
+        addNewline(max: 2);
         return;
       }
       if (tag == 'img') {
@@ -520,6 +528,13 @@ List<RichPiece> parseRichContent(Element content) {
         afterMaskedLink = false;
       }
       var text = raw.replaceAll(RegExp(r'\s+'), ' ');
+      // The source newline sitting between two tags collapses into that
+      // leading space, which would show as an indent after a break or a
+      // gap after a bullet.
+      final previous = pieces.isEmpty ? null : pieces.last;
+      if (previous == null || previous.newline || previous.text.endsWith(' ')) {
+        text = text.trimLeft();
+      }
       if (textLength + text.length > _spoilerTextCap) {
         text = '${text.substring(0, (_spoilerTextCap - textLength).clamp(0, text.length))}…';
         capped = true;
