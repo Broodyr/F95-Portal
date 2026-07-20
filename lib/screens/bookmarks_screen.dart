@@ -281,6 +281,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // The overflow rides this row rather than standing as its
+                    // own column: at Material's default tap size it reserved
+                    // 48px of card width down the whole row, and the badge
+                    // beside it leaves that space going spare anyway.
                     Row(
                       children: [
                         Icon(
@@ -293,6 +297,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                           entry.isPost ? 'POST' : 'THREAD',
                           style: TextStyle(color: AppColors.of(context).hintText, fontSize: 9.5),
                         ),
+                        const Spacer(),
+                        _buildOverflow(entry),
                       ],
                     ),
                     const SizedBox(height: 3),
@@ -329,23 +335,38 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                tooltip: 'Bookmark tools',
-                padding: EdgeInsets.zero,
-                icon: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
-                color: AppColors.of(context).chipSurface,
-                onSelected: (_) => _delete(entry),
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'delete',
-                    height: 40,
-                    child: Text('Remove bookmark', style: TextStyle(fontSize: 13)),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Card overflow, sized by its own padding rather than Material's.
+  ///
+  /// Passing `child` instead of `icon` is what allows that: the `icon` form
+  /// builds an IconButton, and an M3 IconButton will not go under 40x40
+  /// whatever you set for iconSize, padding or tapTargetSize. At 40 square in
+  /// a row of 12px badges this drove the whole card taller.
+  Widget _buildOverflow(BookmarkEntry entry) {
+    return PopupMenuButton<String>(
+      tooltip: 'Bookmark tools',
+      padding: EdgeInsets.zero,
+      color: AppColors.of(context).chipSurface,
+      onSelected: (_) => _delete(entry),
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: 'delete',
+          height: 40,
+          child: Text('Remove bookmark', style: TextStyle(fontSize: 13)),
+        ),
+      ],
+      // Padding rather than a bare glyph: the tap target is this box, and the
+      // card underneath is tappable too, so it needs room to be hit on
+      // purpose. Asymmetric so the glyph sits out at the card's edge.
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 6, 2, 6),
+        child: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
       ),
     );
   }

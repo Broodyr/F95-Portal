@@ -786,6 +786,31 @@ void main() {
     expect(find.textContaining('Mousetrap'), findsOneWidget);
   });
 
+  // The overflow used to stand as its own column beside the content, where
+  // Material's tap box reserved 48px of card width down every row. It rides
+  // the badge row now, so the title and snippet get the full card.
+  testWidgets('the bookmark overflow rides the badge row without reserving a column', (tester) async {
+    await signIn();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: BookmarksScreen(fetchBookmarks: ({page = 1}) async => ForumService.createMockBookmarks(page: page)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final overflow = find.byType(PopupMenuButton<String>).first;
+    final badgeRow = find.ancestor(of: find.text('POST').first, matching: find.byType(Row)).first;
+    expect(
+      find.descendant(of: badgeRow, matching: find.byType(PopupMenuButton<String>)),
+      findsOneWidget,
+      reason: 'the overflow should sit in the same row as the POST/THREAD badge',
+    );
+    // Under 40 means it is not an M3 IconButton, which cannot go smaller and
+    // is what made it too big to live in that row.
+    expect(tester.getSize(overflow).width, lessThan(40));
+  });
+
   testWidgets('bookmarks list renders, filters by kind, and opens the viewer', (tester) async {
     await signIn();
     final openedThreads = <String>[];
