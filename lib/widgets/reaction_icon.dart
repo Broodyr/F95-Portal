@@ -34,7 +34,7 @@ class ReactionGlyph {
     // Deliberately not the site's sprite, which is an unimpressed face: a
     // thumb down reads as disagreement at a glance. Don't "fix" to match.
     18: ReactionGlyph('\u{1F44E}', Color(0xFF993C1D), 'Disagree'), // 👎
-    8: ReactionGlyph('\u{1F621}', Color(0xFFE24B4A), 'Angry'), // 😡
+    8: ReactionGlyph('\u{1F92C}', Color(0xFFE24B4A), 'Angry'), // 🤬
   };
 
   /// The pickable reactions, in site order (map order).
