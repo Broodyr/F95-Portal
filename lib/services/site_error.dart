@@ -1,5 +1,26 @@
 import 'package:html/parser.dart' as html_parser;
 
+/// Content the site won't serve this viewer, and won't on a second ask: a
+/// profile whose owner limited it, a forum or thread that isn't there.
+///
+/// Separate from [ApiException] for one reason — a screen showing this should
+/// not offer Retry. A 403 earns the same 403; a 404 stays missing. Reserved
+/// for those two: a 500 or a timeout carries no such promise and stays an
+/// ordinary, retryable failure.
+class ContentUnavailableException implements Exception {
+  final String message;
+
+  ContentUnavailableException(this.message);
+
+  @override
+  String toString() => message;
+}
+
+/// True for the statuses whose meaning won't change between two identical
+/// requests. Anything else — server errors, rate limits, timeouts — is worth
+/// another try.
+bool isPermanentStatus(int statusCode) => statusCode == 403 || statusCode == 404;
+
 /// The site's own wording for a request it refused, or couldn't fulfil.
 ///
 /// XenForo answers 403 and 404 with an ordinary page rather than a bare

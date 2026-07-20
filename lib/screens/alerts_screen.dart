@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/account.dart';
+import '../services/site_error.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../theme/app_colors.dart';
@@ -51,6 +52,9 @@ class _AlertsScreenState extends State<AlertsScreen> {
   bool _loadingMore = false;
   String? _error;
 
+  /// A 403 or 404 will not change on a second ask, so the view drops Retry.
+  bool _errorRetryable = true;
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +96,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _errorRetryable = e is! ContentUnavailableException;
         _loading = false;
       });
     }
@@ -200,7 +205,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
       return const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
     }
     if (_error != null) {
-      return ErrorView(headline: "Couldn't load alerts", detail: _error, onRetry: _load);
+      return ErrorView(headline: "Couldn't load alerts", detail: _error, onRetry: _errorRetryable ? _load : null);
     }
     if (_groups.isEmpty) {
       return Center(

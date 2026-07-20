@@ -283,9 +283,17 @@ class ForumService {
         // which keeps multi-request flows (alert acknowledgment) diagnosable
         // from the surfaced message alone.
         final stated = parseSiteErrorMessage(response.body);
-        throw ApiException(stated ?? 'Failed to load ${Uri.parse(url).path}: ${response.statusCode}');
+        final fallback = 'Failed to load ${Uri.parse(url).path}: ${response.statusCode}';
+        if (isPermanentStatus(response.statusCode)) {
+          throw ContentUnavailableException(stated ?? fallback);
+        }
+        throw ApiException(stated ?? fallback);
       }
       return response.body;
+    } on ContentUnavailableException {
+      // Would otherwise be swallowed by the catch-all below and re-thrown as
+      // a retryable ApiException, undoing the distinction.
+      rethrow;
     } on ApiException {
       rethrow;
     } catch (e) {

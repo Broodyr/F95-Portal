@@ -8,7 +8,9 @@ import 'package:f95_portal/screens/forum_search_screen.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/forum_threads_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
+import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/services/site_error.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/widgets/glass_fab.dart';
 import 'package:flutter/material.dart';
@@ -106,6 +108,34 @@ void main() {
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
     expect(find.text('Games'), findsOneWidget);
+  });
+
+  testWidgets('a forum that is gone states why and offers no retry', (tester) async {
+    await pumpForum(
+      tester,
+      fetchForumPage: (url, {page = 1}) async =>
+          throw ContentUnavailableException('The requested forum could not be found.'),
+    );
+    await tester.tap(find.text('General Discussions'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('The requested forum could not be found.'), findsOneWidget);
+    // Retrying earns the same 404, so the button is not offered.
+    expect(find.text('Retry'), findsNothing);
+    // And never the raw status the user would have seen before.
+    expect(find.textContaining('404'), findsNothing);
+    expect(find.textContaining('ApiException'), findsNothing);
+  });
+
+  testWidgets('an ordinary forum failure still offers a retry', (tester) async {
+    await pumpForum(
+      tester,
+      fetchForumPage: (url, {page = 1}) async => throw ApiException('Failed to load /forums/x/: 500'),
+    );
+    await tester.tap(find.text('General Discussions'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Retry'), findsOneWidget);
   });
 
   testWidgets('tapping a forum opens its thread list with subforums and stickies', (tester) async {

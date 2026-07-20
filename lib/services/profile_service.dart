@@ -9,18 +9,6 @@ import 'profile_parser.dart';
 import 'site_error.dart';
 import 'thread_page_service.dart';
 
-/// A profile the member has closed off. Distinct from [ApiException] because
-/// nothing about it is retryable: the screen states the reason and offers no
-/// retry, rather than inviting the user to bounce off the same 403.
-class ProfileRestrictedException implements Exception {
-  final String message;
-
-  ProfileRestrictedException(this.message);
-
-  @override
-  String toString() => message;
-}
-
 /// Fetches and parses the signed-in member's profile: the member page (wall
 /// inline), the lazily loaded postings and About tabs, and the wall's write
 /// actions. No cache — the profile is the natural place to see fresh state.
@@ -149,7 +137,7 @@ class ProfileService {
       if (response.statusCode == 403) {
         // Members can restrict who sees their profile; the site answers 403
         // and renders the reason as an ordinary page.
-        throw ProfileRestrictedException(
+        throw ContentUnavailableException(
           parseSiteErrorMessage(response.body) ?? 'This member limits who may view their full profile.',
         );
       }
@@ -157,7 +145,7 @@ class ProfileService {
         throw ApiException('Failed to load profile page: ${response.statusCode}');
       }
       return response.body;
-    } on ProfileRestrictedException {
+    } on ContentUnavailableException {
       rethrow;
     } on ApiException {
       rethrow;

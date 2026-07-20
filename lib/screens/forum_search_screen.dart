@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../models/forum.dart';
+import '../services/site_error.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../theme/app_colors.dart';
@@ -54,6 +55,9 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
   bool _loadingMore = false;
   String? _error;
 
+  /// A 403 or 404 will not change on a second ask, so the view drops Retry.
+  bool _errorRetryable = true;
+
   @override
   void initState() {
     super.initState();
@@ -90,6 +94,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _errorRetryable = e is! ContentUnavailableException;
         _searching = false;
       });
     }
@@ -251,7 +256,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
       return const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
     }
     if (_error != null) {
-      return ErrorView(headline: "Couldn't search", detail: _error, onRetry: _search);
+      return ErrorView(headline: "Couldn't search", detail: _error, onRetry: _errorRetryable ? _search : null);
     }
     final page = _page;
     if (page == null) {

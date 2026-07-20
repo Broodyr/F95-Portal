@@ -4,6 +4,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../constants.dart';
 import '../models/profile.dart';
+import '../services/site_error.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../services/profile_service.dart';
@@ -175,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
-        _restricted = e is ProfileRestrictedException;
+        _restricted = e is ContentUnavailableException;
         _loading = false;
       });
     }

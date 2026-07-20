@@ -3,6 +3,7 @@ import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/services/site_error.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/profile_service.dart';
 import 'package:f95_portal/widgets/reaction_icon.dart';
@@ -605,7 +606,7 @@ void main() {
       await pumpProfile(
         tester,
         fetchProfile: () async =>
-            throw ProfileRestrictedException('This member limits who may view their full profile.'),
+            throw ContentUnavailableException('This member limits who may view their full profile.'),
       );
 
       expect(find.text('This member limits who may view their full profile.'), findsOneWidget);

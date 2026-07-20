@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../models/forum.dart';
+import '../services/site_error.dart';
 import '../services/forum_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/error_view.dart';
@@ -51,6 +52,9 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
   bool _loadingMore = false;
   String? _error;
 
+  /// A 403 or 404 will not change on a second ask, so the view drops Retry.
+  bool _errorRetryable = true;
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +90,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _errorRetryable = e is! ContentUnavailableException;
         _loading = false;
       });
     }
@@ -208,7 +213,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
       return const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
     }
     if (_error != null || page == null) {
-      return ErrorView(headline: "Couldn't load the forum", detail: _error, onRetry: _load);
+      return ErrorView(headline: "Couldn't load the forum", detail: _error, onRetry: _errorRetryable ? _load : null);
     }
 
     final subforums = [

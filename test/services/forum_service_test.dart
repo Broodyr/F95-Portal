@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/forum_service.dart';
+import 'package:f95_portal/services/site_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -448,12 +449,47 @@ void main() {
     );
   });
 
-  test('non-200 responses surface as ApiException', () async {
-    final client = MockClient((_) async => http.Response('blocked', 403));
+  group('non-200 responses', () {
+    Future<void> Function() fetchWith(http.Client client) =>
+        () => ForumService.fetchIndex(client: client, packageInfoLoader: () async => _packageInfo());
 
-    expect(
-      () => ForumService.fetchIndex(client: client, packageInfoLoader: () async => _packageInfo()),
-      throwsA(isA<ApiException>().having((e) => e.message, 'message', contains('403'))),
-    );
+    test('a 404 is permanent and carries the site wording', () async {
+      final client = MockClient(
+        (_) async => http.Response(
+          '<html><body><div class="p-body-pageContent">'
+          '<div class="blockMessage">The requested forum could not be found.</div>'
+          '</div></body></html>',
+          404,
+        ),
+      );
+
+      expect(
+        fetchWith(client),
+        throwsA(
+          isA<ContentUnavailableException>().having(
+            (e) => e.message,
+            'message',
+            'The requested forum could not be found.',
+          ),
+        ),
+      );
+    });
+
+    test('a 403 with nothing to say still falls back to the path and status', () async {
+      final client = MockClient((_) async => http.Response('blocked', 403));
+
+      expect(
+        fetchWith(client),
+        throwsA(isA<ContentUnavailableException>().having((e) => e.message, 'm', contains('403'))),
+      );
+    });
+
+    // A server error says nothing about whether the next request works, so it
+    // stays an ordinary retryable failure.
+    test('a server error stays retryable', () async {
+      final client = MockClient((_) async => http.Response('boom', 500));
+
+      expect(fetchWith(client), throwsA(isA<ApiException>().having((e) => e.message, 'm', contains('500'))));
+    });
   });
 }

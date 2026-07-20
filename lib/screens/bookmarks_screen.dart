@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../models/account.dart';
+import '../services/site_error.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../services/thread_page_service.dart';
@@ -50,6 +51,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   String? _error;
+
+  /// A 403 or 404 will not change on a second ask, so the view drops Retry.
+  bool _errorRetryable = true;
   _BookmarkFilter _filter = _BookmarkFilter.all;
 
   @override
@@ -90,6 +94,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _errorRetryable = e is! ContentUnavailableException;
         _loading = false;
       });
     }
@@ -220,7 +225,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       return const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
     }
     if (_error != null) {
-      return ErrorView(headline: "Couldn't load bookmarks", detail: _error, onRetry: _load);
+      return ErrorView(headline: "Couldn't load bookmarks", detail: _error, onRetry: _errorRetryable ? _load : null);
     }
 
     final entries = _visibleEntries;

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../constants.dart';
 import '../models/forum.dart';
+import '../services/site_error.dart';
 import '../services/forum_service.dart';
 import '../services/thread_page_service.dart';
 import '../theme/app_colors.dart';
@@ -83,6 +84,9 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   bool _watched = false;
   String? _error;
 
+  /// A 403 or 404 will not change on a second ask, so the view drops Retry.
+  bool _errorRetryable = true;
+
   /// The thread's canonical base URL once known; permalink openings
   /// (/posts/N/ from alerts and bookmarks, /threads/x/post-N from search)
   /// can't paginate on their own URL.
@@ -132,6 +136,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
+        _errorRetryable = e is! ContentUnavailableException;
         _loading = false;
       });
     }
@@ -432,7 +437,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       return const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)));
     }
     if (_error != null || page == null) {
-      return ErrorView(headline: "Couldn't load the thread", detail: _error, onRetry: _load);
+      return ErrorView(headline: "Couldn't load the thread", detail: _error, onRetry: _errorRetryable ? _load : null);
     }
 
     return ListView(
