@@ -3,12 +3,14 @@ import 'package:f95_portal/models/search_category.dart';
 import 'package:f95_portal/models/search_query.dart';
 import 'package:f95_portal/screens/settings_screen.dart';
 import 'package:f95_portal/services/auth_service.dart';
+import 'package:f95_portal/services/draft_service.dart';
 import 'package:f95_portal/services/settings_service.dart';
 import 'package:f95_portal/widgets/search_options_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/in_memory_cookie_storage.dart';
+import '../helpers/in_memory_draft_storage.dart';
 import '../helpers/in_memory_settings_storage.dart';
 import '../helpers/metadata_test_utils.dart';
 
@@ -17,6 +19,8 @@ void main() {
 
   late SettingsService service;
   late SettingsService previous;
+  late DraftService drafts;
+  late DraftService previousDrafts;
 
   setUpAll(() {
     loadAndInstallMetadata();
@@ -25,16 +29,75 @@ void main() {
   setUp(() {
     previous = SettingsService.instance;
     service = installTestSettings();
+    previousDrafts = DraftService.instance;
+    drafts = installTestDrafts();
   });
 
   tearDown(() {
     SettingsService.instance = previous;
+    DraftService.instance = previousDrafts;
   });
 
   Future<void> pumpSettings(WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(theme: ThemeData.dark(), home: const SettingsScreen()));
     await tester.pumpAndSettle();
   }
+
+  group('saved drafts', () {
+    Future<void> scrollToStorage(WidgetTester tester, Finder target) async {
+      await tester.scrollUntilVisible(target, 200);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('no button at all when nothing is drafted', (tester) async {
+      await pumpSettings(tester);
+
+      // Scroll the Storage section into view first — the list builds lazily,
+      // so asserting absence without this would pass for the wrong reason.
+      await scrollToStorage(tester, find.text('Clear image cache'));
+      expect(find.text('Clear image cache'), findsOneWidget);
+      expect(find.textContaining('Clear saved drafts'), findsNothing);
+    });
+
+    testWidgets('the button counts the destinations holding text', (tester) async {
+      await drafts.save('threads/1/add-reply', message: 'one');
+      await drafts.save('members/x/post', message: 'two');
+      await pumpSettings(tester);
+
+      await scrollToStorage(tester, find.textContaining('Clear saved drafts'));
+      expect(find.text('Clear saved drafts (2)'), findsOneWidget);
+    });
+
+    testWidgets('backing out of the confirm keeps the drafts', (tester) async {
+      await drafts.save('threads/1/add-reply', message: 'still wanted');
+      await pumpSettings(tester);
+
+      await scrollToStorage(tester, find.textContaining('Clear saved drafts'));
+      await tester.tap(find.textContaining('Clear saved drafts'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(drafts.read('threads/1/add-reply')?.message, 'still wanted');
+    });
+
+    testWidgets('confirming wipes them and the button goes away', (tester) async {
+      await drafts.save('threads/1/add-reply', message: 'one');
+      await drafts.save('members/x/post', message: 'two');
+      await pumpSettings(tester);
+
+      await scrollToStorage(tester, find.textContaining('Clear saved drafts'));
+      await tester.tap(find.textContaining('Clear saved drafts'));
+      await tester.pumpAndSettle();
+      // Unrecoverable, unlike the image cache, so it asks first.
+      expect(find.textContaining('2 saved drafts'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(drafts.count, 0);
+      expect(find.textContaining('Clear saved drafts'), findsNothing);
+    });
+  });
 
   testWidgets('SFW switch round-trips to the service', (tester) async {
     await pumpSettings(tester);

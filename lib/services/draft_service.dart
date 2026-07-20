@@ -50,7 +50,7 @@ class SharedPrefsDraftStorage implements DraftStorage {
 /// profile's wall-post URL, a profile post's comment URL. So a wall post and
 /// a comment on one of its posts keep separate drafts without the callers
 /// having to invent an identity scheme.
-class DraftService {
+class DraftService extends ChangeNotifier {
   static DraftService instance = DraftService(SharedPrefsDraftStorage());
 
   final DraftStorage _storage;
@@ -80,6 +80,10 @@ class DraftService {
 
   ComposerDraft? read(String key) => _drafts[key];
 
+  /// How many destinations are holding unsent text; drives the settings
+  /// screen's clear button, which hides itself at zero.
+  int get count => _drafts.length;
+
   /// Stores the in-progress text for [key]. A draft that is blank (or has
   /// gone blank because the user emptied the field) is removed instead.
   Future<void> save(String key, {String title = '', required String message}) async {
@@ -93,11 +97,23 @@ class DraftService {
     while (_drafts.length > AppLimits.composerDrafts) {
       _drafts.remove(_drafts.keys.first);
     }
+    notifyListeners();
     await _flush();
   }
 
   Future<void> clear(String key) async {
     if (_drafts.remove(key) == null) return;
+    notifyListeners();
+    await _flush();
+  }
+
+  /// Wipes every stored draft. Offered in settings because a draft is
+  /// otherwise only reachable by navigating back to the exact composer that
+  /// wrote it — there is no other way to get unsent text off the device.
+  Future<void> clearAll() async {
+    if (_drafts.isEmpty) return;
+    _drafts.clear();
+    notifyListeners();
     await _flush();
   }
 

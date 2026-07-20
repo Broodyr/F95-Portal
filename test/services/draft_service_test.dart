@@ -88,6 +88,49 @@ void main() {
     expect(service.read('key/1'), isNull);
   });
 
+  test('count reports how many destinations are holding text', () async {
+    expect(service.count, 0);
+
+    await service.save('threads/1', message: 'one');
+    await service.save('threads/2', message: 'two');
+    expect(service.count, 2);
+
+    await service.clear('threads/1');
+    expect(service.count, 1);
+  });
+
+  test('clearAll drops every draft and persists the wipe', () async {
+    await service.save('threads/1', message: 'one');
+    await service.save('threads/2', message: 'two');
+
+    await service.clearAll();
+    expect(service.count, 0);
+
+    final reloaded = DraftService(storage);
+    await reloaded.load();
+    expect(reloaded.count, 0);
+  });
+
+  test('clearAll on an empty store is a no-op, not an error', () async {
+    await service.clearAll();
+    expect(service.count, 0);
+  });
+
+  test('notifies listeners as drafts come and go', () async {
+    var notifications = 0;
+    service.addListener(() => notifications++);
+
+    await service.save('threads/1', message: 'one');
+    expect(notifications, 1);
+
+    await service.clear('threads/1');
+    expect(notifications, 2);
+
+    await service.save('threads/2', message: 'two');
+    await service.clearAll();
+    expect(notifications, 4);
+  });
+
   test('a corrupt store loads as empty rather than throwing', () async {
     storage.stored = 'not json';
 

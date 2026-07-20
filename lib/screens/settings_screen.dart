@@ -10,11 +10,13 @@ import '../models/f95_metadata.dart';
 import '../models/search_category.dart';
 import '../models/search_query.dart';
 import '../services/auth_service.dart';
+import '../services/draft_service.dart';
 import '../services/forum_service.dart';
 import '../services/image_cache_wipe.dart';
 import '../services/settings_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/glass_dialog.dart';
 import '../widgets/remote_image.dart';
 import '../widgets/search_options_sheet.dart';
 import '../widgets/segmented_selector.dart';
@@ -90,6 +92,40 @@ class SettingsScreen extends StatelessWidget {
     RemoteImage.forgetResolved();
   }
 
+  /// Unlike the image cache, this destroys text the user wrote and nothing
+  /// refetches it, so it asks first and names the count it is about to take.
+  Future<void> _clearDrafts(BuildContext context) async {
+    final int count = DraftService.instance.count;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => GlassDialog(
+        title: const Text('Clear saved drafts?', style: TextStyle(fontSize: 16)),
+        content: Text(
+          count == 1
+              ? 'Your 1 saved draft will be deleted. This cannot be undone.'
+              : 'Your $count saved drafts will be deleted. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: GlassDialog.cancelStyle(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: GlassDialog.confirmStyle(context),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    await DraftService.instance.clearAll();
+    AppToast.showOn(messenger, count == 1 ? 'Saved draft cleared.' : 'Saved drafts cleared.');
+  }
+
   Future<void> _clearImageCache(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -107,10 +143,13 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          // Auth changes show/hide the forum-account section.
-          listenable: Listenable.merge([SettingsService.instance, AuthService.instance]),
+          // Auth changes show/hide the forum-account section; draft changes
+          // move the count, including composing done while this tab stayed
+          // alive in the background.
+          listenable: Listenable.merge([SettingsService.instance, AuthService.instance, DraftService.instance]),
           builder: (context, _) {
             final settings = SettingsService.instance.settings;
+            final int draftCount = DraftService.instance.count;
 
             return ListView(
               controller: scrollController,
@@ -223,6 +262,31 @@ class SettingsScreen extends StatelessWidget {
                     label: const Text('Clear image cache'),
                   ),
                 ),
+                // Absent rather than disabled at zero: with no drafts there is
+                // nothing to say, and the count is the only hint the app gives
+                // that unsent text is being held at all.
+                if (draftCount > 0) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _clearDrafts(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                        side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.65)),
+                      ),
+                      icon: const Icon(Icons.drafts_outlined, size: 18),
+                      label: Text('Clear saved drafts ($draftCount)'),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Unsent text from compose sheets you backed out of.',
+                      style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
+                    ),
+                  ),
+                ],
               ],
             );
           },
