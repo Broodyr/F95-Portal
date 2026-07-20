@@ -446,6 +446,23 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   static const double _pillHMargin = 2;
   static const double _pillHPadding = 11;
   static const double _gapHPadding = 9;
+  static const double _pillVPadding = 5;
+
+  /// Vertical padding that centres a pill's *ink* rather than its line box.
+  ///
+  /// A line box is symmetric, but the glyphs inside it are not: Roboto leaves
+  /// 0.2169em between ascent and cap height, against a 0.2441em descent, so a
+  /// digit — having no descender to fill it — floats half that difference
+  /// above centre. Only 0.16px at this size, but on a 3x screen it reads.
+  ///
+  /// Calibrated to Roboto, which is the platform font here (the app ships
+  /// none of its own) and scales with the text-size setting, hence taking the
+  /// size from the scaler rather than the constant.
+  EdgeInsets _pillPadding(BuildContext context, double horizontal) {
+    const double digitLift = (0.2441 - 0.2169) / 2;
+    final double nudge = MediaQuery.textScalerOf(context).scale(_pillFontSize) * digitLift;
+    return EdgeInsets.fromLTRB(horizontal, _pillVPadding + nudge, horizontal, _pillVPadding - nudge);
+  }
 
   /// Chevrons plus a compact pill neighborhood: first, around current, last.
   Widget _buildPagination(ColorScheme colorScheme, int totalPages) {
@@ -480,7 +497,10 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 onTap: () => _promptForPage(totalPages),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
-                  padding: const EdgeInsets.symmetric(horizontal: _gapHPadding, vertical: 5),
+                  // Not [_pillPadding]: that nudge is derived from where a
+                  // digit's ink sits, and an ellipsis rides the baseline
+                  // instead, so it would push this the wrong way.
+                  padding: const EdgeInsets.symmetric(horizontal: _gapHPadding, vertical: _pillVPadding),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadii.pill),
                     border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.18)),
@@ -629,7 +649,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       onTap: () => _goToPage(page),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
-        padding: const EdgeInsets.symmetric(horizontal: _pillHPadding, vertical: 5),
+        padding: _pillPadding(context, _pillHPadding),
         decoration: BoxDecoration(
           // Opaque rather than the translucent chipFill chips elsewhere use:
           // those sit on cards, while the pills sit on the page background,
