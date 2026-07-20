@@ -317,4 +317,77 @@ Support me on itch!</div>
       expect(about.birthday, isNot(contains('291')));
     });
   });
+
+  group('block text keeps the line breaks the author wrote', () {
+    String postBody(String body) => parseProfilePage('''
+      <div id="profile-posts">
+        <article class="message--simple" data-content="profile-post-1" data-author="X">
+          <article class="message-body">$body</article>
+        </article>
+      </div>
+    ''').wallPosts.single.body;
+
+    String commentBody(String body) => parseProfilePage('''
+      <div id="profile-posts">
+        <article class="message--simple" data-content="profile-post-1" data-author="X">
+          <article class="message-body">hi</article>
+          <div class="comment" data-content="profile-post-comment-9" data-author="Y">
+            <div class="comment-body">$body</div>
+          </div>
+        </article>
+      </div>
+    ''').wallPosts.single.comments.single.body;
+
+    String bio(String body) => parseProfileAbout('<div class="block-row"><div class="bbWrapper">$body</div></div>').bio;
+
+    // The source newlines are the point: XenForo emits them between the
+    // <br/>s, and hard-wraps its markup besides.
+    const paragraphs = 'Line one.<br />\n<br />\nLine two.';
+
+    test('a wall post keeps a paragraph break', () {
+      expect(postBody(paragraphs), 'Line one.\n\nLine two.');
+    });
+
+    test('a wall post keeps a single break single', () {
+      expect(postBody('Line one.<br />\nLine two.'), 'Line one.\nLine two.');
+    });
+
+    test('a comment keeps a paragraph break', () {
+      expect(commentBody(paragraphs), 'Line one.\n\nLine two.');
+    });
+
+    test('a bio keeps a paragraph break', () {
+      expect(bio(paragraphs), 'Line one.\n\nLine two.');
+    });
+
+    test('a run of breaks caps at one blank line', () {
+      expect(postBody('One.<br /><br /><br /><br />Two.'), 'One.\n\nTwo.');
+    });
+
+    test('a break at either end leaves no blank line behind', () {
+      expect(postBody('<br /><br />Only.<br /><br />'), 'Only.');
+    });
+
+    // The trap the old bio helper fell into: it split on raw newlines, so
+    // markup wrapped across source lines came out as separate lines.
+    test('source wrapping is whitespace, not a break', () {
+      expect(postBody('A sentence the site\n  wrapped across lines.'), 'A sentence the site wrapped across lines.');
+      expect(bio('A bio the site\n  wrapped across lines.'), 'A bio the site wrapped across lines.');
+    });
+
+    test('a real wall keeps its breaks and joins its wrapped lines', () {
+      final posts = parseProfilePage(fixture('profile_invader_incubus.htm')).wallPosts;
+
+      // Hard-wrapped across six source lines, and one paragraph to a reader.
+      expect(posts.first.body, startsWith('hey! Invader Incubus! I recently played your game eggomon'));
+      expect(posts.first.body, isNot(contains('\n')));
+
+      // This one really did write two lines, and used to arrive as one.
+      expect(
+        posts.last.body,
+        'Will you let me know here when your Subscribestar is approved? =)\n'
+            "I'll migrate over there as soon as its up!",
+      );
+    });
+  });
 }

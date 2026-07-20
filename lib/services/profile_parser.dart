@@ -94,7 +94,7 @@ ProfileAbout parseProfileAbout(String htmlSource) {
     if (row.querySelector('h4.block-textHeader') != null) continue;
     final wrapper = row.querySelector('.bbWrapper');
     if (wrapper == null) continue;
-    bio = _rawText(wrapper);
+    bio = _blockText(wrapper);
     break;
   }
 
@@ -103,7 +103,7 @@ ProfileAbout parseProfileAbout(String htmlSource) {
     for (final heading in document.querySelectorAll('h4.block-textHeader')) {
       if (_clean(heading.text) != 'About') continue;
       final wrapper = heading.parent?.querySelector('.bbWrapper');
-      if (wrapper != null) bio = _rawText(wrapper);
+      if (wrapper != null) bio = _blockText(wrapper);
       break;
     }
   }
@@ -146,7 +146,7 @@ List<ProfilePost> _parseWallPosts(Document document) {
         avatarUrl: _absoluteOrNull(article.querySelector('.message-avatar img')?.attributes['src']),
         authorUrl: _absoluteOrNull(article.querySelector('.message-avatar a')?.attributes['href']),
         date: _clean(article.querySelector('.message-attribution time')?.text ?? ''),
-        body: _clean(article.querySelector('.message-body')?.text ?? ''),
+        body: _blockTextOf(article.querySelector('.message-body')),
         comments: [
           for (final comment in article.querySelectorAll('.comment'))
             if (_idFrom(comment.attributes['data-content'] ?? '', _commentIdPattern) != 0) _parseComment(comment),
@@ -179,7 +179,7 @@ ProfileComment _parseComment(Element comment) {
     author: _clean(comment.attributes['data-author'] ?? ''),
     avatarUrl: _absoluteOrNull(comment.querySelector('.comment-avatar img')?.attributes['src']),
     authorUrl: _absoluteOrNull(comment.querySelector('.comment-avatar a')?.attributes['href']),
-    body: _clean(comment.querySelector('.comment-body')?.text ?? ''),
+    body: _blockTextOf(comment.querySelector('.comment-body')),
     date: _clean(comment.querySelector('.comment-footer time')?.text ?? ''),
     editUrl: editUrl,
     deleteUrl: deleteUrl,
@@ -243,12 +243,35 @@ bool _outsideLatestActivity(Element row) {
 /// Text content with `<br>` respected as line breaks, runs of blank lines
 /// collapsed, and per-line whitespace tidied — for "raw" display of user
 /// bios without any BBCode handling.
-String _rawText(Element element) {
+/// Block text with the author's line breaks kept: a wall post, a comment, a
+/// bio. [_clean] flattens instead, which is right for a title or a snippet
+/// and wrong for anything someone wrote in paragraphs.
+///
+/// Only `<br>` is a break. A newline in the source is ordinary whitespace —
+/// the site hard-wraps its markup — so the break is marked before the
+/// collapse and the split happens on the marker, never on a raw newline.
+///
+/// A blank line survives as a paragraph break, capped at one: `<br><br>` is
+/// how the editor writes a paragraph, and a longer run shouldn't open a gap.
+String _blockTextOf(Element? element) => element == null ? '' : _blockText(element);
+
+String _blockText(Element element) {
+  const marker = '\u0000';
   for (final br in element.querySelectorAll('br')) {
-    br.replaceWith(Text('\n'));
+    br.replaceWith(Text(marker));
   }
-  final lines = element.text.split('\n').map((line) => line.replaceAll(RegExp(r'\s+'), ' ').trim()).toList();
-  return lines.where((line) => line.isNotEmpty).join('\n');
+
+  final lines = <String>[];
+  for (final raw in element.text.split(marker)) {
+    final line = _clean(raw);
+    // No leading blanks, and never two in a row.
+    if (line.isEmpty && (lines.isEmpty || lines.last.isEmpty)) continue;
+    lines.add(line);
+  }
+  while (lines.isNotEmpty && lines.last.isEmpty) {
+    lines.removeLast();
+  }
+  return lines.join('\n');
 }
 
 int _idFrom(String source, RegExp pattern) => int.tryParse(pattern.firstMatch(source)?.group(1) ?? '') ?? 0;
