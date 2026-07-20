@@ -350,12 +350,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _openPosting(ProfilePosting posting) {
-    // Postings link to the exact post; the viewer wants the thread URL.
-    final threadUrl = posting.url.replaceFirst(RegExp(r'post-\d+/?$'), '');
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ForumThreadScreen(
-          url: threadUrl,
+          // Postings link to the exact post; the viewer scrolls to it.
+          url: posting.url,
           title: posting.title,
           fetchPosts: widget.fetchThreadPosts,
           fetchReactions: widget.fetchReactions,

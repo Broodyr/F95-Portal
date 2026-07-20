@@ -572,7 +572,7 @@ void main() {
       expect(find.textContaining('Myth of Slayer Walkthrough [Ch 11]'), findsOneWidget);
     });
 
-    testWidgets('tapping a posting opens the internal thread viewer', (tester) async {
+    testWidgets('tapping a posting opens the thread viewer on that post', (tester) async {
       await signIn();
       await pumpProfile(tester);
 
@@ -583,8 +583,9 @@ void main() {
 
       expect(find.byType(ForumThreadScreen), findsOneWidget);
       final screen = tester.widget<ForumThreadScreen>(find.byType(ForumThreadScreen));
-      // The /post-N suffix is stripped so the viewer loads the thread.
-      expect(screen.url, 'https://example.com/threads/myth-of-slayer.276090/');
+      // The /post-N suffix rides along so the viewer scrolls to the reply,
+      // the same as bookmarks and alerts.
+      expect(screen.url, 'https://example.com/threads/myth-of-slayer.276090/post-20908354');
     });
   });
 
