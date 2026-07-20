@@ -1081,6 +1081,27 @@ void main() {
     expect(find.text('ThyElyson'), findsNothing);
   });
 
+  testWidgets('a reactor in the sheet opens their profile, over the sheet', (tester) async {
+    await pumpForum(tester);
+
+    await tester.tap(find.text('General Discussions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Hidden gems you almost skipped'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('reaction-chip-9001')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('reaction-member-iDrought')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileScreen), findsOneWidget);
+
+    // Backing out lands on the sheet, not the thread: one set of reactions
+    // is worth several profiles.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Reactions to #1'), findsOneWidget);
+  });
+
   testWidgets('a thread list titles itself with the icon of the row that opened it', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

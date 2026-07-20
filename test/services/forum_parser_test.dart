@@ -741,6 +741,24 @@ void main() {
       expect(first.memberTitle, 'New Member');
       expect(first.date, 'Yesterday at 2:34 PM');
       expect(first.avatarUrl, isNull);
+      expect(first.profileUrl, 'https://f95zone.to/members/supoyev.11305077/');
+    });
+
+    test('absolutizes a relative member link', () {
+      // The saved fixture's hrefs are absolute; the live page's are not.
+      final page = parseReactionsPage('''
+        <div class="js-reactionTabPanes"><div class="contentRow">
+          <h3 class="contentRow-header"><a href="/members/someone.42/" class="username">Someone</a></h3>
+        </div></div>
+      ''');
+      expect(page.members.single.profileUrl, 'https://f95zone.to/members/someone.42/');
+    });
+
+    test('leaves a member with no link unopenable', () {
+      final page = parseReactionsPage(
+        '<div class="js-reactionTabPanes"><div class="contentRow"><h3 class="contentRow-header">Guest</h3></div></div>',
+      );
+      expect(page.members.single.profileUrl, isNull);
     });
   });
 

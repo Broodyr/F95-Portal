@@ -749,10 +749,34 @@ class ForumService {
         ReactionTab(id: 14, name: 'Heart', count: 7),
       ],
       members: [
-        ReactionMember(username: 'iDrought', memberTitle: 'Member', reactionId: 3, date: 'Today at 2:11 PM'),
-        ReactionMember(username: 'ThyElyson', memberTitle: 'New Member', reactionId: 1, date: 'Today at 1:40 PM'),
-        ReactionMember(username: 'OnlyHeStandsThere', memberTitle: 'Member', reactionId: 3, date: 'Yesterday'),
-        ReactionMember(username: 'quietfan', memberTitle: 'Member', reactionId: 14, date: 'Yesterday'),
+        ReactionMember(
+          username: 'iDrought',
+          memberTitle: 'Member',
+          reactionId: 3,
+          date: 'Today at 2:11 PM',
+          profileUrl: 'https://example.com/members/idrought.1/',
+        ),
+        ReactionMember(
+          username: 'ThyElyson',
+          memberTitle: 'New Member',
+          reactionId: 1,
+          date: 'Today at 1:40 PM',
+          profileUrl: 'https://example.com/members/thyelyson.2/',
+        ),
+        ReactionMember(
+          username: 'OnlyHeStandsThere',
+          memberTitle: 'Member',
+          reactionId: 3,
+          date: 'Yesterday',
+          profileUrl: 'https://example.com/members/onlyhestandsthere.3/',
+        ),
+        ReactionMember(
+          username: 'quietfan',
+          memberTitle: 'Member',
+          reactionId: 14,
+          date: 'Yesterday',
+          profileUrl: 'https://example.com/members/quietfan.4/',
+        ),
       ],
     );
   }

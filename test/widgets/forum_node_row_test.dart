@@ -42,10 +42,7 @@ void main() {
         'Features Request',
       ]);
       expect(byIcon[Icons.forum_outlined], ['General Discussions']);
-      expect(
-        byIcon.entries.where((e) => e.value.length > 1 && e.key != Icons.add_circle_outline),
-        isEmpty,
-      );
+      expect(byIcon.entries.where((e) => e.value.length > 1 && e.key != Icons.add_circle_outline), isEmpty);
     });
 
     test('separates a subforum block by status, not by its shared topic', () {

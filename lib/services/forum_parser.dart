@@ -547,6 +547,7 @@ ReactionsPage parseReactionsPage(String htmlSource) {
         ReactionMember(
           username: _clean(row.querySelector('.contentRow-header')?.text ?? ''),
           avatarUrl: _absoluteOrNull(row.querySelector('.contentRow-figure img')?.attributes['src']),
+          profileUrl: _absoluteOrNull(row.querySelector('.contentRow-header a')?.attributes['href']),
           memberTitle: _clean(row.querySelector('.userTitle')?.text ?? ''),
           reactionId:
               int.tryParse(row.querySelector('.contentRow-extra .reaction')?.attributes['data-reaction-id'] ?? '') ?? 0,

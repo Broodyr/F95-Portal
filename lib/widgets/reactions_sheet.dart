@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../models/forum.dart';
+import '../screens/profile_screen.dart';
 import '../services/settings_service.dart';
 import '../theme/app_colors.dart';
 import 'reaction_icon.dart';
@@ -207,7 +208,25 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
     );
   }
 
+  /// Opens the member over the sheet rather than replacing it, so backing
+  /// out returns to the list — several profiles are worth a look from one
+  /// set of reactions. Same as the browse sheet opening a thread.
   Widget _buildMemberRow(ReactionMember member) {
+    final profileUrl = member.profileUrl;
+    final row = _buildMemberRowBody(member);
+    if (profileUrl == null) return row;
+    return InkWell(
+      key: Key('reaction-member-${member.username}'),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ProfileScreen(url: profileUrl, username: member.username),
+        ),
+      ),
+      child: row,
+    );
+  }
+
+  Widget _buildMemberRowBody(ReactionMember member) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: Row(

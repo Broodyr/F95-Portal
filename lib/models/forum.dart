@@ -287,12 +287,17 @@ class ReactionMember {
   final int reactionId;
   final String date;
 
+  /// Member page to open when the row is tapped; null for a row the site
+  /// rendered without a link, which stays inert.
+  final String? profileUrl;
+
   const ReactionMember({
     required this.username,
     this.avatarUrl,
     this.memberTitle = '',
     this.reactionId = 0,
     this.date = '',
+    this.profileUrl,
   });
 }
 
