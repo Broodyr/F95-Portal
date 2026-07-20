@@ -675,17 +675,19 @@ class ForumService {
           authorId: 777,
           memberTitle: 'Member',
           date: 'Jun 29, 2026',
-          blocks: const [
+          blocks: [
             ForumPostBlock(
               kind: PostBlockKind.quote,
               label: 'DarkVault',
-              pieces: [RichPiece.text('Nobody mentions Wands & Witches…')],
+              // The post above, so the quote's jump is live on web too.
+              sourcePostId: 9000 + page,
+              pieces: const [RichPiece.text('Nobody mentions Wands & Witches…')],
             ),
-            ForumPostBlock(
+            const ForumPostBlock(
               kind: PostBlockKind.rich,
               pieces: [RichPiece.text('Seconding this. The dev posts monthly progress updates, worth watching.')],
             ),
-            ForumPostBlock(
+            const ForumPostBlock(
               kind: PostBlockKind.spoiler,
               label: 'Ending spoiler',
               pieces: [RichPiece.text('The witch did it.')],

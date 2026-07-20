@@ -107,6 +107,159 @@ void main() {
     expect(field.controller!.text, '[QUOTE="VoidTraveler, post: 42, member: 3590149"]\nhello there:love:\n[/QUOTE]\n');
   });
 
+  // A permalink scrolls its post into view. ensureVisible would park the card
+  // flush against the app bar, which reads as stuck to the chrome, so the jump
+  // leaves half a post gap above it.
+  testWidgets('a permalink lands its post clear of the app bar', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // Enough posts that the target sits well below the fold and well above
+    // the end of the list, so the scroll neither starts nor bottoms out on it.
+    final postsPage = ThreadPostsPage(
+      title: 'Deep thread',
+      posts: [
+        for (var i = 1; i <= 40; i++)
+          ForumPost(
+            postId: i,
+            number: i,
+            author: 'Member$i',
+            blocks: [
+              ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('body of post $i')]),
+            ],
+          ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/deep-thread.1/post-15',
+          title: 'Deep thread',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('body of post 15'), findsOneWidget);
+
+    // The keyed wrapper around the targeted card is the only post padding
+    // carrying a key.
+    final targetCard = find.byWidgetPredicate(
+      (w) => w is Padding && w.key != null && w.padding == const EdgeInsets.only(bottom: 8),
+    );
+    expect(targetCard, findsOneWidget);
+
+    final gap = tester.getTopLeft(targetCard).dy - tester.getBottomLeft(find.byType(AppBar)).dy;
+    expect(gap, closeTo(4, 0.01));
+  });
+
+  // Tapping a quote jumps to the post it came from. On-page that's a scroll;
+  // off-page it pushes, so Back returns to the reply that quoted it.
+  group('quote jumps', () {
+    ThreadPostsPage deepThread({required int quoteSource}) => ThreadPostsPage(
+      title: 'Quoting thread',
+      posts: [
+        for (var i = 1; i <= 40; i++)
+          ForumPost(
+            postId: i,
+            number: i,
+            author: 'Member$i',
+            blocks: [
+              // The last post quotes; everything else is filler to scroll past.
+              if (i == 40)
+                ForumPostBlock(
+                  kind: PostBlockKind.quote,
+                  label: 'Member$quoteSource',
+                  sourcePostId: quoteSource,
+                  pieces: const [RichPiece.text('the quoted words')],
+                ),
+              ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('body of post $i')]),
+            ],
+          ),
+      ],
+    );
+
+    Future<void> pumpThread(WidgetTester tester, ThreadPostsPage thread) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: ForumThreadScreen(
+            url: 'https://f95zone.to/threads/quoting-thread.1/post-40',
+            title: 'Quoting thread',
+            fetchPosts: (url, {page = 1}) async => thread,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a quote of a post on this page scrolls back up to it', (tester) async {
+      // Post 5 is far above post 40, so the jump has to search upward
+      // through posts the lazy list has already unmounted.
+      final thread = deepThread(quoteSource: 5);
+      await pumpThread(tester, thread);
+
+      expect(find.text('Member5 said:'), findsOneWidget);
+      await tester.tap(find.text('Member5 said:'));
+      await tester.pumpAndSettle();
+
+      // Landed on post 5, no new screen pushed.
+      expect(find.text('body of post 5'), findsOneWidget);
+      expect(find.byType(ForumThreadScreen), findsOneWidget);
+    });
+
+    testWidgets('a quote of a post on another page pushes a screen at its permalink', (tester) async {
+      // Post 900 is nowhere on this page.
+      final thread = deepThread(quoteSource: 900);
+      await pumpThread(tester, thread);
+
+      await tester.tap(find.text('Member900 said:'));
+      await tester.pumpAndSettle();
+
+      // The permalink shape, which resolves to whichever page holds the post.
+      final pushed = tester.widget<ForumThreadScreen>(find.byType(ForumThreadScreen));
+      expect(pushed.url, 'https://f95zone.to/posts/900/');
+
+      // The whole point of pushing: Back returns to the reply that quoted it,
+      // rather than stranding the reader on a page they never chose.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      final back = tester.widget<ForumThreadScreen>(find.byType(ForumThreadScreen));
+      expect(back.url, 'https://f95zone.to/threads/quoting-thread.1/post-40');
+    });
+
+    testWidgets('a quote the site gave no source for stays inert', (tester) async {
+      final thread = ThreadPostsPage(
+        title: 'Quoting thread',
+        posts: const [
+          ForumPost(
+            postId: 1,
+            number: 1,
+            author: 'A',
+            blocks: [
+              // Hand-typed quote: no sourcePostId.
+              ForumPostBlock(kind: PostBlockKind.quote, label: 'Someone', pieces: [RichPiece.text('typed by hand')]),
+            ],
+          ),
+        ],
+      );
+      await pumpThread(tester, thread);
+
+      await tester.tap(find.text('Someone said:'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ForumThreadScreen), findsOneWidget);
+    });
+  });
+
   // A mid-thread page shows the widest arrangement — 1 … n-1 n n+1 … last.
   // Long page numbers blow that past a phone's width, so the row sheds its
   // adjacent pages and, failing that, scales; either way it never overflows

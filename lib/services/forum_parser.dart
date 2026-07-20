@@ -472,11 +472,16 @@ List<ForumPostBlock> _parsePostBlocks(Element? body) {
       flushRich();
       final attribution = _clean(node.querySelector('.bbCodeBlock-title')?.text ?? '');
       final content = node.querySelector('.bbCodeBlock-expandContent') ?? node.querySelector('.bbCodeBlock-content');
+      // The attribution link is the only source marker; hand-typed quotes
+      // have none. Read the id out of the query so both the relative href
+      // the site serves and the absolute one saved pages carry work.
+      final jump = node.querySelector('.bbCodeBlock-sourceJump')?.attributes['href'] ?? '';
       blocks.add(
         ForumPostBlock(
           kind: PostBlockKind.quote,
           label: attribution.replaceFirst(RegExp(r' said:$'), ''),
           pieces: content == null ? const [] : parseRichContent(content),
+          sourcePostId: int.tryParse(RegExp(r'[?&]id=(\d+)').firstMatch(jump)?.group(1) ?? ''),
         ),
       );
     } else if (node is Element && node.classes.contains('bbCodeSpoiler')) {

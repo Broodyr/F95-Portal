@@ -116,7 +116,11 @@ class ForumPostBlock {
   final String label;
   final List<RichPiece> pieces;
 
-  const ForumPostBlock({required this.kind, this.label = '', this.pieces = const []});
+  /// The post a quote block came from, so it can be jumped to; null when the
+  /// site gave no source (hand-typed quotes carry no attribution link).
+  final int? sourcePostId;
+
+  const ForumPostBlock({required this.kind, this.label = '', this.pieces = const [], this.sourcePostId});
 }
 
 /// The inline reaction summary on a post: the top reaction ids (at most

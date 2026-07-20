@@ -153,6 +153,45 @@ void main() {
       expect(image.fullImageUrl, 'https://attachments.f95zone.to/2024/05/3652583_1715545111474.png');
     });
 
+    test('carries the quoted post id so the quote can be jumped to', () {
+      // Post 13720578 is the "Bubbles and Sisters" post the first reply quotes.
+      expect(page.posts.first.blocks.first.sourcePostId, 13720578);
+    });
+
+    test('a quote with no attribution link has no source post', () {
+      // Hand-typed [QUOTE] blocks render without a sourceJump anchor; they
+      // must stay inert rather than jumping somewhere arbitrary.
+      final blocks = parseThreadPosts('''
+        <div class="block-container"><article class="message message--post" data-content="post-1">
+          <div class="message-body"><div class="bbWrapper">
+            <blockquote class="bbCodeBlock bbCodeBlock--quote">
+              <div class="bbCodeBlock-title">Someone said:</div>
+              <div class="bbCodeBlock-content">typed by hand</div>
+            </blockquote>
+          </div></div>
+        </article></div>
+      ''').posts.first.blocks;
+      expect(blocks.first.kind, PostBlockKind.quote);
+      expect(blocks.first.sourcePostId, isNull);
+    });
+
+    test('reads the quoted post id from a relative attribution href', () {
+      // Saved fixtures absolutize hrefs; the live site serves them relative.
+      final blocks = parseThreadPosts('''
+        <div class="block-container"><article class="message message--post" data-content="post-1">
+          <div class="message-body"><div class="bbWrapper">
+            <blockquote class="bbCodeBlock bbCodeBlock--quote">
+              <div class="bbCodeBlock-title">
+                <a href="/goto/post?id=17852847" class="bbCodeBlock-sourceJump">NeoEros said:</a>
+              </div>
+              <div class="bbCodeBlock-content">quoted words</div>
+            </blockquote>
+          </div></div>
+        </article></div>
+      ''').posts.first.blocks;
+      expect(blocks.first.sourcePostId, 17852847);
+    });
+
     test('parses the thread watch endpoint and state', () {
       expect(page.watchUrl, 'https://f95zone.to/threads/bubbles-and-babes-v0-162-bubbles-and-babes.207754/watch');
       expect(page.watched, isFalse);

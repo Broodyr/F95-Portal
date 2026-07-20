@@ -76,6 +76,9 @@ class ForumThreadScreen extends StatefulWidget {
 }
 
 class _ForumThreadScreenState extends State<ForumThreadScreen> {
+  /// Vertical gap between post cards.
+  static const double _postGap = 8;
+
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _targetPostKey = GlobalKey();
   ThreadPostsPage? _page;
@@ -152,18 +155,78 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
 
   /// The list builds lazily, so the target's element doesn't exist until
   /// its offset is reached: step toward it until it mounts, then align it.
-  Future<void> _stepScrollToTarget() async {
+  /// Permalinks open at the top of the page and search downward; a quote
+  /// jump jumps back to a post already read, so it searches the other way.
+  Future<void> _stepScrollToTarget({bool upward = false}) async {
     while (mounted &&
         _targetPostKey.currentContext == null &&
         _scrollController.hasClients &&
-        _scrollController.offset < _scrollController.position.maxScrollExtent) {
-      _scrollController.jumpTo((_scrollController.offset + 600).clamp(0.0, _scrollController.position.maxScrollExtent));
+        (upward
+            ? _scrollController.offset > _scrollController.position.minScrollExtent
+            : _scrollController.offset < _scrollController.position.maxScrollExtent)) {
+      final position = _scrollController.position;
+      _scrollController.jumpTo(
+        (_scrollController.offset + (upward ? -600 : 600)).clamp(position.minScrollExtent, position.maxScrollExtent),
+      );
       await WidgetsBinding.instance.endOfFrame;
     }
     final targetContext = _targetPostKey.currentContext;
     if (targetContext != null && targetContext.mounted) {
       await Scrollable.ensureVisible(targetContext, duration: Motion.duration, curve: Motion.curve);
+      // ensureVisible parks the card flush against the app bar. Back off half
+      // a card gap so it reads as spaced from the chrome rather than stuck to
+      // it. Clamped, so a target already at the top of the list stays put.
+      if (mounted && _scrollController.hasClients) {
+        final position = _scrollController.position;
+        _scrollController.jumpTo(
+          (_scrollController.offset - _postGap / 2).clamp(position.minScrollExtent, position.maxScrollExtent),
+        );
+      }
     }
+  }
+
+  /// Jumps from a quote to the post it came from. On this page that's a
+  /// scroll; anywhere else it's a pushed screen, so Back returns to the
+  /// reply that quoted it rather than stranding the reader mid-thread.
+  void _openQuotedPost(int sourcePostId, ForumPost quotedBy) {
+    final posts = _page?.posts ?? const <ForumPost>[];
+    final target = posts.indexWhere((post) => post.postId == sourcePostId);
+    if (target >= 0) {
+      setState(() {
+        _targetPostId = sourcePostId;
+        _scrolledToTarget = true;
+      });
+      // A quote nearly always points backwards, but trust the layout over
+      // the assumption: a merged thread can reorder posts.
+      final upward = target < posts.indexWhere((post) => post.postId == quotedBy.postId);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _stepScrollToTarget(upward: upward));
+      return;
+    }
+
+    final origin = Uri.tryParse(_resolvedUrl ?? widget.url)?.origin;
+    if (origin == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        // The permalink shape this screen already resolves: the site
+        // redirects it to whichever page holds the post, and the parsed
+        // page supplies the real page number and canonical URL.
+        builder: (_) => ForumThreadScreen(
+          url: '$origin/posts/$sourcePostId/',
+          title: widget.title,
+          fetchPosts: widget.fetchPosts,
+          fetchReactions: widget.fetchReactions,
+          reactSender: widget.reactSender,
+          replySender: widget.replySender,
+          editFetcher: widget.editFetcher,
+          editSaver: widget.editSaver,
+          watchSender: widget.watchSender,
+          reportFormFetcher: widget.reportFormFetcher,
+          reportSender: widget.reportSender,
+          deleteSender: widget.deleteSender,
+          urlLauncher: widget.urlLauncher,
+        ),
+      ),
+    );
   }
 
   void _goToPage(int page) {
@@ -448,10 +511,11 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         for (final post in page.posts)
           Padding(
             key: post.postId == _targetPostId ? _targetPostKey : null,
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: _postGap),
             child: _PostCard(
               post: post,
               highlighted: post.postId == _targetPostId,
+              onQuoteTap: (sourcePostId) => _openQuotedPost(sourcePostId, post),
               onOpenLink: _launch,
               fetchReactions: widget.fetchReactions ?? ForumService.fetchReactions,
               onAuthorTap: post.authorUrl == null ? null : () => _openProfile(post),
@@ -822,10 +886,15 @@ class _PostCard extends StatefulWidget {
   /// Marks the post a permalink targeted, so the reader can spot it.
   final bool highlighted;
 
+  /// Opens the post a quote block came from; quotes the site gave no
+  /// source for stay inert.
+  final void Function(int sourcePostId)? onQuoteTap;
+
   const _PostCard({
     required this.post,
     required this.onOpenLink,
     required this.fetchReactions,
+    this.onQuoteTap,
     this.onAuthorTap,
     this.onReact,
     this.onQuote,
@@ -1059,6 +1128,12 @@ class _PostCardState extends State<_PostCard> {
           galleryIndexOffset: galleryIndexOffset,
         );
       case PostBlockKind.quote:
+        // The attribution line is the jump, matching the site, where the
+        // "X said:" text is itself the link to the quoted post. The body
+        // stays selectable, which a tap target over it would prevent.
+        final sourcePostId = block.sourcePostId;
+        final onQuoteTap = widget.onQuoteTap;
+        final jumpable = sourcePostId != null && onQuoteTap != null;
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
@@ -1070,11 +1145,25 @@ class _PostCardState extends State<_PostCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (block.label.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(
-                    '${block.label} said:',
-                    style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 10.5),
+                Semantics(
+                  button: jumpable,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: jumpable ? () => onQuoteTap(sourcePostId) : null,
+                    child: Padding(
+                      // Roomier below than the plain label needs, so the
+                      // line is a reachable target without moving the text.
+                      padding: const EdgeInsets.only(bottom: 3, right: 4),
+                      child: Text(
+                        '${block.label} said:',
+                        style: TextStyle(
+                          color: jumpable ? colorScheme.primary : AppColors.of(context).subtleText,
+                          fontSize: 10.5,
+                          decoration: jumpable ? TextDecoration.underline : null,
+                          decorationColor: jumpable ? colorScheme.primary : null,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               RichSpoilerText(
