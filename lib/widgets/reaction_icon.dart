@@ -16,19 +16,25 @@ class ReactionGlyph {
 
   const ReactionGlyph(this.emoji, this.color, [this.label = '']);
 
+  /// Insertion order is the site's own, taken from its picker template
+  /// (`#xfReactTooltipTemplate`) — the picker renders the map in order, and
+  /// a test pins it against the fixture. The template also offers 15
+  /// (Star-struck) and 17 (Crown), which the live site no longer shows and
+  /// the API rejects; leave both out.
   static const Map<int, ReactionGlyph> _byId = {
     1: ReactionGlyph('\u{1F44D}', Color(0xFF378ADD), 'Like'), // 👍
-    3: ReactionGlyph('\u{1F606}', Color(0xFFEF7727), 'Haha'), // 😆
-    4: ReactionGlyph('\u{1F62E}', Color(0xFFEF9F27), 'Wow'), // 😮
-    5: ReactionGlyph('\u{1F622}', Color(0xFF888780), 'Sad'), // 😢
-    7: ReactionGlyph('\u{1F914}', Color(0xFF7F77DD), 'Thinking'), // 🤔
-    8: ReactionGlyph('\u{1F620}', Color(0xFFE24B4A), 'Angry'), // 😠
-    9: ReactionGlyph('\u{1F440}', Color(0xFF5DCAA5), 'Hey there'), // 👀
-    12: ReactionGlyph('\u{1F973}', Color(0xFF97C459), 'Yay, update!'), // 🥳
+    14: ReactionGlyph('\u{2764}\u{FE0F}', Color(0xFFE05785), 'Heart'), // ❤️
     13: ReactionGlyph('\u{1F924}', Color(0xFF85B7EB), 'Jizzed my pants'), // 🤤
-    14: ReactionGlyph('\u{2764}\u{FE0F}', Color(0xFFD4537E), 'Heart'), // ❤️
-    // 17: ReactionGlyph('\u{1F451}', Color(0xFFE3B341), 'Crown'), // 👑 - not in use/rejected by API, do NOT uncomment
+    12: ReactionGlyph('\u{1F973}', Color(0xFF97C459), 'Yay, update!'), // 🥳
+    3: ReactionGlyph('\u{1F923}', Color(0xFFFF7C25), 'Haha'), // 🤣
+    9: ReactionGlyph('\u{1F440}', Color(0xFF5DCAA5), 'Hey there'), // 👀
+    4: ReactionGlyph('\u{1F632}', Color(0xFFEF9F27), 'Wow'), // 😲
+    7: ReactionGlyph('\u{1F914}', Color(0xFF7F77DD), 'Thinking'), // 🤔
+    5: ReactionGlyph('\u{1F622}', Color(0xFF888780), 'Sad'), // 😢
+    // Deliberately not the site's sprite, which is an unimpressed face: a
+    // thumb down reads as disagreement at a glance. Don't "fix" to match.
     18: ReactionGlyph('\u{1F44E}', Color(0xFF993C1D), 'Disagree'), // 👎
+    8: ReactionGlyph('\u{1F621}', Color(0xFFE24B4A), 'Angry'), // 😡
   };
 
   /// The pickable reactions, in site order (map order).
