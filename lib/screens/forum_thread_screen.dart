@@ -448,21 +448,23 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   static const double _gapHPadding = 9;
   static const double _pillVPadding = 5;
 
-  /// Vertical padding that centres a pill's *ink* rather than its line box.
-  ///
-  /// A line box is symmetric, but the glyphs inside it are not: Roboto leaves
-  /// 0.2169em between ascent and cap height, against a 0.2441em descent, so a
-  /// digit — having no descender to fill it — floats half that difference
-  /// above centre. Only 0.16px at this size, but on a 3x screen it reads.
-  ///
-  /// Calibrated to Roboto, which is the platform font here (the app ships
-  /// none of its own) and scales with the text-size setting, hence taking the
-  /// size from the scaler rather than the constant.
-  EdgeInsets _pillPadding(BuildContext context, double horizontal) {
-    const double digitLift = (0.2441 - 0.2169) / 2;
-    final double nudge = MediaQuery.textScalerOf(context).scale(_pillFontSize) * digitLift;
-    return EdgeInsets.fromLTRB(horizontal, _pillVPadding + nudge, horizontal, _pillVPadding - nudge);
-  }
+  // Both pills centre on the line box, which leaves their glyphs a shade off
+  // centre — a digit rides about 0.16px high (no descender to fill the space
+  // under it), an ellipsis sits a few px low (it hugs the baseline). Both are
+  // deliberate.
+  //
+  // The digit case was corrected once and reverted. The correction has to
+  // come from ascent, cap height and descent, which are the font's, so it
+  // only holds for Roboto: under SF Pro, which is what Flutter's Material
+  // typography uses on iOS, the same numbers overshoot by roughly 7x and tip
+  // the digits low instead. A sub-pixel gain is not worth pinning the layout
+  // to one platform's font, especially as correcting the geometry exactly
+  // still did not read as centred — what is left is optical, and optical
+  // tuning against one device is how this gets worse everywhere else.
+  //
+  // The ellipsis stays low on purpose too: it should read as punctuation. A
+  // vertically centred triple dot is a menu glyph, and the app now has real
+  // ones — the overflow buttons on posts and bookmark cards.
 
   /// Chevrons plus a compact pill neighborhood: first, around current, last.
   Widget _buildPagination(ColorScheme colorScheme, int totalPages) {
@@ -497,9 +499,6 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 onTap: () => _promptForPage(totalPages),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
-                  // Not [_pillPadding]: that nudge is derived from where a
-                  // digit's ink sits, and an ellipsis rides the baseline
-                  // instead, so it would push this the wrong way.
                   padding: const EdgeInsets.symmetric(horizontal: _gapHPadding, vertical: _pillVPadding),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -649,7 +648,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       onTap: () => _goToPage(page),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
-        padding: _pillPadding(context, _pillHPadding),
+        padding: const EdgeInsets.symmetric(horizontal: _pillHPadding, vertical: _pillVPadding),
         decoration: BoxDecoration(
           // Opaque rather than the translucent chipFill chips elsewhere use:
           // those sit on cards, while the pills sit on the page background,
