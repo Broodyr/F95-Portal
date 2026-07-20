@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../constants.dart';
 import '../models/profile.dart';
+import '../models/thread_page.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../services/profile_service.dart';
@@ -17,6 +19,7 @@ import '../widgets/image_gallery.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/report_dialog.dart';
+import '../widgets/rich_spoiler_text.dart';
 import '../widgets/segmented_selector.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
@@ -65,6 +68,10 @@ class ProfileScreen extends StatefulWidget {
   final ReactSender? reactSender;
   final ReplySender? replySender;
 
+  /// Opens a link tapped in a wall post or comment; defaults to the
+  /// platform browser. Injected by tests.
+  final Future<bool> Function(Uri uri)? urlLauncher;
+
   const ProfileScreen({
     super.key,
     this.url,
@@ -83,6 +90,7 @@ class ProfileScreen extends StatefulWidget {
     this.fetchReactions,
     this.reactSender,
     this.replySender,
+    this.urlLauncher,
   });
 
   @override
@@ -754,7 +762,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(post.body, style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12.5, height: 1.45)),
+          DefaultTextStyle.merge(
+            style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 12.5, height: 1.45),
+            child: RichSpoilerText(pieces: _piecesOf(post.rich, post.body), onOpenLink: _launch),
+          ),
           if (post.comments.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
@@ -878,9 +889,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ], dense: true),
                   ],
                 ),
-                Text(
-                  comment.body,
+                DefaultTextStyle.merge(
                   style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5, height: 1.4),
+                  child: RichSpoilerText(pieces: _piecesOf(comment.rich, comment.body), onOpenLink: _launch),
                 ),
               ],
             ),
@@ -1095,6 +1106,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  /// Falls back to the plain body for anything built by hand — mock data,
+  /// tests — which carries no pieces.
+  List<RichPiece> _piecesOf(List<RichPiece> rich, String body) =>
+      rich.isNotEmpty ? rich : [RichPiece.text(body)];
+
+  Future<void> _launch(Uri uri) async {
+    final launch =
+        widget.urlLauncher ?? ((uri) => launcher.launchUrl(uri, mode: launcher.LaunchMode.externalApplication));
+    await launch(uri);
   }
 
   /// The profile isn't coming, and won't on a second ask. A 403 is the

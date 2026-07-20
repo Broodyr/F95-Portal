@@ -2,6 +2,8 @@
 // profile-post wall (with nested comments), the recent-content postings
 // list, and the About tab's fields.
 
+import 'thread_page.dart';
+
 class ProfileComment {
   final int id;
   final String author;
@@ -9,7 +11,15 @@ class ProfileComment {
 
   /// The commenter's member page URL; lets the viewer open their profile.
   final String? authorUrl;
+
+  /// The comment as plain text, for anything that wants a string.
   final String body;
+
+  /// The same content as inline pieces — links, emphasis, line breaks — so
+  /// it renders like a forum post rather than as flattened text. Empty only
+  /// when built by hand; [body] is the fallback then.
+  final List<RichPiece> rich;
+
   final String date;
 
   /// Edit action; the site renders it only on the viewer's own comments.
@@ -24,6 +34,7 @@ class ProfileComment {
     this.avatarUrl,
     this.authorUrl,
     required this.body,
+    this.rich = const [],
     this.date = '',
     this.editUrl,
     this.deleteUrl,
@@ -38,7 +49,13 @@ class ProfilePost {
   /// The author's member page URL; lets the viewer open their profile.
   final String? authorUrl;
   final String date;
+
+  /// The post as plain text, for anything that wants a string.
   final String body;
+
+  /// The same content as inline pieces; see [ProfileComment.rich].
+  final List<RichPiece> rich;
+
   final List<ProfileComment> comments;
 
   /// Add-comment form action; only rendered for viewers who can comment.
@@ -57,6 +74,7 @@ class ProfilePost {
     this.authorUrl,
     this.date = '',
     required this.body,
+    this.rich = const [],
     this.comments = const [],
     this.commentUrl,
     this.editUrl,

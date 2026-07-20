@@ -1,4 +1,5 @@
 import 'package:f95_portal/models/profile.dart';
+import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/profile_screen.dart';
 import 'package:f95_portal/services/api_service.dart';
@@ -9,6 +10,7 @@ import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/profile_service.dart';
 import 'package:f95_portal/widgets/image_gallery.dart';
 import 'package:f95_portal/widgets/reaction_icon.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -714,6 +716,71 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Nothing here yet.'), findsOneWidget);
+    });
+  });
+
+  group('wall posts render like forum posts', () {
+    ProfilePage pageWith({required List<RichPiece> rich, String body = 'fallback'}) => ProfilePage(
+      username: 'Someone',
+      profileUrl: 'https://f95zone.to/members/someone.1/',
+      wallPosts: [ProfilePost(id: 1, author: 'Poster', body: body, rich: rich)],
+    );
+
+    testWidgets('a body is selectable, so it can be long-pressed and copied', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => pageWith(rich: const [RichPiece.text('Something worth copying.')]),
+      );
+
+      expect(find.text('Something worth copying.'), findsOneWidget);
+      expect(
+        find.ancestor(of: find.text('Something worth copying.'), matching: find.byType(SelectionArea)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a link in a body opens rather than reading as plain text', (tester) async {
+      await signIn();
+      final opened = <Uri>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProfileScreen(
+            fetchProfile: () async => pageWith(
+              rich: const [
+                RichPiece.text('See '),
+                RichPiece.text('the rules', url: 'https://f95zone.to/threads/general-rules.5589/'),
+              ],
+            ),
+            fetchPostings: (_) async => const [],
+            fetchAbout: (_) async => const ProfileAbout(),
+            urlLauncher: (uri) async {
+              opened.add(uri);
+              return true;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      TapGestureRecognizer? tap;
+      for (final text in tester.widgetList<Text>(find.byType(Text))) {
+        text.textSpan?.visitChildren((child) {
+          if (child is TextSpan && child.text == 'the rules') tap = child.recognizer as TapGestureRecognizer?;
+          return true;
+        });
+      }
+      expect(tap, isNotNull, reason: 'the link piece carries a tap recognizer');
+      tap!.onTap!();
+
+      expect(opened.single.toString(), 'https://f95zone.to/threads/general-rules.5589/');
+    });
+
+    testWidgets('a hand-built post with no pieces still shows its text', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchProfile: () async => pageWith(rich: const [], body: 'Plain and unparsed.'));
+
+      expect(find.text('Plain and unparsed.'), findsOneWidget);
     });
   });
 

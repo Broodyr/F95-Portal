@@ -337,6 +337,48 @@ Support me on itch!</div>
     });
   });
 
+  group('wall bodies parse as rich content', () {
+    late ProfilePage page;
+
+    setUpAll(() => page = parseProfilePage(fixture('profile_post_links.htm')));
+
+    test('a comment turns its URL into a link piece', () {
+      final comment = page.wallPosts
+          .expand((p) => p.comments)
+          .firstWhere((c) => c.body.contains('read section 5'));
+
+      final link = comment.rich.firstWhere((p) => p.url != null);
+      expect(link.url, 'https://f95zone.to/threads/general-rules-updated-2026-05-07.5589/');
+      // The mention beside it stays ordinary text.
+      expect(comment.rich.first.text, contains('@angryweedDX'));
+    });
+
+    test('a post carries its text as pieces, breaks and all', () {
+      final post = page.wallPosts.firstWhere((p) => p.body.startsWith('I want to tell real story'));
+      expect(post.rich, isNotEmpty);
+      expect(post.rich.where((p) => p.newline), isNotEmpty, reason: 'the post is written in two paragraphs');
+      expect(post.rich.map((p) => p.text).join(), contains('I need help/advice'));
+    });
+
+    test('the plain body still reads for anything that wants a string', () {
+      final post = page.wallPosts.firstWhere((p) => p.body.startsWith('I cannot respond'));
+      expect(post.rich.map((p) => p.text).join(), contains('Check your PM settings'));
+      expect(post.body, contains('Check your PM settings'));
+    });
+
+    test('a body with no markup still yields one text piece', () {
+      final posts = parseProfilePage('''
+        <div id="profile-posts">
+          <article class="message--simple" data-content="profile-post-1" data-author="X">
+            <article class="message-body">Just words.</article>
+          </article>
+        </div>
+      ''').wallPosts;
+      expect(posts.single.rich.single.text, 'Just words.');
+      expect(posts.single.body, 'Just words.');
+    });
+  });
+
   group('block text keeps the line breaks the author wrote', () {
     String postBody(String body) => parseProfilePage('''
       <div id="profile-posts">

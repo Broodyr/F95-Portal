@@ -2,7 +2,9 @@ import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
 
 import '../models/profile.dart';
+import '../models/thread_page.dart';
 import 'forum_parser.dart' show liftTitlePrefixes;
+import 'thread_page_parser.dart' show parseRichContent;
 
 /// Parsers for XenForo member profile pages. As with the other parsers,
 /// missing or unrecognized markup degrades to empty fields, never a throw.
@@ -148,6 +150,7 @@ List<ProfilePost> _parseWallPosts(Document document) {
         authorUrl: _absoluteOrNull(article.querySelector('.message-avatar a')?.attributes['href']),
         date: _clean(article.querySelector('.message-attribution time')?.text ?? ''),
         body: _blockTextOf(article.querySelector('.message-body')),
+        rich: _richOf(article.querySelector('.message-body')),
         comments: [
           for (final comment in article.querySelectorAll('.comment'))
             if (_idFrom(comment.attributes['data-content'] ?? '', _commentIdPattern) != 0) _parseComment(comment),
@@ -181,6 +184,7 @@ ProfileComment _parseComment(Element comment) {
     avatarUrl: _absoluteOrNull(comment.querySelector('.comment-avatar img')?.attributes['src']),
     authorUrl: _absoluteOrNull(comment.querySelector('.comment-avatar a')?.attributes['href']),
     body: _blockTextOf(comment.querySelector('.comment-body')),
+    rich: _richOf(comment.querySelector('.comment-body')),
     date: _clean(comment.querySelector('.comment-footer time')?.text ?? ''),
     editUrl: editUrl,
     deleteUrl: deleteUrl,
@@ -241,9 +245,6 @@ bool _outsideLatestActivity(Element row) {
   return true;
 }
 
-/// Text content with `<br>` respected as line breaks, runs of blank lines
-/// collapsed, and per-line whitespace tidied — for "raw" display of user
-/// bios without any BBCode handling.
 /// Block text with the author's line breaks kept: a wall post, a comment, a
 /// bio. [_clean] flattens instead, which is right for a title or a snippet
 /// and wrong for anything someone wrote in paragraphs.
@@ -256,7 +257,15 @@ bool _outsideLatestActivity(Element row) {
 /// how the editor writes a paragraph, and a longer run shouldn't open a gap.
 String _blockTextOf(Element? element) => element == null ? '' : _blockText(element);
 
-String _blockText(Element element) {
+/// Wall posts and comments are the same rendered BBCode a forum post is —
+/// links, emphasis, smilies — just without the `bbWrapper` around it, so the
+/// forum's own walker reads them unchanged.
+List<RichPiece> _richOf(Element? element) => element == null ? const [] : parseRichContent(element);
+
+String _blockText(Element source) {
+  // Marking the breaks rewrites nodes, so work on a copy: the same element
+  // goes to parseRichContent, which needs its <br>s intact.
+  final element = source.clone(true);
   const marker = '\u0000';
   for (final br in element.querySelectorAll('br')) {
     br.replaceWith(Text(marker));
