@@ -349,6 +349,43 @@ void main() {
       expect(find.widgetWithText(TextButton, 'Comment'), findsNWidgets(2));
     });
 
+    testWidgets('a footer row sits equally clear of the comments above and the card edge below', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchProfile: () async => ownPostPage());
+
+      // A comment sits inside exactly two Containers: its own comments block,
+      // then the post card. Innermost first.
+      final wrappers = find.ancestor(of: find.text('A visitor comment'), matching: find.byType(Container));
+      expect(wrappers, findsNWidgets(2));
+      final commentsBlock = tester.getRect(wrappers.first);
+      // The card's rect runs to the far side of the 8pt margin separating it
+      // from the next card, so its drawn edge is that much higher.
+      final cardEdge = tester.getRect(wrappers.last).bottom - 8;
+      // The buttons' 48pt tap targets dwarf their labels, so the labels are
+      // what the eye reads as the row's extent.
+      final label = tester.getRect(
+        find.descendant(of: find.widgetWithText(TextButton, 'Edit'), matching: find.text('Edit')),
+      );
+
+      expect(label.top - commentsBlock.bottom, moreOrLessEquals(cardEdge - label.bottom));
+    });
+
+    testWidgets('a post with no footer row keeps its bottom padding', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => const ProfilePage(
+          username: 'Broodyr',
+          profileUrl: 'https://example.com/members/broodyr.1957582/',
+          wallPosts: [ProfilePost(id: 1, author: 'Visitor', body: 'Nothing to act on')],
+        ),
+      );
+
+      final body = tester.getRect(find.text('Nothing to act on'));
+      final card = find.ancestor(of: find.text('Nothing to act on'), matching: find.byType(Container));
+      expect(tester.getRect(card.last).bottom - 8 - body.bottom, moreOrLessEquals(8));
+    });
+
     testWidgets('edits an own post through the composer prefilled with its BBCode', (tester) async {
       await signIn();
       final fetched = <String>[];

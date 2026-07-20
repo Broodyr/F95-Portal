@@ -691,9 +691,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildWallPost(ColorScheme colorScheme, ProfilePost post) {
+    final hasActions = post.editUrl != null || post.deleteUrl != null || post.commentUrl != null;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      // No bottom padding under the footer row: its buttons are 48pt tap
+      // targets around ~16pt of label, so they already carry a matching band
+      // of slack above and below. Padding on top of that only lands below
+      // them, leaving the row visibly closer to the content above it than to
+      // the card edge. Posts without a footer still need the real padding.
+      padding: EdgeInsets.fromLTRB(12, 10, 12, hasActions ? 0 : 8),
       decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -752,7 +758,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [for (final comment in post.comments) _buildComment(comment)],
               ),
             ),
-          if (post.editUrl != null || post.deleteUrl != null || post.commentUrl != null)
+          if (hasActions)
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
