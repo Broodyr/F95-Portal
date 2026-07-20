@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/forum.dart';
-import '../services/site_error.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
+import '../services/site_error.dart';
 import '../theme/app_colors.dart';
 import '../widgets/error_view.dart';
 import '../widgets/forum_node_row.dart';

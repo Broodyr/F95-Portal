@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/account.dart';
-import '../services/site_error.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
+import '../services/site_error.dart';
 import '../theme/app_colors.dart';
-import '../widgets/error_view.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/error_view.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import 'forum_thread_screen.dart';

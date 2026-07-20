@@ -4,12 +4,12 @@ import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../constants.dart';
 import '../models/forum.dart';
-import '../services/site_error.dart';
 import '../services/forum_service.dart';
+import '../services/site_error.dart';
 import '../services/thread_page_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/error_view.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/error_view.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/glass_fab.dart';

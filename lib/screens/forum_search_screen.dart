@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 import '../models/forum.dart';
-import '../services/site_error.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
+import '../services/site_error.dart';
 import '../theme/app_colors.dart';
 import '../widgets/error_view.dart';
 import '../widgets/reaction_icon.dart';
