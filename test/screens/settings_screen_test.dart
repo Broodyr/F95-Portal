@@ -200,10 +200,22 @@ void main() {
       );
     }
 
+    const sectionNote = 'These settings are saved to your forum account preferences.';
+
     testWidgets('hidden while logged out', (tester) async {
       await AuthService.instance.logout();
       await pumpSettings(tester);
       expect(find.text(tileTitle), findsNothing);
+      expect(find.text(sectionNote), findsNothing);
+    });
+
+    testWidgets('the section says where these settings live', (tester) async {
+      await pumpTile(tester, loader: () async => const AlertPreferences(popupSkipsMarkRead: false), saver: (_) async {});
+      await tester.pumpAndSettle();
+
+      final noteFinder = find.text(sectionNote);
+      await tester.scrollUntilVisible(noteFinder, 200);
+      expect(noteFinder, findsOneWidget);
     });
 
     testWidgets('loads the account value and saves a toggle to the site', (tester) async {

@@ -238,6 +238,10 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 if (kIsWeb || AuthService.instance.isLoggedIn) ...[
                   _sectionHeader(context, 'Forum account'),
+                  Text(
+                    'These settings are saved to your forum account preferences.',
+                    style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
+                  ),
                   _AlertsPopupPrefTile(
                     loader: alertPrefsLoader ?? ForumService.fetchAlertPreferences,
                     saver: alertPrefsSaver ?? ForumService.setAlertsPopupSkipsMarkRead,
@@ -470,11 +474,24 @@ class _AlertsPopupPrefTileState extends State<_AlertsPopupPrefTile> {
         'Alerts pop-up skips mark read',
         style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15),
       ),
-      subtitle: Text(
-        'Viewing the alerts pop-up will not mark alerts as read. '
-        'The Alerts screen in this app uses this setting. '
-        'Saved to your forum account preferences.',
-        style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
+      subtitle: Text.rich(
+        TextSpan(
+          style: TextStyle(
+            color: AppColors.of(context).subtleText,
+            fontSize: 12,
+          ),
+          children: [
+            const TextSpan(text: 'When enabled, viewing the Alerts pop-up will '),
+            const TextSpan(
+              text: 'not',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const TextSpan(
+              text: ' mark alerts as read. '
+                  'The Alerts screen in this app uses this setting. '
+            ),
+          ],
+        ),
       ),
       value: _value ?? false,
       onChanged: _value == null || _saving ? null : _save,
