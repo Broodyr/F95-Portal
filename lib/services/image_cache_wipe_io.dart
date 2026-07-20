@@ -12,6 +12,23 @@ Future<void> wipeImageCacheDir({Directory? tempDir}) async {
   if (await dir.exists()) await dir.delete(recursive: true);
 }
 
+/// Total bytes the cache folder is holding, for the settings readout.
+///
+/// Measures the folder rather than the package's sqlite index because the
+/// two disagree: the orphans left by the deletion bug are real disk use the
+/// index has already forgotten about.
+Future<int> imageCacheDirBytes({Directory? tempDir}) async {
+  final base = tempDir ?? await getTemporaryDirectory();
+  final dir = Directory(p.join(base.path, DefaultCacheManager.key));
+  if (!await dir.exists()) return 0;
+
+  var total = 0;
+  await for (final entity in dir.list()) {
+    if (entity is File) total += await entity.length();
+  }
+  return total;
+}
+
 /// The image cache's disk budget; the whole folder is kept under this.
 const int imageCacheBudgetBytes = 200 * 1024 * 1024;
 

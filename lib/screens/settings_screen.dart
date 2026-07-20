@@ -92,6 +92,10 @@ class SettingsScreen extends StatelessWidget {
     RemoteImage.forgetResolved();
   }
 
+  /// Reads the cache's disk use for the button's readout; swappable for the
+  /// same reason as [wipeCache].
+  static Future<int> Function() cacheSize = imageCacheDirBytes;
+
   /// Unlike the image cache, this destroys text the user wrote and nothing
   /// refetches it, so it asks first and names the count it is about to take.
   Future<void> _clearDrafts(BuildContext context) async {
@@ -124,16 +128,6 @@ class SettingsScreen extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     await DraftService.instance.clearAll();
     AppToast.showOn(messenger, count == 1 ? 'Saved draft cleared.' : 'Saved drafts cleared.');
-  }
-
-  Future<void> _clearImageCache(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await wipeCache();
-      AppToast.showOn(messenger, 'Image cache cleared.');
-    } catch (e) {
-      AppToast.showOn(messenger, 'Could not clear cache: $e', error: true);
-    }
   }
 
   @override
@@ -250,18 +244,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ],
                 _sectionHeader(context, 'Storage'),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _clearImageCache(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: colorScheme.primary,
-                      side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.65)),
-                    ),
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Clear image cache'),
-                  ),
-                ),
+                const Align(alignment: Alignment.centerLeft, child: _ImageCacheButton()),
                 // Absent rather than disabled at zero: with no drafts there is
                 // nothing to say, and the count is the only hint the app gives
                 // that unsent text is being held at all.
@@ -372,6 +355,77 @@ class _AlertsPopupPrefTile extends StatefulWidget {
   State<_AlertsPopupPrefTile> createState() => _AlertsPopupPrefTileState();
 }
 
+/// Clear-image-cache button carrying what it would reclaim. Stateful because
+/// measuring the folder is disk I/O, and the figure has to be re-read after
+/// a wipe.
+class _ImageCacheButton extends StatefulWidget {
+  const _ImageCacheButton();
+
+  @override
+  State<_ImageCacheButton> createState() => _ImageCacheButtonState();
+}
+
+class _ImageCacheButtonState extends State<_ImageCacheButton> {
+  /// Null while loading, and after a read that failed — the size is a
+  /// nicety, so an unreadable one goes unmentioned rather than blocking the
+  /// button or showing a figure nobody can trust.
+  int? _bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSize();
+  }
+
+  Future<void> _loadSize() async {
+    int? bytes;
+    try {
+      bytes = await SettingsScreen.cacheSize();
+    } catch (_) {
+      bytes = null;
+    }
+    if (mounted) setState(() => _bytes = bytes);
+  }
+
+  Future<void> _clear() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await SettingsScreen.wipeCache();
+      AppToast.showOn(messenger, 'Image cache cleared.');
+    } catch (e) {
+      AppToast.showOn(messenger, 'Could not clear cache: $e', error: true);
+    }
+    await _loadSize();
+  }
+
+  /// Megabytes once there is a megabyte to report, with a decimal below ten
+  /// where the difference is still legible; kilobytes under that, so a small
+  /// cache doesn't round away to a meaningless "0 MB".
+  static String _formatBytes(int bytes) {
+    const int mb = 1024 * 1024;
+    if (bytes >= 10 * mb) return '${(bytes / mb).round()} MB';
+    if (bytes >= mb) return '${(bytes / mb).toStringAsFixed(1)} MB';
+    return '${(bytes / 1024).ceil()} KB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final int? bytes = _bytes;
+    final String suffix = bytes == null || bytes == 0 ? '' : ' (${_formatBytes(bytes)})';
+
+    return OutlinedButton.icon(
+      onPressed: _clear,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: colorScheme.primary,
+        side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.65)),
+      ),
+      icon: const Icon(Icons.delete_outline, size: 18),
+      label: Text('Clear image cache$suffix'),
+    );
+  }
+}
+
 class _AlertsPopupPrefTileState extends State<_AlertsPopupPrefTile> {
   /// Null until the account preference loads; the switch stays disabled.
   bool? _value;
@@ -417,8 +471,9 @@ class _AlertsPopupPrefTileState extends State<_AlertsPopupPrefTile> {
         style: TextStyle(color: AppColors.of(context).brightText, fontSize: 15),
       ),
       subtitle: Text(
-        'Alerts stay unread until you open them, instead of being marked '
-        'read once shown. Saved to your forum account preferences.',
+        'Viewing the alerts pop-up will not mark alerts as read. '
+        'The Alerts screen in this app uses this setting. '
+        'Saved to your forum account preferences.',
         style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
       ),
       value: _value ?? false,

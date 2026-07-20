@@ -31,6 +31,28 @@ void main() {
     expect(tempDir.existsSync(), isTrue);
   });
 
+  group('imageCacheDirBytes', () {
+    test('adds up what the cache folder is holding', () async {
+      final cacheDir = Directory(p.join(tempDir.path, 'libCachedImageData'))..createSync();
+      File(p.join(cacheDir.path, 'aaaa.avif')).writeAsBytesSync(List.filled(400, 0));
+      File(p.join(cacheDir.path, 'bbbb.file')).writeAsBytesSync(List.filled(600, 0));
+
+      expect(await imageCacheDirBytes(tempDir: tempDir), 1000);
+    });
+
+    test('reads as empty when the folder was never created', () async {
+      expect(await imageCacheDirBytes(tempDir: tempDir), 0);
+    });
+
+    test('counts only files, not nested folders', () async {
+      final cacheDir = Directory(p.join(tempDir.path, 'libCachedImageData'))..createSync();
+      Directory(p.join(cacheDir.path, 'nested')).createSync();
+      File(p.join(cacheDir.path, 'aaaa.avif')).writeAsBytesSync(List.filled(250, 0));
+
+      expect(await imageCacheDirBytes(tempDir: tempDir), 250);
+    });
+  });
+
   group('trimImageCacheDir', () {
     late Directory cacheDir;
 

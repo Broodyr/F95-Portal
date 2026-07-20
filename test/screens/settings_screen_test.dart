@@ -255,16 +255,90 @@ void main() {
   group('clear image cache button', () {
     late int wipes;
     late Object? wipeError;
+    late int cacheBytes;
+    late Object? sizeError;
 
     setUp(() {
       wipes = 0;
       wipeError = null;
+      // Stubbed rather than left to the real reader, which needs a
+      // path_provider channel; an empty cache means a bare label.
+      cacheBytes = 0;
+      sizeError = null;
       final original = SettingsScreen.wipeCache;
+      final originalSize = SettingsScreen.cacheSize;
       SettingsScreen.wipeCache = () async {
         wipes++;
         if (wipeError != null) throw wipeError!;
+        cacheBytes = 0;
       };
-      addTearDown(() => SettingsScreen.wipeCache = original);
+      SettingsScreen.cacheSize = () async {
+        if (sizeError != null) throw sizeError!;
+        return cacheBytes;
+      };
+      addTearDown(() {
+        SettingsScreen.wipeCache = original;
+        SettingsScreen.cacheSize = originalSize;
+      });
+    });
+
+    testWidgets('carries the size it is about to reclaim', (tester) async {
+      cacheBytes = 42 * 1024 * 1024;
+      await pumpSettings(tester);
+
+      await tester.scrollUntilVisible(find.textContaining('Clear image cache'), 200);
+      expect(find.text('Clear image cache (42 MB)'), findsOneWidget);
+    });
+
+    testWidgets('keeps a decimal under ten megabytes, where it still reads', (tester) async {
+      cacheBytes = 3 * 1024 * 1024 + 512 * 1024;
+      await pumpSettings(tester);
+
+      await tester.scrollUntilVisible(find.textContaining('Clear image cache'), 200);
+      expect(find.text('Clear image cache (3.5 MB)'), findsOneWidget);
+    });
+
+    testWidgets('drops to KB under a megabyte rather than rounding to zero', (tester) async {
+      cacheBytes = 400 * 1024;
+      await pumpSettings(tester);
+
+      await tester.scrollUntilVisible(find.textContaining('Clear image cache'), 200);
+      expect(find.text('Clear image cache (400 KB)'), findsOneWidget);
+    });
+
+    testWidgets('an empty cache gets a bare label, not a zero', (tester) async {
+      await pumpSettings(tester);
+
+      await tester.scrollUntilVisible(find.text('Clear image cache'), 200);
+      expect(find.text('Clear image cache'), findsOneWidget);
+    });
+
+    testWidgets('a size that cannot be read just goes unmentioned', (tester) async {
+      // The button still has to work — the readout is a nicety, and a
+      // failure here must not take the clearing with it.
+      sizeError = Exception('no temp dir');
+      await pumpSettings(tester);
+
+      final button = find.text('Clear image cache');
+      await tester.scrollUntilVisible(button, 200);
+      expect(button, findsOneWidget);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(wipes, 1);
+    });
+
+    testWidgets('the size drops away once the cache is cleared', (tester) async {
+      cacheBytes = 12 * 1024 * 1024;
+      await pumpSettings(tester);
+
+      final button = find.textContaining('Clear image cache');
+      await tester.scrollUntilVisible(button, 200);
+      expect(find.text('Clear image cache (12 MB)'), findsOneWidget);
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Clear image cache'), findsOneWidget);
     });
 
     testWidgets('runs the wipe and confirms with a toast', (tester) async {
