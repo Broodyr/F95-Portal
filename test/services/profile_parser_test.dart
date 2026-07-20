@@ -317,23 +317,4 @@ Support me on itch!</div>
       expect(about.birthday, isNot(contains('291')));
     });
   });
-
-  group('parseRestrictionMessage', () {
-    test('reads the site wording off a limited profile', () {
-      // The page also carries the no-JS and old-browser notices in its
-      // header, both of them .blockMessage too.
-      expect(
-        parseRestrictionMessage(fixture('profile_limited_403.htm')),
-        'This member limits who may view their full profile.',
-      );
-    });
-
-    test('finds nothing on a profile that loaded', () {
-      expect(parseRestrictionMessage(fixture('profile_gugatron.htm')), isNull);
-    });
-
-    test('finds nothing in markup it does not recognize', () {
-      expect(parseRestrictionMessage('<html><body><p>502 Bad Gateway</p></body></html>'), isNull);
-    });
-  });
 }

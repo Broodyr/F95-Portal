@@ -6,6 +6,7 @@ import '../models/profile.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 import 'profile_parser.dart';
+import 'site_error.dart';
 import 'thread_page_service.dart';
 
 /// A profile the member has closed off. Distinct from [ApiException] because
@@ -149,7 +150,7 @@ class ProfileService {
         // Members can restrict who sees their profile; the site answers 403
         // and renders the reason as an ordinary page.
         throw ProfileRestrictedException(
-          parseRestrictionMessage(response.body) ?? 'This member limits who may view their full profile.',
+          parseSiteErrorMessage(response.body) ?? 'This member limits who may view their full profile.',
         );
       }
       if (response.statusCode != 200) {

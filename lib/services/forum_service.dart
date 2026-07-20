@@ -8,6 +8,7 @@ import '../models/thread_page.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 import 'forum_parser.dart';
+import 'site_error.dart';
 import 'thread_page_service.dart';
 
 /// Fetches and parses forum pages (directory, thread lists, post loops,
@@ -276,9 +277,13 @@ class ForumService {
 
       final response = await httpClient.get(Uri.parse(url), headers: headers);
       if (response.statusCode != 200) {
-        // The path makes multi-request flows (alert acknowledgment)
-        // diagnosable from the surfaced message alone.
-        throw ApiException('Failed to load ${Uri.parse(url).path}: ${response.statusCode}');
+        // The site states its own reason on a 403 or 404 — "The requested
+        // forum could not be found" beats a path and a number for anyone who
+        // isn't debugging. Falls through to the path when it says nothing,
+        // which keeps multi-request flows (alert acknowledgment) diagnosable
+        // from the surfaced message alone.
+        final stated = parseSiteErrorMessage(response.body);
+        throw ApiException(stated ?? 'Failed to load ${Uri.parse(url).path}: ${response.statusCode}');
       }
       return response.body;
     } on ApiException {

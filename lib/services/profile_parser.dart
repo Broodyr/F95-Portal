@@ -253,18 +253,6 @@ String _rawText(Element element) {
 
 int _idFrom(String source, RegExp pattern) => int.tryParse(pattern.firstMatch(source)?.group(1) ?? '') ?? 0;
 
-/// The site's own wording for a profile it refused to serve — it renders a
-/// 403 as an ordinary page carrying a `.blockMessage`. A direct child of the
-/// page content: the header's own notices (no-JS, out-of-date browser) share
-/// the class, and a profile that loaded has one per lazy tab pane holding
-/// "Loading…", nested deeper. Null when the markup says nothing useful, so
-/// the caller can fall back to the status code.
-String? parseRestrictionMessage(String htmlSource) {
-  final block = html_parser.parse(htmlSource).querySelector('.p-body-pageContent > .blockMessage');
-  final message = _clean(block?.text ?? '');
-  return message.isEmpty ? null : message;
-}
-
 String _clean(String text) => text.replaceAll(RegExp(r'\s+'), ' ').trim();
 
 /// Live pages emit relative hrefs (saved fixtures have browser-absolutized
