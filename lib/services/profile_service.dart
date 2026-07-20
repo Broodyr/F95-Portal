@@ -134,15 +134,16 @@ class ProfileService {
       if (cookies != null) headers['Cookie'] = cookies;
 
       final response = await httpClient.get(Uri.parse(url), headers: headers);
-      if (response.statusCode == 403) {
-        // Members can restrict who sees their profile; the site answers 403
-        // and renders the reason as an ordinary page.
-        throw ContentUnavailableException(
-          parseSiteErrorMessage(response.body) ?? 'This member limits who may view their full profile.',
-        );
-      }
       if (response.statusCode != 200) {
-        throw ApiException('Failed to load profile page: ${response.statusCode}');
+        // Members can restrict who sees their profile, and a deleted one
+        // stays deleted; the site answers both with an ordinary page stating
+        // the reason. Neither changes on a second ask.
+        final stated = parseSiteErrorMessage(response.body);
+        final fallback = 'Failed to load profile page: ${response.statusCode}';
+        if (isPermanentStatus(response.statusCode)) {
+          throw ContentUnavailableException(stated ?? fallback, statusCode: response.statusCode);
+        }
+        throw ApiException(stated ?? fallback);
       }
       return response.body;
     } on ContentUnavailableException {

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:f95_portal/services/api_service.dart';
 import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/profile_service.dart';
+import 'package:f95_portal/services/site_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -129,5 +130,66 @@ void main() {
     expect(urls, ['https://f95zone.to/members/gugatron.328002/about']);
     expect(about.location, 'Berlin');
     expect(about.bio, 'A bio.');
+  });
+
+  group('non-200 responses', () {
+    Future<void> Function() fetchWith(http.Client client) => () => ProfileService.fetchProfile(
+      'https://f95zone.to/members/someone.1/',
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    http.Client statedAs(String message, int status) => MockClient(
+      (_) async => http.Response(
+        '<html><body><div class="p-body-pageContent">'
+        '<div class="blockMessage">$message</div>'
+        '</div></body></html>',
+        status,
+      ),
+    );
+
+    test('a 403 is permanent, and says so in the site\'s words', () async {
+      expect(
+        fetchWith(statedAs('This member limits who may view their full profile.', 403)),
+        throwsA(
+          isA<ContentUnavailableException>()
+              .having((e) => e.message, 'message', 'This member limits who may view their full profile.')
+              .having((e) => e.statusCode, 'statusCode', 403),
+        ),
+      );
+    });
+
+    test('a 404 is permanent too, and carries its own status', () async {
+      // Kept apart from the 403 so the screen can say "not found" rather
+      // than accusing a deleted member of hiding.
+      expect(
+        fetchWith(statedAs('The requested member could not be found.', 404)),
+        throwsA(
+          isA<ContentUnavailableException>()
+              .having((e) => e.message, 'message', 'The requested member could not be found.')
+              .having((e) => e.statusCode, 'statusCode', 404),
+        ),
+      );
+    });
+
+    test('an unreadable body falls back to the status', () async {
+      expect(
+        fetchWith(MockClient((_) async => http.Response('nope', 403))),
+        throwsA(
+          isA<ContentUnavailableException>().having(
+            (e) => e.message,
+            'message',
+            'Failed to load profile page: 403',
+          ),
+        ),
+      );
+    });
+
+    test('a 500 stays retryable', () async {
+      expect(
+        fetchWith(statedAs('Something broke.', 500)),
+        throwsA(isA<ApiException>().having((e) => e.message, 'message', 'Something broke.')),
+      );
+    });
   });
 }

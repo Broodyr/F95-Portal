@@ -285,7 +285,7 @@ class ForumService {
         final stated = parseSiteErrorMessage(response.body);
         final fallback = 'Failed to load ${Uri.parse(url).path}: ${response.statusCode}';
         if (isPermanentStatus(response.statusCode)) {
-          throw ContentUnavailableException(stated ?? fallback);
+          throw ContentUnavailableException(stated ?? fallback, statusCode: response.statusCode);
         }
         throw ApiException(stated ?? fallback);
       }

@@ -10,7 +10,12 @@ import 'package:html/parser.dart' as html_parser;
 class ContentUnavailableException implements Exception {
   final String message;
 
-  ContentUnavailableException(this.message);
+  /// Which of the two it was. Most screens don't care — they only drop
+  /// Retry — but the one showing a member can tell "they shut you out" from
+  /// "they aren't there" and say so.
+  final int? statusCode;
+
+  ContentUnavailableException(this.message, {this.statusCode});
 
   @override
   String toString() => message;

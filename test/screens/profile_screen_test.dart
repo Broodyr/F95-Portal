@@ -618,12 +618,31 @@ void main() {
       expect(find.textContaining('403'), findsNothing);
     });
 
+    testWidgets('a member who is gone reads as missing, not as private', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async =>
+            throw ContentUnavailableException('The requested member could not be found.', statusCode: 404),
+      );
+
+      expect(find.text('Member not found'), findsOneWidget);
+      expect(find.byIcon(Icons.person_off_outlined), findsOneWidget);
+      // A padlock would say the member shut you out, which they did not.
+      expect(find.byIcon(Icons.lock_outline), findsNothing);
+      expect(find.widgetWithText(TextButton, 'Retry'), findsNothing);
+    });
+
     testWidgets('an ordinary failure still offers a retry', (tester) async {
       await signIn();
       await pumpProfile(tester, fetchProfile: () async => throw ApiException('Failed to load profile page: 500'));
 
       expect(find.widgetWithText(TextButton, 'Retry'), findsOneWidget);
       expect(find.byIcon(Icons.lock_outline), findsNothing);
+      expect(find.byIcon(Icons.person_off_outlined), findsNothing);
+      // The class name is not something to put in front of a reader.
+      expect(find.textContaining('ApiException'), findsNothing);
+      expect(find.text('Failed to load profile page: 500'), findsOneWidget);
     });
   });
 }
