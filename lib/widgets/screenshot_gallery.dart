@@ -145,6 +145,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
   }
 
   void _onPointerUp() {
+    _endEdgeFlick();
     _onPointerCountChanged(-1);
     if (_dismissDragging && _pointerCount == 0) {
       _endDismissDrag();
@@ -160,7 +161,6 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
 
   void _onDismissPointerMove(PointerMoveEvent event) {
     if (_zoomed || _pointerCount != 1) return;
-    _velocityTracker?.addPosition(event.timeStamp, event.position);
     if (!_dismissDragging) {
       _dragDx += event.delta.dx;
       _dragDy += event.delta.dy;
@@ -195,10 +195,22 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
   /// while small pan overshoots stay on the current image.
   double _edgeDragAccum = 0;
   bool _edgeFlipTriggered = false;
-  static const double _edgeFlipThreshold = 110;
+  static const double _edgeFlipThreshold = 80;
+
+  /// A quick flick past the edge shouldn't have to travel the full drag
+  /// distance — same as how a pager answers a fling.
+  static const double _edgeFlickDistance = 24;
+  static const double _edgeFlickVelocity = 400;
+
+  /// How far the image may drift back off an edge and still count as pinned.
+  /// A swipe with any vertical component wobbles a few pixels sideways per
+  /// frame; a one-pixel tolerance let that noise unpin the image and throw
+  /// the whole pull away, which is what made diagonal swipes feel dead.
+  static const double _edgeSlop = 8;
 
   void _onPointerMove(PointerMoveEvent event) {
     _onDismissPointerMove(event);
+    _velocityTracker?.addPosition(event.timeStamp, event.position);
     if (!_zoomed || _pointerCount != 1 || _edgeFlipTriggered) return;
     final dx = event.delta.dx;
     if (dx == 0) return;
@@ -208,27 +220,42 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
     final scale = _transformation.value.getMaxScaleOnAxis();
     final tx = _transformation.value.getTranslation().x;
     final width = MediaQuery.of(context).size.width;
-    const slop = 1.0;
-    final atLeftEdge = tx >= -slop;
-    final atRightEdge = tx <= width * (1 - scale) + slop;
+    final canFlipBack = tx >= -_edgeSlop && _index > 0;
+    final canFlipForward = tx <= width * (1 - scale) + _edgeSlop && _index < widget.urls.length - 1;
 
-    if (dx > 0 && atLeftEdge && _index > 0) {
-      _edgeDragAccum = (_edgeDragAccum > 0 ? _edgeDragAccum : 0) + dx;
-    } else if (dx < 0 && atRightEdge && _index < widget.urls.length - 1) {
-      _edgeDragAccum = (_edgeDragAccum < 0 ? _edgeDragAccum : 0) + dx;
-    } else {
+    // Away from a usable edge the drag is panning the image, not paging.
+    if (!canFlipBack && !canFlipForward) {
       _edgeDragAccum = 0;
       return;
     }
 
+    // Count the *net* pull rather than resetting on every opposing frame,
+    // so sideways jitter only gives a little of the pull back.
+    _edgeDragAccum += dx;
+    if (_edgeDragAccum > 0 && !canFlipBack) _edgeDragAccum = 0;
+    if (_edgeDragAccum < 0 && !canFlipForward) _edgeDragAccum = 0;
+
     if (_edgeDragAccum.abs() > _edgeFlipThreshold) {
-      _edgeFlipTriggered = true;
-      _pageController.animateToPage(
-        _index + (_edgeDragAccum > 0 ? -1 : 1),
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
+      _flipPage();
     }
+  }
+
+  /// Releasing mid-pull still flips if the pull was a fast flick.
+  void _endEdgeFlick() {
+    if (!_zoomed || _pointerCount != 1 || _edgeFlipTriggered) return;
+    if (_edgeDragAccum.abs() < _edgeFlickDistance) return;
+    final vx = _velocityTracker?.getVelocity().pixelsPerSecond.dx ?? 0;
+    if (vx.abs() < _edgeFlickVelocity || vx.sign != _edgeDragAccum.sign) return;
+    _flipPage();
+  }
+
+  void _flipPage() {
+    _edgeFlipTriggered = true;
+    _pageController.animateToPage(
+      _index + (_edgeDragAccum > 0 ? -1 : 1),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   /// Double tap toggles between fit and 2.5x zoom centered on the tap point.

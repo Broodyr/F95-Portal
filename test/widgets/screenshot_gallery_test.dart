@@ -229,6 +229,83 @@ void main() {
     await tester.pump(const Duration(minutes: 1));
   });
 
+  /// Zooms in and pans hard left so the image sits pinned against its right
+  /// edge — the state a swipe-to-next-image has to start from.
+  Future<void> zoomToRightEdge(WidgetTester tester) async {
+    final center = tester.getCenter(find.byType(PageView));
+    await tester.tapAt(center);
+    await tester.pump(kDoubleTapMinTime);
+    await tester.tapAt(center);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.dragFrom(center, const Offset(-700, 0));
+    await tester.pump();
+  }
+
+  testWidgets('a mostly vertical drag past the edge still flips to the next image', (tester) async {
+    await pumpPushedGallery(tester);
+    await zoomToRightEdge(tester);
+
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    // A real diagonal swipe wobbles in x from frame to frame; the flip has
+    // to survive that rather than be cancelled by the first opposing pixel.
+    final gesture = await tester.startGesture(tester.getCenter(find.byType(PageView)));
+    var time = Duration.zero;
+    for (var i = 0; i < 24; i++) {
+      time += const Duration(milliseconds: 16);
+      await gesture.moveBy(Offset(i.isEven ? -10 : 2, -12), timeStamp: time);
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await gesture.up(timeStamp: time);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('a quick flick past the edge flips without a full-length drag', (tester) async {
+    await pumpPushedGallery(tester);
+    await zoomToRightEdge(tester);
+
+    final gesture = await tester.startGesture(tester.getCenter(find.byType(PageView)));
+    var time = Duration.zero;
+    for (var i = 0; i < 6; i++) {
+      time += const Duration(milliseconds: 16);
+      await gesture.moveBy(const Offset(-9, -18), timeStamp: time);
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    // 54px of pull — well under the deliberate-drag distance, but fast.
+    await gesture.up(timeStamp: time);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('a small slow pull past the edge stays on the current image', (tester) async {
+    await pumpPushedGallery(tester);
+    await zoomToRightEdge(tester);
+
+    final gesture = await tester.startGesture(tester.getCenter(find.byType(PageView)));
+    var time = Duration.zero;
+    for (var i = 0; i < 8; i++) {
+      time += const Duration(milliseconds: 50);
+      await gesture.moveBy(const Offset(-5, 0), timeStamp: time);
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await gesture.up(timeStamp: time);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
   testWidgets('page swiping stays disabled while zoomed in', (tester) async {
     await pumpGallery(tester);
 
