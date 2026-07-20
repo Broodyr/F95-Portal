@@ -6,8 +6,10 @@ import '../constants.dart';
 import 'remote_image.dart';
 import 'sfw_blur.dart';
 
-/// Fullscreen swipeable screenshot viewer with pinch-zoom.
-class ScreenshotGallery extends StatefulWidget {
+/// Fullscreen swipeable image viewer with pinch-zoom. Used for anything the
+/// app shows full size: thread screenshots and covers, images inline in a
+/// post, and a member's avatar.
+class ImageGallery extends StatefulWidget {
   final List<String> urls;
   final int initialIndex;
 
@@ -21,7 +23,7 @@ class ScreenshotGallery extends StatefulWidget {
     await DefaultCacheManager().getSingleFile(url);
   }
 
-  const ScreenshotGallery({super.key, required this.urls, this.initialIndex = 0});
+  const ImageGallery({super.key, required this.urls, this.initialIndex = 0});
 
   static void show(BuildContext context, List<String> urls, {int initialIndex = 0}) {
     // Transparent route: the screen behind keeps painting, so the backdrop
@@ -30,17 +32,17 @@ class ScreenshotGallery extends StatefulWidget {
       PageRouteBuilder(
         opaque: false,
         fullscreenDialog: true,
-        pageBuilder: (_, _, _) => ScreenshotGallery(urls: urls, initialIndex: initialIndex),
+        pageBuilder: (_, _, _) => ImageGallery(urls: urls, initialIndex: initialIndex),
         transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
       ),
     );
   }
 
   @override
-  State<ScreenshotGallery> createState() => _ScreenshotGalleryState();
+  State<ImageGallery> createState() => _ImageGalleryState();
 }
 
-class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTickerProviderStateMixin {
+class _ImageGalleryState extends State<ImageGallery> with SingleTickerProviderStateMixin {
   late final PageController _pageController;
   final TransformationController _transformation = TransformationController();
   Offset _doubleTapPosition = Offset.zero;
@@ -100,7 +102,7 @@ class _ScreenshotGalleryState extends State<ScreenshotGallery> with SingleTicker
       while (queue.isNotEmpty) {
         final url = queue.removeAt(0);
         try {
-          await ScreenshotGallery.downloadBytes(url);
+          await ImageGallery.downloadBytes(url);
         } catch (_) {}
       }
     }

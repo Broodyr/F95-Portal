@@ -22,7 +22,7 @@ import 'app_toast.dart';
 import 'engine_pill.dart';
 import 'remote_image.dart';
 import 'rich_spoiler_text.dart';
-import 'screenshot_gallery.dart';
+import 'image_gallery.dart';
 import 'sfw_blur.dart';
 import 'sliding_reveal.dart';
 import 'version_pill.dart';
@@ -813,7 +813,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
         // Covers are cropped to 3:1 here; tap to see the full image.
         onTap: thread.cover.isEmpty
             ? null
-            : () => ScreenshotGallery.show(context, [toHdImageUrl(thread.cover) ?? thread.cover]),
+            : () => ImageGallery.show(context, [toHdImageUrl(thread.cover) ?? thread.cover]),
         child: Stack(
           children: [
             ClipRRect(
@@ -928,7 +928,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
     return GestureDetector(
       // Thumbs stay on the low-quality preview host; the viewer gets the HD
       // variants, all of which it starts loading as soon as it opens.
-      onTap: () => ScreenshotGallery.show(context, [
+      onTap: () => ImageGallery.show(context, [
         for (final url in thread.screens) toHdImageUrl(url) ?? url,
       ], initialIndex: index),
       child: ClipRRect(

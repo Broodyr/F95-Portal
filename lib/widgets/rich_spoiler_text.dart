@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/thread_page.dart';
 import '../theme/app_colors.dart';
 import 'remote_image.dart';
-import 'screenshot_gallery.dart';
+import 'image_gallery.dart';
 import 'sfw_blur.dart';
 
 /// Renders parsed spoiler content: styled text runs, tappable links, and
@@ -102,7 +102,7 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: GestureDetector(
-                onTap: () => ScreenshotGallery.show(context, galleryUrls, initialIndex: galleryIndex),
+                onTap: () => ImageGallery.show(context, galleryUrls, initialIndex: galleryIndex),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: ConstrainedBox(

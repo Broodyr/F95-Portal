@@ -25,6 +25,12 @@ void main() {
       expect(page.profileUrl, 'https://f95zone.to/members/gugatron.328002/');
     });
 
+    test('links the avatar to its full-size original', () {
+      // The header img is the downscaled `l` variant; the anchor around it
+      // is the site's own link to the untouched upload.
+      expect(page.avatarFullUrl, 'https://f95zone.to/data/avatars/o/328/328002.jpg?1777143770');
+    });
+
     test('captures the CSRF token and wall composer action', () {
       expect(page.csrfToken, isNotEmpty);
       expect(page.wallPostUrl, 'https://f95zone.to/members/gugatron.328002/post');
@@ -183,7 +189,7 @@ void main() {
     const relativeHtml = '''
 <html data-csrf="tok"><body>
 <div class="memberHeader">
-  <div class="memberHeader-avatar"><img src="/data/avatars/l/328/328002.jpg"></div>
+  <div class="memberHeader-avatar"><a href="/data/avatars/o/328/328002.jpg" class="avatar avatar--l"><img src="/data/avatars/l/328/328002.jpg"></a></div>
   <div class="memberHeader-name"><span class="username">Someone</span></div>
 </div>
 <a href="/members/someone.99/recent-content" class="tabs-tab" id="recent-content">Postings</a>
@@ -226,6 +232,7 @@ void main() {
     test('absolutizes every URL in the parsed page', () {
       final page = parseProfilePage(relativeHtml);
       expect(page.avatarUrl, 'https://f95zone.to/data/avatars/l/328/328002.jpg');
+      expect(page.avatarFullUrl, 'https://f95zone.to/data/avatars/o/328/328002.jpg');
       expect(page.profileUrl, 'https://f95zone.to/members/someone.99/');
       expect(page.wallPostUrl, 'https://f95zone.to/members/someone.99/post');
       expect(page.wallPosts.single.comments.single.avatarUrl, 'https://f95zone.to/data/avatars/s/328/328002.jpg');
@@ -235,6 +242,18 @@ void main() {
       expect(page.wallPosts.single.comments.single.editUrl, 'https://f95zone.to/profile-posts/comments/9/edit');
       expect(page.wallPosts.single.comments.single.deleteUrl, 'https://f95zone.to/profile-posts/comments/9/delete');
       expect(page.postings.single.url, 'https://f95zone.to/threads/some-game.1/post-77');
+    });
+
+    test('a default avatar offers no full-size image', () {
+      // With nothing uploaded, XenForo aims the same anchor at the member's
+      // own page. Opening that in an image viewer would show a broken icon.
+      final page = parseProfilePage(
+        relativeHtml.replaceAll(
+          '<a href="/data/avatars/o/328/328002.jpg" class="avatar avatar--l">',
+          '<a href="/members/someone.99/" class="avatar avatar--l avatar--default">',
+        ),
+      );
+      expect(page.avatarFullUrl, isNull);
     });
 
     test('comment edit links never become the post edit URL', () {

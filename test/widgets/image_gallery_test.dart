@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:f95_portal/widgets/screenshot_gallery.dart';
+import 'package:f95_portal/widgets/image_gallery.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,13 +10,13 @@ void main() {
 
   testWidgets('downloads every image on open, nearest to the opened one first', (tester) async {
     final fetched = <String>[];
-    final original = ScreenshotGallery.downloadBytes;
-    ScreenshotGallery.downloadBytes = (url) async => fetched.add(url);
-    addTearDown(() => ScreenshotGallery.downloadBytes = original);
+    final original = ImageGallery.downloadBytes;
+    ImageGallery.downloadBytes = (url) async => fetched.add(url);
+    addTearDown(() => ImageGallery.downloadBytes = original);
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: ScreenshotGallery(
+        home: ImageGallery(
           urls: [
             'https://example.com/a.png',
             'https://example.com/b.png',
@@ -43,15 +43,15 @@ void main() {
   testWidgets('prefetch never runs more than a few downloads at once', (tester) async {
     final started = <String>[];
     final completers = <String, Completer<void>>{};
-    final original = ScreenshotGallery.downloadBytes;
-    ScreenshotGallery.downloadBytes = (url) {
+    final original = ImageGallery.downloadBytes;
+    ImageGallery.downloadBytes = (url) {
       started.add(url);
       return (completers[url] = Completer<void>()).future;
     };
-    addTearDown(() => ScreenshotGallery.downloadBytes = original);
+    addTearDown(() => ImageGallery.downloadBytes = original);
 
     await tester.pumpWidget(
-      MaterialApp(home: ScreenshotGallery(urls: [for (var i = 0; i < 6; i++) 'https://example.com/$i.png'])),
+      MaterialApp(home: ImageGallery(urls: [for (var i = 0; i < 6; i++) 'https://example.com/$i.png'])),
     );
     await tester.pump();
 
@@ -76,7 +76,7 @@ void main() {
 
   Future<void> pumpGallery(WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: ScreenshotGallery(urls: ['https://example.com/a.png', 'https://example.com/b.png'])),
+      const MaterialApp(home: ImageGallery(urls: ['https://example.com/a.png', 'https://example.com/b.png'])),
     );
     await tester.pump();
   }
@@ -111,7 +111,7 @@ void main() {
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () =>
-                  ScreenshotGallery.show(context, const ['https://example.com/a.png', 'https://example.com/b.png']),
+                  ImageGallery.show(context, const ['https://example.com/a.png', 'https://example.com/b.png']),
               child: const Text('open'),
             ),
           ),
@@ -131,7 +131,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(ScreenshotGallery), findsNothing);
+    expect(find.byType(ImageGallery), findsNothing);
 
     await tester.pump(const Duration(minutes: 1));
   });
@@ -144,7 +144,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(ScreenshotGallery), findsNothing);
+    expect(find.byType(ImageGallery), findsNothing);
 
     await tester.pump(const Duration(minutes: 1));
   });
@@ -159,7 +159,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.byType(ScreenshotGallery), findsOneWidget);
+    expect(find.byType(ImageGallery), findsOneWidget);
 
     await tester.pump(const Duration(minutes: 1));
   });
@@ -205,7 +205,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(ScreenshotGallery), findsOneWidget);
+    expect(find.byType(ImageGallery), findsOneWidget);
     expect(find.text('2 / 2'), findsOneWidget);
 
     await tester.pump(const Duration(minutes: 1));
@@ -224,7 +224,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(ScreenshotGallery), findsOneWidget);
+    expect(find.byType(ImageGallery), findsOneWidget);
 
     await tester.pump(const Duration(minutes: 1));
   });

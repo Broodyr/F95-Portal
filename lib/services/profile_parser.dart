@@ -59,6 +59,7 @@ ProfilePage parseProfilePage(String htmlSource) {
     username: _clean(header?.querySelector('.username')?.text ?? ''),
     memberTitle: _clean(header?.querySelector('.userTitle')?.text ?? ''),
     avatarUrl: _absoluteOrNull(header?.querySelector('.memberHeader-avatar img')?.attributes['src']),
+    avatarFullUrl: _imageHrefOrNull(header?.querySelector('.memberHeader-avatar a.avatar')?.attributes['href']),
     messages: messages,
     joined: joined,
     lastSeen: lastSeen,
@@ -286,3 +287,16 @@ String _absoluteUrl(String url) {
 }
 
 String? _absoluteOrNull(String? url) => url == null ? null : _absoluteUrl(url);
+
+final RegExp _imagePathPattern = RegExp(r'\.(jpe?g|png|gif|webp)$', caseSensitive: false);
+
+/// The avatar anchor wraps the uploaded image, but only for a member who has
+/// one: with nothing uploaded XenForo renders a letter tile and points the
+/// same anchor at the member's page instead. Only an href that actually names
+/// an image is worth handing to an image viewer.
+String? _imageHrefOrNull(String? href) {
+  if (href == null) return null;
+  final path = Uri.tryParse(href)?.path;
+  if (path == null || !_imagePathPattern.hasMatch(path)) return null;
+  return _absoluteUrl(href);
+}

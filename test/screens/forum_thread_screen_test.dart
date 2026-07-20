@@ -2,7 +2,7 @@ import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
-import 'package:f95_portal/widgets/screenshot_gallery.dart';
+import 'package:f95_portal/widgets/image_gallery.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,7 +55,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    final gallery = tester.widget<ScreenshotGallery>(find.byType(ScreenshotGallery));
+    final gallery = tester.widget<ImageGallery>(find.byType(ImageGallery));
     expect(gallery.urls, ['https://example.com/q.jpg', 'https://example.com/a.jpg', 'https://example.com/b.jpg']);
     expect(gallery.initialIndex, 2);
 

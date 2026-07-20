@@ -13,6 +13,7 @@ import '../widgets/app_toast.dart';
 import '../widgets/error_view.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
+import '../widgets/image_gallery.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/report_dialog.dart';
@@ -518,6 +519,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// The header avatar opens full size, which the small ones in the wall and
+  /// comments can't: those are already the tap target for the member's page,
+  /// and at 17-22px they are too fiddly to carry a second meaning anyway.
+  Widget _buildHeaderAvatar(ProfilePage page) {
+    final avatar = ForumAvatar(username: page.username, avatarUrl: page.avatarUrl, size: 48);
+    // With nothing uploaded the avatar is a drawn letter tile, so there is no
+    // image to open — the tap target would only ever disappoint.
+    final full = page.avatarFullUrl ?? page.avatarUrl;
+    if (full == null || full.isEmpty) return avatar;
+    return GestureDetector(
+      onTap: () => ImageGallery.show(context, [full]),
+      behavior: HitTestBehavior.opaque,
+      child: avatar,
+    );
+  }
+
   Widget _buildHeader(ProfilePage page) {
     final meta = [
       if (page.messages.isNotEmpty) '${page.messages} messages',
@@ -527,7 +544,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        ForumAvatar(username: page.username, avatarUrl: page.avatarUrl, size: 48),
+        _buildHeaderAvatar(page),
         const SizedBox(width: 11),
         Expanded(
           child: Column(

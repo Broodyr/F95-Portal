@@ -108,6 +108,10 @@ class ProfilePage {
   final String username;
   final String memberTitle;
   final String? avatarUrl;
+
+  /// The untouched avatar upload behind [avatarUrl]'s downscaled variant,
+  /// for opening full size. Null when the member has never set one.
+  final String? avatarFullUrl;
   final String messages;
   final String joined;
   final String lastSeen;
@@ -128,6 +132,7 @@ class ProfilePage {
     required this.username,
     this.memberTitle = '',
     this.avatarUrl,
+    this.avatarFullUrl,
     this.messages = '',
     this.joined = '',
     this.lastSeen = '',

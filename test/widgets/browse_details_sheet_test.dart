@@ -8,7 +8,7 @@ import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/services/auth_service.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/thread_page_service.dart';
-import 'package:f95_portal/widgets/screenshot_gallery.dart';
+import 'package:f95_portal/widgets/image_gallery.dart';
 import 'package:f95_portal/widgets/sliding_reveal.dart';
 import 'package:f95_portal/widgets/browse_details_sheet.dart';
 import 'package:f95_portal/widgets/version_pill.dart';
@@ -166,7 +166,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(ScreenshotGallery), findsOneWidget);
+    expect(find.byType(ImageGallery), findsOneWidget);
   });
 
   testWidgets('the gallery gets the HD variant of a preview-host cover', (tester) async {
@@ -179,7 +179,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    final gallery = tester.widget<ScreenshotGallery>(find.byType(ScreenshotGallery));
+    final gallery = tester.widget<ImageGallery>(find.byType(ImageGallery));
     expect(gallery.urls, ['https://attachments.f95zone.to/2023/02/42_cover.png']);
 
     // cached_network_image leaves pending timers.
@@ -201,7 +201,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    final gallery = tester.widget<ScreenshotGallery>(find.byType(ScreenshotGallery));
+    final gallery = tester.widget<ImageGallery>(find.byType(ImageGallery));
     expect(gallery.urls, [
       'https://attachments.f95zone.to/2023/02/42_s1.png',
       'https://attachments.f95zone.to/2023/02/42_s2.png',

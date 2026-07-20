@@ -7,6 +7,7 @@ import 'package:f95_portal/services/draft_service.dart';
 import 'package:f95_portal/services/site_error.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/profile_service.dart';
+import 'package:f95_portal/widgets/image_gallery.dart';
 import 'package:f95_portal/widgets/reaction_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,6 +136,46 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Broodyr'), findsNWidgets(3));
+    });
+
+    testWidgets('tapping the avatar opens it full size', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => const ProfilePage(
+          username: 'Broodyr',
+          avatarUrl: 'https://f95zone.to/data/avatars/l/1/1957582.jpg',
+          avatarFullUrl: 'https://f95zone.to/data/avatars/o/1/1957582.jpg',
+        ),
+      );
+
+      await tester.tap(find.byType(ForumAvatar));
+      // The gallery's loading spinner animates indefinitely (the image never
+      // resolves in tests), so pump the route transition instead of settling.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The original upload, not the downscaled variant the header shows.
+      final gallery = tester.widget<ImageGallery>(find.byType(ImageGallery));
+      expect(gallery.urls, ['https://f95zone.to/data/avatars/o/1/1957582.jpg']);
+
+      // cached_network_image leaves pending timers.
+      await tester.pump(const Duration(minutes: 1));
+    });
+
+    testWidgets('a member with no avatar has nothing to open', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchProfile: () async => const ProfilePage(username: 'Broodyr'));
+
+      // The miss is the point: the letter tile stands in for an avatar, so
+      // it carries no tap target and there is no image behind it.
+      await tester.tap(find.byType(ForumAvatar), warnIfMissed: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byType(ImageGallery), findsNothing);
+
+      await tester.pump(const Duration(minutes: 1));
     });
   });
 
