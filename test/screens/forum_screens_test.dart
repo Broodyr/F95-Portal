@@ -1080,4 +1080,30 @@ void main() {
     expect(find.text('iDrought'), findsOneWidget);
     expect(find.text('ThyElyson'), findsNothing);
   });
+
+  testWidgets('a thread list titles itself with the icon of the row that opened it', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadsScreen(
+          node: ForumNode(id: 5, title: 'Rejected Game Requests', url: 'https://example.com/forums/x.5/'),
+          // The page's own title differs from the node's, as it can live.
+          fetchPage: (url, {page = 1}) async => ForumService.createMockForumPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The mock page calls itself General Discussions, so the two titles
+    // disagree and only the node's gives cancel_outlined.
+    final bar = find.byType(AppBar);
+    expect(find.descendant(of: bar, matching: find.byIcon(Icons.forum_outlined)), findsNothing);
+    final icon = find.descendant(of: bar, matching: find.byIcon(Icons.cancel_outlined));
+    expect(icon, findsOneWidget, reason: 'the node title decides, not the fetched page title');
+    expect(
+      tester.widget<Icon>(icon).color,
+      ThemeData.dark().colorScheme.primary,
+      reason: 'primary reads as decorative, not as a close button',
+    );
+  });
 }

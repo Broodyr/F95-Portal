@@ -137,15 +137,26 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
-            if (widget.node.threads.isNotEmpty)
-              Text(
-                '${widget.node.threads} threads',
-                style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11),
+            // Keyed off the node, not [title]: this echoes the row that was
+            // tapped, and the page's own title can differ from it. Primary,
+            // like that row — the appbar's functional icons are plain white.
+            Icon(ForumNodeRow.iconFor(widget.node.title), size: 18, color: colorScheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
+                  if (widget.node.threads.isNotEmpty)
+                    Text(
+                      '${widget.node.threads} threads',
+                      style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11),
+                    ),
+                ],
               ),
+            ),
           ],
         ),
       ),
