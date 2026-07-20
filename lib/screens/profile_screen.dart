@@ -632,6 +632,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Profile posts are their own XenForo content type, so the report overlay
   /// hangs off /profile-posts/N rather than the /posts/N the thread uses.
+  /// Both shapes are confirmed against the saved fixtures' own report links.
   Future<void> _reportWallPost(ProfilePost post) {
     return ReportDialog.show(
       context,
@@ -641,24 +642,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  /// A comment is addressed under its own path rather than its parent's —
+  /// /profile-posts/comments/N, not /profile-posts/N.
+  Future<void> _reportComment(ProfileComment comment) {
+    return ReportDialog.show(
+      context,
+      contentUrl: 'https://f95zone.to/profile-posts/comments/${comment.id}',
+      fetchForm: widget.reportFormFetcher,
+      sendReport: widget.reportSender,
+    );
+  }
+
   /// Header-row overflow, sized by its padding via `child` — see the note on
   /// the bookmark card's version for why `icon` can't be used.
-  Widget _buildOverflow(VoidCallback onReport) {
-    return PopupMenuButton<String>(
+  /// [dense] is for a comment's header, whose text is 11.5px against a wall
+  /// post's 12.5 — at the post's size this control set the row height and
+  /// pushed the card taller.
+  Widget _buildOverflow(List<(String, VoidCallback)> actions, {bool dense = false}) {
+    return PopupMenuButton<VoidCallback>(
       tooltip: 'Post tools',
       padding: EdgeInsets.zero,
       color: AppColors.of(context).chipSurface,
-      onSelected: (_) => onReport(),
-      itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: 'report',
-          height: 40,
-          child: Text('Report…', style: TextStyle(fontSize: 13)),
-        ),
+      onSelected: (action) => action(),
+      itemBuilder: (context) => [
+        for (final (label, action) in actions)
+          PopupMenuItem(
+            value: action,
+            height: 40,
+            child: Text(label, style: const TextStyle(fontSize: 13)),
+          ),
       ],
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
-        child: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
+        padding: dense ? const EdgeInsets.fromLTRB(8, 0, 0, 0) : const EdgeInsets.fromLTRB(8, 4, 2, 4),
+        child: Icon(Icons.more_vert, size: dense ? 14 : 16, color: AppColors.of(context).iconDefault),
       ),
     );
   }
@@ -698,7 +714,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               Text(post.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11)),
               // Same header-row overflow as a thread post and a bookmark card.
-              if (post.id > 0) _buildOverflow(() => _reportWallPost(post)),
+              // Edit and Delete stay in the footer row here: a wall post has
+              // room for them, and they are the actions its own author reaches
+              // for. Only report, which anyone may want, is tucked away.
+              if (post.id > 0) _buildOverflow([('Report…', () => _reportWallPost(post))]),
             ],
           ),
           const SizedBox(height: 6),
@@ -769,22 +788,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildCommentAction(IconData icon, String tooltip, VoidCallback onTap) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip,
-        // No visible label, but it sits alongside [_buildWallAction] on the
-        // same rows, so it takes that row's icon weight rather than its own.
-        child: Padding(
-          padding: const EdgeInsets.only(left: 10),
-          child: Icon(icon, size: 13, color: AppColors.of(context).subtleText),
-        ),
-      ),
-    );
-  }
-
   Widget _buildComment(ProfileComment comment) {
     return Padding(
       padding: const EdgeInsets.only(top: 7),
@@ -821,24 +824,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Same colour as a top-level post's date; the smaller size
                     // already sets a comment apart without darkening it too.
                     Text(comment.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10)),
-                    // Icon-only actions keep the inline comment row compact;
-                    // like the post's, they gate on the per-comment links.
-                    if (comment.editUrl != null)
-                      _buildCommentAction(
-                        Icons.edit_outlined,
-                        'Edit comment',
-                        () => _editViaComposer(comment.editUrl!),
-                      ),
-                    if (comment.deleteUrl != null)
-                      _buildCommentAction(
-                        Icons.delete_outline,
-                        'Delete comment',
-                        () => _deleteWithConfirm(
-                          comment.deleteUrl!,
-                          title: 'Delete comment?',
-                          message: 'The comment will be removed.',
-                        ),
-                      ),
+                    // One overflow rather than a row of glyphs. A comment's
+                    // header is already tight, and adding report to the icons
+                    // would have put three controls beside an 11px name —
+                    // where the post above it gets one. Edit and Delete come
+                    // along, still gated on the per-comment links.
+                    if (comment.id > 0)
+                      _buildOverflow([
+                        if (comment.editUrl != null) ('Edit', () => _editViaComposer(comment.editUrl!)),
+                        if (comment.deleteUrl != null)
+                          (
+                            'Delete',
+                            () => _deleteWithConfirm(
+                              comment.deleteUrl!,
+                              title: 'Delete comment?',
+                              message: 'The comment will be removed.',
+                            ),
+                          ),
+                        ('Report…', () => _reportComment(comment)),
+                      ], dense: true),
                   ],
                 ),
                 Text(

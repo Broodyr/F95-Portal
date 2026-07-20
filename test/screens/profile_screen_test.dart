@@ -286,6 +286,19 @@ void main() {
       ],
     );
 
+    /// The overflow belonging to the comment with [body]; both sit in the
+    /// same Column, the header Row above the body text.
+    Finder overflowFor(WidgetTester tester, String body) {
+      return find.descendant(
+        of: find.ancestor(of: find.text(body), matching: find.byType(Column)).first,
+        matching: find.byTooltip('Post tools'),
+      );
+    }
+
+    /// An entry in an open overflow. Scoped to the menu because a wall post's
+    /// footer carries buttons with these same labels.
+    Finder menuItem(String label) => find.widgetWithText(PopupMenuItem<VoidCallback>, label);
+
     testWidgets('shows Edit and Delete only on posts carrying their action URLs', (tester) async {
       await signIn();
       await pumpProfile(tester, fetchProfile: () async => ownPostPage());
@@ -364,13 +377,27 @@ void main() {
       expect(find.text('My own wall post'), findsOneWidget);
     });
 
-    testWidgets('shows comment edit/delete icons only on own comments', (tester) async {
+    testWidgets('offers edit and delete only on an own comment, report on any', (tester) async {
       await signIn();
       await pumpProfile(tester, fetchProfile: () async => ownPostPage());
 
-      // One own comment among two, so exactly one icon of each.
-      expect(find.byTooltip('Edit comment'), findsOneWidget);
-      expect(find.byTooltip('Delete comment'), findsOneWidget);
+      // Located by the comment they belong to rather than by index: the
+      // overflows render post, comment, comment, post, and an index would
+      // silently follow the wrong one if that order ever changed.
+      await tester.tap(overflowFor(tester, 'My own comment'));
+      await tester.pumpAndSettle();
+      expect(menuItem('Edit'), findsOneWidget);
+      expect(menuItem('Delete'), findsOneWidget);
+      expect(menuItem('Report…'), findsOneWidget);
+      Navigator.of(tester.element(menuItem('Report…'))).pop();
+      await tester.pumpAndSettle();
+
+      // A visitor's comment can still be reported, but not rewritten.
+      await tester.tap(overflowFor(tester, 'A visitor comment'));
+      await tester.pumpAndSettle();
+      expect(menuItem('Edit'), findsNothing);
+      expect(menuItem('Delete'), findsNothing);
+      expect(menuItem('Report…'), findsOneWidget);
     });
 
     testWidgets('edits an own comment through the composer', (tester) async {
@@ -383,7 +410,9 @@ void main() {
         editSaver: (url, csrf, message) async => saved.add((url, csrf, message)),
       );
 
-      await tester.tap(find.byTooltip('Edit comment'));
+      await tester.tap(overflowFor(tester, 'My own comment'));
+      await tester.pumpAndSettle();
+      await tester.tap(menuItem('Edit'));
       await tester.pumpAndSettle();
 
       expect(find.text('Original comment'), findsOneWidget);
@@ -406,7 +435,9 @@ void main() {
         postDeleter: (url, csrf) async => deleted.add((url, csrf)),
       );
 
-      await tester.tap(find.byTooltip('Delete comment'));
+      await tester.tap(overflowFor(tester, 'My own comment'));
+      await tester.pumpAndSettle();
+      await tester.tap(menuItem('Delete'));
       await tester.pumpAndSettle();
 
       expect(find.text('Delete comment?'), findsOneWidget);
