@@ -180,6 +180,42 @@ PreferencesForm parsePreferencesForm(String htmlSource) {
   return PreferencesForm(csrfToken: csrfToken, fields: fields);
 }
 
+/// Parses the report overlay served for a post or profile post
+/// (`/posts/N/report`, `/profile-posts/N/report`).
+///
+/// The reasons are site configuration rather than anything fixed, so they're
+/// read off the form instead of being baked in — a reason added or renamed on
+/// the site shows up without a release. Returns an empty form for a page that
+/// has none (a guest fetch redirects to login), which the caller reads as
+/// "can't report this" through [ReportForm.isAvailable].
+ReportForm parseReportForm(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final form = document.querySelector('form[action*="/report"]');
+  if (form == null) return const ReportForm();
+
+  final reasons = <ReportReason>[];
+  for (final input in form.querySelectorAll('input[name="reason_id"]')) {
+    final id = int.tryParse(input.attributes['value'] ?? '');
+    if (id == null) continue;
+    // The visible text is a sibling span inside the wrapping <label>; the
+    // input itself carries only the id.
+    final label = _clean(input.parent?.querySelector('.iconic-label')?.text ?? '');
+    if (label.isEmpty) continue;
+    reasons.add(ReportReason(id: id, label: label));
+  }
+
+  return ReportForm(
+    action: _absoluteUrl(form.attributes['action'] ?? ''),
+    // The form's own hidden token, falling back to the page's: an overlay
+    // fetched on its own carries the input, a full page carries the attribute.
+    csrfToken:
+        form.querySelector('input[name="_xfToken"]')?.attributes['value'] ??
+        document.documentElement?.attributes['data-csrf'] ??
+        '',
+    reasons: reasons,
+  );
+}
+
 /// Parses the account bookmarks page (`/account/bookmarks`).
 BookmarksPage parseBookmarks(String htmlSource) {
   final document = html_parser.parse(htmlSource);

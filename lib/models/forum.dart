@@ -240,6 +240,32 @@ class ThreadPostsPage {
 
 /// One tab of the reactions overlay: a reaction type and how many members
 /// gave it. Id 0 is the synthetic "All" tab.
+/// One choice in the report form's reason list. The ids are the site's own
+/// and are not stable across a config change there, which is why the form is
+/// fetched rather than these being hardcoded.
+class ReportReason {
+  final int id;
+  final String label;
+
+  const ReportReason({required this.id, required this.label});
+}
+
+/// The report form as the site renders it for one piece of content.
+///
+/// Empty [reasons] means the page carried no form — a guest fetch, or content
+/// that can't be reported — and the UI treats that as "not available" rather
+/// than posting a report with no reason.
+class ReportForm {
+  /// Absolute POST target, already scoped to the content being reported.
+  final String action;
+  final String csrfToken;
+  final List<ReportReason> reasons;
+
+  const ReportForm({this.action = '', this.csrfToken = '', this.reasons = const []});
+
+  bool get isAvailable => action.isNotEmpty && reasons.isNotEmpty;
+}
+
 class ReactionTab {
   final int id;
   final String name;

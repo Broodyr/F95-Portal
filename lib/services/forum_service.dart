@@ -424,6 +424,40 @@ class ForumService {
     );
   }
 
+  /// Fetches the report overlay for a post or profile post so its reasons and
+  /// token can be shown. Uncached: the token is single-use, and a stale one
+  /// fails the submit.
+  static Future<ReportForm> fetchReportForm(
+    String contentUrl, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(AppDurations.mockRead);
+      return createMockReportForm();
+    }
+    return parseReportForm(await _fetchHtml(contentUrl, client: client, packageInfoLoader: packageInfoLoader));
+  }
+
+  /// Files a report. [reasonId] is one of the ids [fetchReportForm] returned.
+  static Future<void> sendReport(
+    String action,
+    String csrfToken, {
+    required int reasonId,
+    required String message,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
+    return ThreadPageService.postAction(
+      action,
+      csrfToken,
+      fields: {'reason_id': '$reasonId', 'message': message},
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
   /// Posts a BBCode reply to a thread's add-reply action.
   static Future<void> sendReply(
     String replyUrl,
@@ -686,6 +720,23 @@ class ForumService {
       currentPage: page,
       totalPages: 1,
       searchUrl: 'https://example.com/search/649178657/?q=mock',
+    );
+  }
+
+  /// The live site's reason list at the time of writing; the web build can't
+  /// reach the real form (CORS), so this stands in for it there.
+  static ReportForm createMockReportForm() {
+    return const ReportForm(
+      action: 'https://f95zone.to/posts/1/report',
+      csrfToken: 'mock',
+      reasons: [
+        ReportReason(id: 7, label: 'Game update'),
+        ReportReason(id: 8, label: 'Comic / Animation Update'),
+        ReportReason(id: 11, label: 'Asset update'),
+        ReportReason(id: 9, label: 'Advertising / Spam'),
+        ReportReason(id: 10, label: 'Inappropriate Behaviour'),
+        ReportReason(id: 0, label: 'Other'),
+      ],
     );
   }
 

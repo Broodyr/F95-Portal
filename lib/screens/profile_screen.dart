@@ -13,6 +13,7 @@ import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
+import '../widgets/report_dialog.dart';
 import '../widgets/segmented_selector.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
@@ -54,6 +55,8 @@ class ProfileScreen extends StatefulWidget {
   final EditFetcher? editFetcher;
   final EditSaver? editSaver;
   final ProfilePostDeleter? postDeleter;
+  final ReportFormFetcher? reportFormFetcher;
+  final ReportSender? reportSender;
   final FetchThreadPosts? fetchThreadPosts;
   final FetchReactions? fetchReactions;
   final ReactSender? reactSender;
@@ -71,6 +74,8 @@ class ProfileScreen extends StatefulWidget {
     this.editFetcher,
     this.editSaver,
     this.postDeleter,
+    this.reportFormFetcher,
+    this.reportSender,
     this.fetchThreadPosts,
     this.fetchReactions,
     this.reactSender,
@@ -625,6 +630,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ];
   }
 
+  /// Profile posts are their own XenForo content type, so the report overlay
+  /// hangs off /profile-posts/N rather than the /posts/N the thread uses.
+  Future<void> _reportWallPost(ProfilePost post) {
+    return ReportDialog.show(
+      context,
+      contentUrl: 'https://f95zone.to/profile-posts/${post.id}',
+      fetchForm: widget.reportFormFetcher,
+      sendReport: widget.reportSender,
+    );
+  }
+
+  /// Header-row overflow, sized by its padding via `child` — see the note on
+  /// the bookmark card's version for why `icon` can't be used.
+  Widget _buildOverflow(VoidCallback onReport) {
+    return PopupMenuButton<String>(
+      tooltip: 'Post tools',
+      padding: EdgeInsets.zero,
+      color: AppColors.of(context).chipSurface,
+      onSelected: (_) => onReport(),
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: 'report',
+          height: 40,
+          child: Text('Report…', style: TextStyle(fontSize: 13)),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
+        child: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
+      ),
+    );
+  }
+
   Widget _buildWallPost(ColorScheme colorScheme, ProfilePost post) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -659,6 +697,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               Text(post.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 11)),
+              // Same header-row overflow as a thread post and a bookmark card.
+              if (post.id > 0) _buildOverflow(() => _reportWallPost(post)),
             ],
           ),
           const SizedBox(height: 6),

@@ -165,6 +165,37 @@ void main() {
     expect(find.textContaining('The witch did it'), findsOneWidget);
   });
 
+  // The dialog has its own tests; this covers the wiring between them — that
+  // the overflow exists on a post and hands the dialog that post's permalink.
+  testWidgets('a post overflow opens the report dialog for that post', (tester) async {
+    String? requested;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/t.1/',
+          title: 'T',
+          fetchPosts: (url, {page = 1}) async => ForumService.createMockThreadPosts(page: page),
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+          reportFormFetcher: (url) async {
+            requested = url;
+            return ForumService.createMockReportForm();
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Post tools').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Report…'));
+    await tester.pumpAndSettle();
+
+    expect(requested, matches(RegExp(r'^https://f95zone\.to/posts/\d+/report$')));
+    expect(find.text('Report content'), findsOneWidget);
+    expect(find.text('Game update'), findsOneWidget);
+  });
+
   testWidgets('tapping a post author opens their profile', (tester) async {
     await pumpForum(tester);
     await openThreadViewer(tester);

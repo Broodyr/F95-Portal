@@ -744,4 +744,45 @@ void main() {
       expect(lost.prefixes.single.label, 'README');
     });
   });
+
+  group('parseReportForm', () {
+    late ReportForm form;
+
+    setUpAll(() => form = parseReportForm(fixture('report_form.htm')));
+
+    test('reads the content-scoped action and the page CSRF token', () {
+      expect(form.action, 'https://f95zone.to/posts/13742106/report');
+      expect(form.csrfToken, isNotEmpty);
+      expect(form.isAvailable, isTrue);
+    });
+
+    test('lists every reason in the order the site offers them', () {
+      expect(form.reasons.map((reason) => (reason.id, reason.label)).toList(), [
+        (7, 'Game update'),
+        (8, 'Comic / Animation Update'),
+        (11, 'Asset update'),
+        (9, 'Advertising / Spam'),
+        (10, 'Inappropriate Behaviour'),
+        (0, 'Other'),
+      ]);
+    });
+
+    test('reports nothing available when the page carries no report form', () {
+      final form = parseReportForm(fixture('forum_home.htm'));
+      expect(form.isAvailable, isFalse);
+      expect(form.reasons, isEmpty);
+    });
+
+    // The saved fixture absolutizes hrefs; live pages serve them relative
+    // (see AGENTS.md), so the action has to survive both.
+    test('absolutizes a relative form action', () {
+      final form = parseReportForm(
+        '<html data-csrf="tok"><body><form action="/posts/99/report" method="post">'
+        '<label><input type="radio" name="reason_id" value="0">'
+        '<span class="iconic-label">Other</span></label></form></body></html>',
+      );
+      expect(form.action, 'https://f95zone.to/posts/99/report');
+      expect(form.reasons.single.label, 'Other');
+    });
+  });
 }

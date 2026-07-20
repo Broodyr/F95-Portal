@@ -14,6 +14,7 @@ import '../widgets/glass_fab.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reaction_picker.dart';
 import '../widgets/reactions_sheet.dart';
+import '../widgets/report_dialog.dart';
 import '../widgets/rich_spoiler_text.dart';
 import '../widgets/sliding_reveal.dart';
 import 'login_screen.dart';
@@ -44,6 +45,8 @@ class ForumThreadScreen extends StatefulWidget {
   final EditFetcher? editFetcher;
   final EditSaver? editSaver;
   final WatchSender? watchSender;
+  final ReportFormFetcher? reportFormFetcher;
+  final ReportSender? reportSender;
   final Future<bool> Function(Uri uri)? urlLauncher;
 
   const ForumThreadScreen({
@@ -58,6 +61,8 @@ class ForumThreadScreen extends StatefulWidget {
     this.editFetcher,
     this.editSaver,
     this.watchSender,
+    this.reportFormFetcher,
+    this.reportSender,
     this.urlLauncher,
   });
 
@@ -165,6 +170,15 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     ForumService.clearCache();
     if (page != null) _pageNumber = page;
     await _load();
+  }
+
+  Future<void> _reportPost(ForumPost post) {
+    return ReportDialog.show(
+      context,
+      contentUrl: 'https://f95zone.to/posts/${post.postId}',
+      fetchForm: widget.reportFormFetcher,
+      sendReport: widget.reportSender,
+    );
   }
 
   void _openProfile(ForumPost post) {
@@ -415,6 +429,9 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               onReact: page.replyUrl == null ? null : () => _react(post),
               onQuote: page.replyUrl == null ? null : () => _openComposer(initialMessage: _quoteBbcode(post)),
               onEdit: post.editUrl == null ? null : () => _editPost(post),
+              // Unlike the others this needs no per-post link: the report
+              // overlay hangs off the permalink, which every real post has.
+              onReport: post.postId > 0 ? () => _reportPost(post) : null,
             ),
           ),
         if (totalPages > 1) _buildPagination(colorScheme, totalPages),
@@ -736,6 +753,7 @@ class _PostCard extends StatefulWidget {
   final VoidCallback? onReact;
   final VoidCallback? onQuote;
   final VoidCallback? onEdit;
+  final VoidCallback? onReport;
   final bool watched;
   final VoidCallback? onWatchToggle;
   final VoidCallback? onWatchLongPress;
@@ -751,6 +769,7 @@ class _PostCard extends StatefulWidget {
     this.onReact,
     this.onQuote,
     this.onEdit,
+    this.onReport,
     this.watched = false,
     this.onWatchToggle,
     this.onWatchLongPress,
@@ -857,6 +876,10 @@ class _PostCardState extends State<_PostCard> {
                     ),
                   ),
                 ),
+              // Overflow rides the header row, as on a bookmark card: report
+              // is rare enough that a fifth control in the action row below
+              // would cost more than it earns.
+              if (widget.onReport != null) _buildOverflow(widget.onReport!),
             ],
           ),
           const SizedBox(height: 8),
@@ -880,6 +903,29 @@ class _PostCardState extends State<_PostCard> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  /// Sized by its own padding via `child`, not `icon` — an M3 IconButton
+  /// won't go under 40x40, which is too tall for a header row of 11px text.
+  /// Same shape as the bookmark card's overflow.
+  Widget _buildOverflow(VoidCallback onReport) {
+    return PopupMenuButton<String>(
+      tooltip: 'Post tools',
+      padding: EdgeInsets.zero,
+      color: AppColors.of(context).chipSurface,
+      onSelected: (_) => onReport(),
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: 'report',
+          height: 40,
+          child: Text('Report…', style: TextStyle(fontSize: 13)),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
+        child: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
       ),
     );
   }
