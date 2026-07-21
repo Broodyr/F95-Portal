@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:f95_portal/services/image_save.dart';
 import 'package:f95_portal/widgets/image_gallery.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -316,6 +317,150 @@ void main() {
     await tester.pump();
 
     expect(pageView(tester).physics, isA<NeverScrollableScrollPhysics>());
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  /// Stubs both the prefetch and the save so no test touches the network
+  /// or the platform, and returns the list the download button appends to.
+  List<String> stubSaving(
+    WidgetTester tester, {
+    ImageSaveResult result = ImageSaveResult.saved,
+    Future<void> Function(String url)? onSave,
+  }) {
+    final saved = <String>[];
+    final originalDownload = ImageGallery.downloadBytes;
+    final originalSave = ImageGallery.saveImage;
+    ImageGallery.downloadBytes = (_) async {};
+    ImageGallery.saveImage = (url) async {
+      saved.add(url);
+      if (onSave != null) await onSave(url);
+      return result;
+    };
+    addTearDown(() {
+      ImageGallery.downloadBytes = originalDownload;
+      ImageGallery.saveImage = originalSave;
+    });
+    return saved;
+  }
+
+  final downloadButton = find.byKey(const ValueKey('gallery-download'));
+
+  testWidgets('the download button saves the image being viewed', (tester) async {
+    final saved = stubSaving(tester);
+    await pumpPushedGallery(tester);
+
+    await tester.tap(downloadButton);
+    await tester.pump();
+
+    expect(saved, ['https://example.com/a.png']);
+
+    // After a swipe it saves the new image, not the one it opened on.
+    await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(downloadButton);
+    await tester.pump();
+
+    expect(saved, ['https://example.com/a.png', 'https://example.com/b.png']);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('repeat taps while a save is in flight are ignored', (tester) async {
+    final completer = Completer<void>();
+    final saved = stubSaving(tester, onSave: (_) => completer.future);
+    await pumpPushedGallery(tester);
+
+    await tester.tap(downloadButton);
+    await tester.pump();
+
+    // The share sheet takes a beat to appear and the button stays live
+    // behind it; a second tap must not start a second save.
+    await tester.tap(downloadButton);
+    await tester.pump();
+    expect(saved, ['https://example.com/a.png']);
+
+    completer.complete();
+    await tester.pump();
+    await tester.tap(downloadButton);
+    await tester.pump();
+    expect(saved.length, 2);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  /// Taps download and settles the toast.
+  ///
+  /// Toasts are found with findsWidgets, not findsOneWidget: the messenger
+  /// puts one in every registered Scaffold, and the gallery's route is
+  /// transparent so the screen behind is still one of them. They land on
+  /// top of each other, so it reads as a single toast.
+  Future<void> tapDownload(WidgetTester tester) async {
+    await tester.tap(downloadButton);
+    await tester.pump();
+    await tester.pump();
+  }
+
+  testWidgets('a saved image is confirmed — it lands outside the app', (tester) async {
+    stubSaving(tester);
+    await pumpPushedGallery(tester);
+
+    await tapDownload(tester);
+
+    expect(find.text('Saved to your photos'), findsWidgets);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  // An animated source saves as one frame, because Flutter has no
+  // animated format to encode into. Saying plain "saved" would overstate
+  // what the user got.
+  testWidgets('an animation saved as one frame says so', (tester) async {
+    stubSaving(tester, result: ImageSaveResult.savedAsStill);
+    await pumpPushedGallery(tester);
+
+    await tapDownload(tester);
+
+    expect(find.text('Saved as a still image'), findsWidgets);
+    expect(find.text('Saved to your photos'), findsNothing);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('refusing photo access says so rather than looking broken', (tester) async {
+    stubSaving(tester, result: ImageSaveResult.denied);
+    await pumpPushedGallery(tester);
+
+    await tapDownload(tester);
+
+    expect(find.text('Photo access is needed to save images'), findsWidgets);
+    expect(find.byType(ImageGallery), findsOneWidget);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('a failed save tells the user', (tester) async {
+    stubSaving(tester, result: ImageSaveResult.failed);
+    await pumpPushedGallery(tester);
+
+    await tapDownload(tester);
+
+    expect(find.text("Couldn't save image"), findsWidgets);
+    // The viewer stays put; a failed save is not a reason to lose the image.
+    expect(find.byType(ImageGallery), findsOneWidget);
+
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('a save that throws is reported, not swallowed into a crash', (tester) async {
+    stubSaving(tester, onSave: (_) async => throw Exception('plugin blew up'));
+    await pumpPushedGallery(tester);
+
+    await tapDownload(tester);
+
+    expect(find.text("Couldn't save image"), findsWidgets);
+    expect(find.byType(ImageGallery), findsOneWidget);
 
     await tester.pump(const Duration(minutes: 1));
   });

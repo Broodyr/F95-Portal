@@ -24,6 +24,11 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Add-only: the viewer saves images out, and never reads the library
+	     back in, so the broader NSPhotoLibraryUsageDescription is not asked
+	     for. iOS shows this the first time a save runs. -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save images from threads to your photo library.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

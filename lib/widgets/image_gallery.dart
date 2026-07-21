@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import '../constants.dart';
+import '../services/image_save.dart';
+import 'app_toast.dart';
 import 'remote_image.dart';
 import 'sfw_blur.dart';
 
@@ -22,6 +24,10 @@ class ImageGallery extends StatefulWidget {
   static Future<void> _downloadToCache(String url) async {
     await DefaultCacheManager().getSingleFile(url);
   }
+
+  /// Writes one image to the device's photo gallery, asking for access on
+  /// the way if it doesn't have it yet. Swappable, same as [downloadBytes].
+  static Future<ImageSaveResult> Function(String url) saveImage = saveImageToGallery;
 
   const ImageGallery({super.key, required this.urls, this.initialIndex = 0});
 
@@ -260,6 +266,38 @@ class _ImageGalleryState extends State<ImageGallery> with SingleTickerProviderSt
     );
   }
 
+  /// A save already running. Writing to the gallery takes a beat (longer
+  /// on the first one, which may be waiting on the permission prompt),
+  /// leaving the button live under the user's finger the whole time.
+  bool _saving = false;
+
+  /// Every outcome says something: the image lands in another app, so
+  /// without a toast a successful save looks like nothing happened.
+  Future<void> _saveCurrentImage() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      switch (await ImageGallery.saveImage(widget.urls[_index])) {
+        case ImageSaveResult.saved:
+          AppToast.showOn(messenger, 'Saved to your photos');
+        case ImageSaveResult.savedAsStill:
+          // Not an error — the save worked — but the user was watching
+          // something move and got one frame, so saying plain "saved"
+          // would be a small lie.
+          AppToast.showOn(messenger, 'Saved as a still image');
+        case ImageSaveResult.denied:
+          AppToast.showOn(messenger, 'Photo access is needed to save images', error: true);
+        case ImageSaveResult.failed:
+          AppToast.showOn(messenger, "Couldn't save image", error: true);
+      }
+    } catch (_) {
+      AppToast.showOn(messenger, "Couldn't save image", error: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   /// Double tap toggles between fit and 2.5x zoom centered on the tap point.
   void _handleDoubleTap() {
     if (_transformation.value != Matrix4.identity()) {
@@ -293,16 +331,30 @@ class _ImageGalleryState extends State<ImageGallery> with SingleTickerProviderSt
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 12,
-            child: GestureDetector(
+            child: _overlayButton(
               onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                ),
-                child: const Icon(Icons.close, color: Colors.white, size: 18),
-              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 18),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 12,
+            child: _overlayButton(
+              key: const ValueKey('gallery-download'),
+              onTap: _saveCurrentImage,
+              child: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: Center(
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        ),
+                      ),
+                    )
+                  : const Icon(Icons.download_outlined, color: Colors.white, size: 18),
             ),
           ),
           if (widget.urls.length > 1)
@@ -325,6 +377,23 @@ class _ImageGalleryState extends State<ImageGallery> with SingleTickerProviderSt
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// The dark circle the corner controls sit in, so close and download
+  /// read as one set.
+  Widget _overlayButton({Key? key, required VoidCallback onTap, required Widget child}) {
+    return GestureDetector(
+      key: key,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+        ),
+        child: child,
       ),
     );
   }

@@ -1,5 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Saving an image from the viewer to the gallery. Android 10 (API 29)
+         and up write through MediaStore and need no permission at all, so
+         this is capped there and never reaches a modern device; where it
+         does apply it's requested at the first save, not at startup. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"/>
     <application
         android:label="F95 Portal"
         android:name="${applicationName}"
