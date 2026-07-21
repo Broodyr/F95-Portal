@@ -203,6 +203,44 @@ void main() {
       expect(watched.watched, isTrue);
     });
 
+    test('parses a post signature into rich pieces, images downgraded inline', () {
+      // Lerd0's signature is a row of three linked banner gifs.
+      final signature = page.posts.first.signature;
+      final images = [
+        for (final p in signature)
+          if (p.imageUrl != null) p,
+      ];
+      expect(images, hasLength(3));
+      expect(images.first.imageUrl, 'https://preview.f95zone.to/2025/10/5383249_tenor_1.gif');
+      expect(images.first.fullImageUrl, 'https://attachments.f95zone.to/2025/10/5383249_tenor_1.gif');
+    });
+
+    test('a text signature keeps its styling', () {
+      // "My biggest flex…" is an italic, image-free signature.
+      final post = page.posts.firstWhere(
+        (p) => p.signature.any((piece) => piece.text.contains('My biggest flex')),
+      );
+      expect(post.signature.first.italic, isTrue);
+      expect(post.signature.any((p) => p.imageUrl != null), isFalse);
+    });
+
+    test('the expand-signature chrome never becomes content', () {
+      for (final post in page.posts) {
+        for (final piece in post.signature) {
+          expect(piece.text, isNot(contains('Expand signature')));
+        }
+      }
+    });
+
+    test('a post without a signature yields none', () {
+      final posts = parseThreadPosts('''
+        <div class="block-container"><article class="message message--post" data-content="post-1">
+          <div class="message-body"><div class="bbWrapper">plain words</div></div>
+        </article></div>
+      ''').posts;
+      expect(posts.first.signature, isEmpty);
+    });
+
     test('parses the reaction summary on the OP', () {
       final dik = parseThreadPosts(fixture('thread_renpy_being_a_dik.htm'));
       expect(dik.posts, hasLength(20));

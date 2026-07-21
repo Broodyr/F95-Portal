@@ -3,6 +3,7 @@ import 'package:html/parser.dart' as html_parser;
 
 import '../models/account.dart';
 import '../models/forum.dart';
+import '../models/thread_page.dart' show RichPiece;
 import 'thread_page_parser.dart' show parseRichContent;
 
 /// Parsers for XenForo forum pages. Like the thread-page parser, nothing
@@ -442,11 +443,16 @@ ForumPost _parsePost(Element post) {
     memberTitle: _clean(post.querySelector('.message-userTitle')?.text ?? ''),
     date: _clean(post.querySelector('.message-attribution-main time')?.text ?? ''),
     blocks: _parsePostBlocks(post.querySelector('.message-body .bbWrapper')),
+    // Scoping to the signature's own bbWrapper leaves out the theme's
+    // "Expand signature" chrome, a sibling div inside the aside.
+    signature: _parseSignature(post.querySelector('.message-signature .bbWrapper')),
     reactions: _parseReactionSummary(post.querySelector('.reactionsBar')),
     editUrl: _absoluteOrNull(post.querySelector('a.actionBar-action--edit')?.attributes['href']),
     deleteUrl: _absoluteOrNull(post.querySelector('a.actionBar-action--delete')?.attributes['href']),
   );
 }
+
+List<RichPiece> _parseSignature(Element? wrapper) => wrapper == null ? const [] : parseRichContent(wrapper);
 
 /// Splits a post body into ordered blocks: quotes and spoilers become
 /// their own blocks, everything between them accumulates into rich runs.

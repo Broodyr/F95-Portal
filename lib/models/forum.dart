@@ -152,6 +152,10 @@ class ForumPost {
   final String memberTitle;
   final String date;
   final List<ForumPostBlock> blocks;
+
+  /// The author's signature as rich content, empty when they have none.
+  /// Shown below the body at reduced scale, as on the site.
+  final List<RichPiece> signature;
   final PostReactionSummary? reactions;
 
   /// The action-bar Edit link; present only on the viewer's own posts.
@@ -171,6 +175,7 @@ class ForumPost {
     this.memberTitle = '',
     this.date = '',
     this.blocks = const [],
+    this.signature = const [],
     this.reactions,
     this.editUrl,
     this.deleteUrl,

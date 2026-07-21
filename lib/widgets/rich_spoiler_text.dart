@@ -10,9 +10,6 @@ import 'image_gallery.dart';
 import 'inline_video.dart';
 import 'sfw_blur.dart';
 
-/// Ceiling on an inline image's height; some posts inline dozens.
-const double _maxImageHeight = 180;
-
 /// Stand-in size for an image whose dimensions the markup never stated,
 /// which is most of them.
 const Size _unsizedImagePlaceholder = Size(120, 80);
@@ -21,7 +18,7 @@ const Size _unsizedImagePlaceholder = Size(120, 80);
 /// post doesn't grow under a reader already looking at it. Only as good as
 /// what the markup stated: with no size, this is the old fixed block and the
 /// post still shifts a little when the image arrives.
-Widget _imagePlaceholder(BuildContext context, RichPiece piece) {
+Widget _imagePlaceholder(BuildContext context, RichPiece piece, double maxImageHeight) {
   final color = AppColors.of(context).placeholderSurface;
   final height = piece.imageHeight;
   final width = piece.imageWidth;
@@ -32,7 +29,7 @@ Widget _imagePlaceholder(BuildContext context, RichPiece piece) {
     builder: (context, constraints) {
       // Mirrors BoxFit.contain under the same height cap: the image lands at
       // its own size unless the cap or the column width shrinks it.
-      double boxHeight = math.min(_maxImageHeight, height.toDouble());
+      double boxHeight = math.min(maxImageHeight, height.toDouble());
       double boxWidth = width == null || width <= 0 ? _unsizedImagePlaceholder.width : boxHeight * width / height;
       if (width != null && width > 0 && constraints.hasBoundedWidth && boxWidth > constraints.maxWidth) {
         boxWidth = constraints.maxWidth;
@@ -56,12 +53,20 @@ class RichSpoilerText extends StatefulWidget {
   final List<String>? galleryUrls;
   final int galleryIndexOffset;
 
+  /// Base font size of text runs; smaller contexts (signatures) lower it.
+  final double fontSize;
+
+  /// Ceiling on an inline image's height; some posts inline dozens.
+  final double maxImageHeight;
+
   const RichSpoilerText({
     super.key,
     required this.pieces,
     required this.onOpenLink,
     this.galleryUrls,
     this.galleryIndexOffset = 0,
+    this.fontSize = 13,
+    this.maxImageHeight = 180,
   });
 
   @override
@@ -87,7 +92,7 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
     _recognizers.clear();
 
     final colorScheme = Theme.of(context).colorScheme;
-    final baseStyle = TextStyle(color: AppColors.of(context).brightText, fontSize: 13, height: 1.45);
+    final baseStyle = TextStyle(color: AppColors.of(context).brightText, fontSize: widget.fontSize, height: 1.45);
 
     // Tapping any image opens the gallery positioned on it with the rest
     // swipeable: the caller-provided set when given, else this block's own
@@ -161,15 +166,15 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: _maxImageHeight),
+                    constraints: BoxConstraints(maxHeight: widget.maxImageHeight),
                     child: SfwBlur(
                       child: RemoteImage(
                         url: imageUrl,
                         fit: BoxFit.contain,
                         // Decode at the render height, not source size; some
                         // posts inline dozens of images.
-                        decodeHeight: (_maxImageHeight * MediaQuery.devicePixelRatioOf(context)).round(),
-                        placeholder: (context) => _imagePlaceholder(context, piece),
+                        decodeHeight: (widget.maxImageHeight * MediaQuery.devicePixelRatioOf(context)).round(),
+                        placeholder: (context) => _imagePlaceholder(context, piece, widget.maxImageHeight),
                         errorWidget: (context) => Container(
                           width: _unsizedImagePlaceholder.width,
                           height: _unsizedImagePlaceholder.height,

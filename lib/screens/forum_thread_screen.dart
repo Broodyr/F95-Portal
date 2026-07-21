@@ -1079,6 +1079,22 @@ class _PostCardState extends State<_PostCard> {
           ),
           const SizedBox(height: 8),
           ..._buildBlocks(colorScheme, post),
+          if (post.signature.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.08)),
+            const SizedBox(height: 8),
+            // Reduced scale and dimmed, so a signature reads as the post's
+            // chrome rather than more of its content.
+            Opacity(
+              opacity: 0.7,
+              child: RichSpoilerText(
+                pieces: post.signature,
+                onOpenLink: widget.onOpenLink,
+                fontSize: 11,
+                maxImageHeight: 80,
+              ),
+            ),
+          ],
           if ((post.reactions?.count ?? 0) > 0 ||
               widget.onReact != null ||
               widget.onEdit != null ||

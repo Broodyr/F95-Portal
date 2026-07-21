@@ -188,5 +188,28 @@ void main() {
       final size = await placeholderSize(tester, const RichPiece.image('https://example.com/a.jpg'));
       expect(size, const Size(120, 80));
     });
+
+    testWidgets('a caller-lowered image cap also caps the held space', (tester) async {
+      // The signature rendering caps images well below the body's 180.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            body: SizedBox(
+              width: 400,
+              child: RichSpoilerText(
+                pieces: const [RichPiece.image('https://example.com/a.jpg', imageWidth: 480, imageHeight: 360)],
+                onOpenLink: (_) {},
+                maxImageHeight: 80,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final size = tester.getSize(find.byType(RemoteImage));
+      expect(size.height, closeTo(80, 0.01));
+      expect(size.width, closeTo(80 * 480 / 360, 0.01));
+    });
   });
 }

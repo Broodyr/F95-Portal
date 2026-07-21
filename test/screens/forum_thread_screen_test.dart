@@ -3,6 +3,7 @@ import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/widgets/image_gallery.dart';
+import 'package:f95_portal/widgets/rich_spoiler_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,6 +62,82 @@ void main() {
 
     // cached_network_image leaves pending timers.
     await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('a signature renders below the post, smaller and dimmed', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Signed',
+      posts: const [
+        ForumPost(
+          postId: 1,
+          number: 1,
+          author: 'A',
+          blocks: [
+            ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('the message')]),
+          ],
+          signature: [
+            RichPiece.text('my signature', italic: true),
+            RichPiece.image('https://example.com/banner.gif'),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/signed.1/',
+          title: 'Signed',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('my signature', findRichText: true), findsOneWidget);
+
+    // The signature block renders at reduced scale, under the body's text.
+    final texts = tester.widgetList<RichSpoilerText>(find.byType(RichSpoilerText)).toList();
+    expect(texts, hasLength(2));
+    final body = texts.first;
+    final signature = texts.last;
+    expect(signature.pieces.first.text, 'my signature');
+    expect(signature.fontSize, lessThan(body.fontSize));
+    expect(signature.maxImageHeight, lessThan(body.maxImageHeight));
+
+    // cached_network_image leaves pending timers.
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('a post without a signature renders no extra text block', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Unsigned',
+      posts: const [
+        ForumPost(
+          postId: 1,
+          number: 1,
+          author: 'A',
+          blocks: [
+            ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('the message')]),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/unsigned.1/',
+          title: 'Unsigned',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RichSpoilerText), findsOneWidget);
   });
 
   testWidgets('quoting a post prefills author, post id, and member id', (tester) async {
