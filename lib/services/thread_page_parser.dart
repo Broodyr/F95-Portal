@@ -34,12 +34,21 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
   // --- Pass 1: linearize the post into lines of inline items. -------------
   final spoilerElements = <Element>[];
   final lines = <List<_Item>>[];
+  // Whether a blank line preceded lines[i]. Authors write <br><br> for a
+  // paragraph, so only consecutive explicit breaks count; block boundaries
+  // don't (same rule as parseRichContent), and runs cap at one blank.
+  final blankBefore = <bool>[];
   var current = <_Item>[];
+  var pendingBreaks = 0;
 
-  void newline() {
+  void newline({bool explicit = false}) {
     if (current.isNotEmpty) {
       lines.add(current);
+      blankBefore.add(pendingBreaks >= 2);
       current = <_Item>[];
+      pendingBreaks = explicit ? 1 : 0;
+    } else if (explicit) {
+      pendingBreaks++;
     }
   }
 
@@ -54,7 +63,7 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
         return;
       }
       if (tag == 'br') {
-        newline();
+        newline(explicit: true);
         return;
       }
       if (tag == 'script' || tag == 'style' || tag == 'noscript') return;
@@ -118,7 +127,16 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
     pendingLabel = null;
   }
 
-  for (final line in lines) {
+  /// Appends one overview line, restoring the blank line before it when the
+  /// post had one.
+  void appendOverview(String text, int lineIndex) {
+    if (text.isEmpty) return;
+    if (blankBefore[lineIndex] && overviewBuffer.isNotEmpty) overviewBuffer.writeln();
+    overviewBuffer.writeln(text);
+  }
+
+  for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    final line = lines[lineIndex];
     // A line that is just a spoiler placeholder.
     _Item? spoilerItem;
     for (final item in line) {
@@ -183,8 +201,7 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
 
       if (label.toLowerCase() == 'overview') {
         collectingOverview = true;
-        final restText = _plainText(rest);
-        if (restText.isNotEmpty) overviewBuffer.writeln(restText);
+        appendOverview(_plainText(rest), lineIndex);
         pendingLabel = null;
         continue;
       }
@@ -192,8 +209,7 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
       // Bold without a colon mid-overview is emphasis, not a new label
       // (e.g. "<b>Overview:<br>Futaken Valley</b> is an action…").
       if (collectingOverview && !hadColon) {
-        final text = _collapse('$label ${_plainText(rest)}');
-        if (text.isNotEmpty) overviewBuffer.writeln(text);
+        appendOverview(_collapse('$label ${_plainText(rest)}'), lineIndex);
         continue;
       }
       collectingOverview = false;
@@ -210,8 +226,7 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
 
     // No leading bold.
     if (collectingOverview) {
-      final text = _plainText(line);
-      if (text.isNotEmpty) overviewBuffer.writeln(text);
+      appendOverview(_plainText(line), lineIndex);
       continue;
     }
 

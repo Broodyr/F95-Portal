@@ -26,6 +26,10 @@ void main() {
       expect(page.overview, contains('You thought it was a miracle'));
     });
 
+    test('keeps the overview paragraph break', () {
+      expect(page.overview, contains('too good to be true!\n\nUnfortunately for you'));
+    });
+
     test('keeps known and one-off spoiler sections in order', () {
       final titles = [for (final s in page.spoilers) s.title];
       expect(titles, containsAllInOrder(['Genre', 'Installation', 'Changelog', 'Developer Notes', 'Old Builds']));
@@ -301,6 +305,44 @@ void main() {
 
     test('does not double the space after a bullet', () {
       expect(render('<ul><li>\nFirst</li><li>\nSecond</li></ul>'), '• First\n• Second');
+    });
+  });
+
+  group('parseThreadPage overview paragraphs', () {
+    ThreadPage fromBody(String body) => parseThreadPage('''
+      <html><body>
+        <article class="message--post"><div class="bbWrapper">$body</div></article>
+      </body></html>
+    ''', threadId: 1);
+
+    test('a double break becomes a blank line', () {
+      final page = fromBody('<b>Overview:</b><br>Line one.<br><br>Line two.');
+      expect(page.overview, 'Line one.\n\nLine two.');
+    });
+
+    test('extra breaks cap at one blank line', () {
+      final page = fromBody('<b>Overview:</b><br>One.<br><br><br><br>Two.');
+      expect(page.overview, 'One.\n\nTwo.');
+    });
+
+    test('a single break keeps lines adjacent', () {
+      final page = fromBody('<b>Overview:</b><br>One.<br>Two.');
+      expect(page.overview, 'One.\nTwo.');
+    });
+
+    test('block boundaries do not open blank lines', () {
+      final page = fromBody('<b>Overview:</b><div>One.</div><div>Two.</div>');
+      expect(page.overview, 'One.\nTwo.');
+    });
+
+    test('source hard-wraps between breaks do not defeat the blank line', () {
+      final page = fromBody('<b>Overview:</b><br>One.<br>\n<br>\nTwo.');
+      expect(page.overview, 'One.\n\nTwo.');
+    });
+
+    test('bold emphasis after a paragraph break keeps the blank line', () {
+      final page = fromBody('<b>Overview:</b><br>One.<br><br><b>Two</b> bold-led.');
+      expect(page.overview, 'One.\n\nTwo bold-led.');
     });
   });
 
