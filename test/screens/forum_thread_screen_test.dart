@@ -157,6 +157,100 @@ void main() {
     expect(gap, closeTo(4, 0.01));
   });
 
+  // Images have no height until they load, so posts above a landed scroll
+  // grow and push the target down. The landing holds its place while the page
+  // settles. Text scale stands in for the images here: it is content above the
+  // target growing after the scroll, which is the shape of the bug.
+  group('holding a landed scroll while the page settles', () {
+    Future<void> pumpAtScale(WidgetTester tester, double scale) async {
+      final postsPage = ThreadPostsPage(
+        title: 'Deep thread',
+        posts: [
+          for (var i = 1; i <= 40; i++)
+            ForumPost(
+              postId: i,
+              number: i,
+              author: 'Member$i',
+              blocks: [
+                ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('body of post $i')]),
+              ],
+            ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: ForumThreadScreen(
+              url: 'https://example.com/threads/deep-thread.1/post-15',
+              title: 'Deep thread',
+              fetchPosts: (url, {page = 1}) async => postsPage,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Enough frames for the step-scroll and its landing animation, but well
+    // inside the settle window — pumpAndSettle would run the window out and
+    // leave nothing to observe.
+    Future<void> land(WidgetTester tester) async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+    }
+
+    double gapAboveTarget(WidgetTester tester) {
+      final targetCard = find.byWidgetPredicate(
+        (w) => w is Padding && w.key != null && w.padding == const EdgeInsets.only(bottom: 8),
+      );
+      return tester.getTopLeft(targetCard).dy - tester.getBottomLeft(find.byType(AppBar)).dy;
+    }
+
+    testWidgets('content growing above the target keeps it in place', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpAtScale(tester, 1);
+      await land(tester);
+      expect(gapAboveTarget(tester), closeTo(4, 0.01));
+
+      // Everything above the target gets taller, mid-settle.
+      await pumpAtScale(tester, 2);
+      await tester.pump();
+      await tester.pump();
+
+      // Still parked under the app bar rather than shoved down the screen.
+      expect(gapAboveTarget(tester), closeTo(4, 0.01));
+    });
+
+    testWidgets('the reader taking hold of the scroll ends the correction', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpAtScale(tester, 1);
+      await land(tester);
+
+      final controller = tester.widget<Scrollable>(find.byType(Scrollable).first).controller!;
+      final landed = controller.offset;
+
+      // A drag inside the settle window must stand: a correction that pulled
+      // the reader back to the target would be the app fighting them.
+      await tester.drag(find.byType(ListView), const Offset(0, -200));
+      await tester.pump();
+      expect(controller.offset, closeTo(landed + 200, 1));
+
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(controller.offset, closeTo(landed + 200, 1));
+
+      await tester.pumpAndSettle();
+    });
+  });
+
   // Tapping a quote jumps to the post it came from. On-page that's a scroll;
   // off-page it pushes, so Back returns to the reply that quoted it.
   group('quote jumps', () {

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
@@ -79,6 +82,11 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   /// Vertical gap between post cards.
   static const double _postGap = 8;
 
+  /// How long a landed scroll keeps correcting for content loading in above
+  /// it. Long enough for images on a slow connection, short enough that a
+  /// reader who settles in isn't moved from under their eyes.
+  static const Duration _settleWindow = Duration(seconds: 2);
+
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _targetPostKey = GlobalKey();
   ThreadPostsPage? _page;
@@ -99,6 +107,15 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
   int? _targetPostId;
   bool _scrolledToTarget = false;
 
+  /// Set once the reader drags the list themselves, which ends any settling
+  /// correction still running.
+  bool _readerTookOver = false;
+
+  /// Whether a landed scroll is still correcting itself, and the timer that
+  /// closes that window.
+  bool _settling = false;
+  Timer? _settleTimer;
+
   @override
   void initState() {
     super.initState();
@@ -112,6 +129,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
 
   @override
   void dispose() {
+    _settleTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -173,16 +191,54 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     final targetContext = _targetPostKey.currentContext;
     if (targetContext != null && targetContext.mounted) {
       await Scrollable.ensureVisible(targetContext, duration: Motion.duration, curve: Motion.curve);
-      // ensureVisible parks the card flush against the app bar. Back off half
-      // a card gap so it reads as spaced from the chrome rather than stuck to
-      // it. Clamped, so a target already at the top of the list stays put.
-      if (mounted && _scrollController.hasClients) {
-        final position = _scrollController.position;
-        _scrollController.jumpTo(
-          (_scrollController.offset - _postGap / 2).clamp(position.minScrollExtent, position.maxScrollExtent),
-        );
-      }
+      _alignTarget();
+      await _holdTargetWhileSettling();
     }
+  }
+
+  /// Where the scroll has to sit for the target to rest under the app bar,
+  /// backed off half a post gap so the card doesn't touch the chrome.
+  /// Null once the target leaves the tree.
+  double? _targetOffset() {
+    final targetContext = _targetPostKey.currentContext;
+    if (targetContext == null || !targetContext.mounted) return null;
+    final box = targetContext.findRenderObject();
+    if (box == null || !box.attached || !_scrollController.hasClients) return null;
+    final reveal = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset - _postGap / 2;
+    final position = _scrollController.position;
+    return reveal.clamp(position.minScrollExtent, position.maxScrollExtent);
+  }
+
+  /// Puts the target where [_targetOffset] says it belongs, if it has moved.
+  /// Instant rather than animated: this is a correction, and easing it would
+  /// read as the page drifting on its own.
+  bool _alignTarget() {
+    final desired = _targetOffset();
+    if (desired == null || (desired - _scrollController.offset).abs() <= 0.5) return false;
+    _scrollController.jumpTo(desired);
+    return true;
+  }
+
+  /// Images carry no height until they load, so posts above the target grow
+  /// after the scroll lands and push it down the screen. Rather than wait for
+  /// them — most never report a size to wait on — land immediately and hold
+  /// the target in place while the page settles. The reader taking hold of
+  /// the scroll ends it at once, so this never fights them for control.
+  Future<void> _holdTargetWhileSettling() async {
+    _readerTookOver = false;
+    _settleTimer?.cancel();
+    // A timer rather than a wall clock: the window then follows whatever
+    // clock the app is on, which is what lets a test drive it.
+    _settling = true;
+    _settleTimer = Timer(_settleWindow, () => _settling = false);
+    while (mounted && _settling && !_readerTookOver) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || _readerTookOver || !_scrollController.hasClients) break;
+      _alignTarget();
+    }
+    _settleTimer?.cancel();
+    _settleTimer = null;
+    _settling = false;
   }
 
   /// Jumps from a quote to the post it came from. On this page that's a
@@ -504,43 +560,51 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       return ErrorView(headline: "Couldn't load the thread", detail: _error, onRetry: _errorRetryable ? _load : null);
     }
 
-    return ListView(
-      controller: _scrollController,
-      padding: EdgeInsets.fromLTRB(12, 10, 12, 16 + MediaQuery.of(context).viewPadding.bottom),
-      children: [
-        for (final post in page.posts)
-          Padding(
-            key: post.postId == _targetPostId ? _targetPostKey : null,
-            padding: const EdgeInsets.only(bottom: _postGap),
-            child: _PostCard(
-              post: post,
-              highlighted: post.postId == _targetPostId,
-              onQuoteTap: (sourcePostId) => _openQuotedPost(sourcePostId, post),
-              onOpenLink: _launch,
-              fetchReactions: widget.fetchReactions ?? ForumService.fetchReactions,
-              onAuthorTap: post.authorUrl == null ? null : () => _openProfile(post),
-              // Watch sits at the OP's top-right so it's reachable without
-              // scrolling the post; the anchor only renders for members.
-              // Tap toggles alerts-only watching, hold picks email mode.
-              watched: _watched,
-              onWatchToggle: page.watchUrl != null && _pageNumber == 1 && identical(post, page.posts.first)
-                  ? _toggleWatch
-                  : null,
-              onWatchLongPress: _showWatchOptions,
-              // Writes gate on the reply URL: the quick-reply form only
-              // renders for members who can post here. Edit gates on the
-              // per-post edit link (own posts only).
-              onReact: page.replyUrl == null ? null : () => _react(post),
-              onQuote: page.replyUrl == null ? null : () => _openComposer(initialMessage: _quoteBbcode(post)),
-              onEdit: post.editUrl == null ? null : () => _editPost(post),
-              onDelete: post.deleteUrl == null ? null : () => _deletePost(post),
-              // Unlike the others this needs no per-post link: the report
-              // overlay hangs off the permalink, which every real post has.
-              onReport: post.postId > 0 ? () => _reportPost(post) : null,
+    return NotificationListener<ScrollStartNotification>(
+      // A drag is the reader taking over; a programmatic correction carries
+      // no drag details, so settling doesn't cancel itself.
+      onNotification: (notification) {
+        if (notification.dragDetails != null) _readerTookOver = true;
+        return false;
+      },
+      child: ListView(
+        controller: _scrollController,
+        padding: EdgeInsets.fromLTRB(12, 10, 12, 16 + MediaQuery.of(context).viewPadding.bottom),
+        children: [
+          for (final post in page.posts)
+            Padding(
+              key: post.postId == _targetPostId ? _targetPostKey : null,
+              padding: const EdgeInsets.only(bottom: _postGap),
+              child: _PostCard(
+                post: post,
+                highlighted: post.postId == _targetPostId,
+                onQuoteTap: (sourcePostId) => _openQuotedPost(sourcePostId, post),
+                onOpenLink: _launch,
+                fetchReactions: widget.fetchReactions ?? ForumService.fetchReactions,
+                onAuthorTap: post.authorUrl == null ? null : () => _openProfile(post),
+                // Watch sits at the OP's top-right so it's reachable without
+                // scrolling the post; the anchor only renders for members.
+                // Tap toggles alerts-only watching, hold picks email mode.
+                watched: _watched,
+                onWatchToggle: page.watchUrl != null && _pageNumber == 1 && identical(post, page.posts.first)
+                    ? _toggleWatch
+                    : null,
+                onWatchLongPress: _showWatchOptions,
+                // Writes gate on the reply URL: the quick-reply form only
+                // renders for members who can post here. Edit gates on the
+                // per-post edit link (own posts only).
+                onReact: page.replyUrl == null ? null : () => _react(post),
+                onQuote: page.replyUrl == null ? null : () => _openComposer(initialMessage: _quoteBbcode(post)),
+                onEdit: post.editUrl == null ? null : () => _editPost(post),
+                onDelete: post.deleteUrl == null ? null : () => _deletePost(post),
+                // Unlike the others this needs no per-post link: the report
+                // overlay hangs off the permalink, which every real post has.
+                onReport: post.postId > 0 ? () => _reportPost(post) : null,
+              ),
             ),
-          ),
-        if (totalPages > 1) _buildPagination(colorScheme, totalPages),
-      ],
+          if (totalPages > 1) _buildPagination(colorScheme, totalPages),
+        ],
+      ),
     );
   }
 
