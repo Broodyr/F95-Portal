@@ -7,6 +7,7 @@ import '../models/thread_page.dart';
 import '../theme/app_colors.dart';
 import 'remote_image.dart';
 import 'image_gallery.dart';
+import 'inline_video.dart';
 import 'sfw_blur.dart';
 
 /// Ceiling on an inline image's height; some posts inline dozens.
@@ -120,6 +121,25 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
               height: size,
               semanticLabel: piece.text,
               errorBuilder: (context, error, stackTrace) => Text(piece.text, style: baseStyle),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      final videoUrl = piece.videoUrl;
+      if (videoUrl != null) {
+        spans.add(
+          WidgetSpan(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 260),
+                  child: SfwBlur(child: InlineVideo(url: videoUrl)),
+                ),
+              ),
             ),
           ),
         );

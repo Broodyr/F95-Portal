@@ -2,6 +2,7 @@ import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/widgets/rich_spoiler_text.dart';
 import 'package:f95_portal/widgets/image_gallery.dart';
+import 'package:f95_portal/widgets/inline_video.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -65,6 +66,27 @@ void main() {
 
     // cached_network_image leaves pending timers.
     await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('a video piece renders an inline player block', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: Scaffold(
+          body: RichSpoilerText(
+            pieces: const [
+              RichPiece.text('Watch:'),
+              RichPiece.video('https://f95zone.to/data/video/1/1.mp4'),
+            ],
+            onOpenLink: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final video = tester.widget<InlineVideo>(find.byType(InlineVideo));
+    expect(video.url, 'https://f95zone.to/data/video/1/1.mp4');
   });
 
   testWidgets('smilies render as inline assets, unknown ones as their shortcode', (tester) async {

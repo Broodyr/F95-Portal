@@ -97,6 +97,10 @@ class RichPiece {
   /// still, so it is parsed on its own where the width isn't given.
   final int? imageWidth;
 
+  /// Set when the piece is an embedded video (text/styles unused). Shown as
+  /// an inline tap-to-play block with a fullscreen option.
+  final String? videoUrl;
+
   /// True for explicit line breaks (text/styles unused).
   final bool newline;
 
@@ -118,6 +122,7 @@ class RichPiece {
        imageHeight = null,
        imageWidth = null,
        smilieAsset = null,
+       videoUrl = null,
        newline = false;
 
   const RichPiece.image(this.imageUrl, {this.fullImageUrl, this.imageHeight, this.imageWidth})
@@ -127,6 +132,21 @@ class RichPiece {
       underline = false,
       strike = false,
       url = null,
+      smilieAsset = null,
+      videoUrl = null,
+      newline = false;
+
+  const RichPiece.video(this.videoUrl)
+    : text = '',
+      bold = false,
+      italic = false,
+      underline = false,
+      strike = false,
+      url = null,
+      imageUrl = null,
+      fullImageUrl = null,
+      imageHeight = null,
+      imageWidth = null,
       smilieAsset = null,
       newline = false;
 
@@ -141,6 +161,7 @@ class RichPiece {
       imageHeight = null,
       imageWidth = null,
       smilieAsset = asset,
+      videoUrl = null,
       newline = false;
 
   const RichPiece.newline()
@@ -155,6 +176,7 @@ class RichPiece {
       imageHeight = null,
       imageWidth = null,
       smilieAsset = null,
+      videoUrl = null,
       newline = true;
 }
 

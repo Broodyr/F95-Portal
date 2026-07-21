@@ -199,6 +199,77 @@ void main() {
     });
   });
 
+  group('parseThreadPage on TimeLust (videos embedded in a spoiler)', () {
+    late ThreadPage page;
+
+    setUpAll(
+      () => page = parseFixture(
+        "post with videos embedded -  VN - Ren'Py - TimeLust [v0.41] [UnknownWhiteRaven] _ F95zone _ Adult Games _ Comics _ Mods _ Cheats.htm",
+      ),
+    );
+
+    test('developer notes spoiler carries the embedded videos, absolutized', () {
+      final notes = page.spoilers.firstWhere((s) => s.title == 'Developer Notes');
+      final videos = [
+        for (final p in notes.rich)
+          if (p.videoUrl != null) p.videoUrl!,
+      ];
+      expect(videos, [
+        'https://f95zone.to/data/video/5625/5625137-a617526f8d3e92b3b939f733c988b160.mp4',
+        'https://f95zone.to/data/video/5625/5625136-1d8380cc8fd3ab0310daf11be60e802e.mp4',
+      ]);
+    });
+
+    test('the browser-fallback text inside a video never shows', () {
+      final notes = page.spoilers.firstWhere((s) => s.title == 'Developer Notes');
+      expect(notes.content, isNot(contains('not able to display')));
+    });
+
+    test('downloads still parse around the videos', () {
+      expect([for (final g in allGroups(page)) g.label], ['Win/Linux', 'Mac']);
+    });
+  });
+
+  group('parseRichContent videos', () {
+    List<RichPiece> rich(String body) =>
+        parseRichContent(html_parser.parse('<div class="bbWrapper">$body</div>').querySelector('.bbWrapper')!);
+
+    test('an already-absolute source is kept as-is', () {
+      final piece = rich(
+        '<video controls><source src="https://f95zone.to/data/video/1/1.mp4" /></video>',
+      ).firstWhere((p) => p.videoUrl != null);
+      expect(piece.videoUrl, 'https://f95zone.to/data/video/1/1.mp4');
+    });
+
+    test('a video with no usable source yields no piece', () {
+      final pieces = rich('<video controls><div class="bbMediaWrapper-fallback">nope</div></video>');
+      expect(pieces.any((p) => p.videoUrl != null), isFalse);
+    });
+
+    test('a main-body video does not leak fallback text into the overview', () {
+      final page = parseThreadPage('''
+        <html><body>
+          <article class="message--post"><div class="bbWrapper">
+            <b>Overview:</b><br>Story here.
+            <video controls><source src="/data/video/1/1.mp4" />
+              <div class="bbMediaWrapper-fallback">Your browser is not able to display this video.</div>
+            </video>
+          </div></article>
+        </body></html>
+      ''', threadId: 1);
+      expect(page.overview, isNot(contains('not able to display')));
+    });
+
+    test('a video sits on its own line between text runs', () {
+      final pieces = rich('before<video controls><source src="/data/video/1/1.mp4" /></video>after');
+      final types = [
+        for (final p in pieces)
+          if (p.newline) 'nl' else if (p.videoUrl != null) 'video' else 'text',
+      ];
+      expect(types, ['text', 'nl', 'video', 'nl', 'text']);
+    });
+  });
+
   group('parseThreadPage bookmark action', () {
     // Live pages serve relative hrefs (saved fixtures absolutize them), and
     // an existing bookmark renders with the is-bookmarked class.

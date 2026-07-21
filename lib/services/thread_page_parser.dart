@@ -67,6 +67,8 @@ ThreadPage parseThreadPage(String htmlSource, {required int threadId}) {
         return;
       }
       if (tag == 'script' || tag == 'style' || tag == 'noscript') return;
+      // A video's only text is its browser-fallback message.
+      if (tag == 'video') return;
       if (tag == 'a') {
         final text = _collapse(node.text);
         // Lightbox/gallery anchors carry no usable label (or escaped markup
@@ -476,6 +478,21 @@ List<RichPiece> parseRichContent(Element content) {
       if (tag == 'script' || tag == 'style' || tag == 'noscript') return;
       if (tag == 'br') {
         addNewline(max: 2);
+        return;
+      }
+      if (tag == 'video') {
+        // Embedded upload: <video><source src="/data/video/…"/> plus a
+        // browser-fallback div that must not leak as text. Live pages keep
+        // the src relative.
+        final src = node.querySelector('source')?.attributes['src'] ?? node.attributes['src'] ?? '';
+        if (src.isNotEmpty) {
+          final url = _absoluteUrl(src);
+          if (url.startsWith('http')) {
+            addNewline();
+            pieces.add(RichPiece.video(url));
+            addNewline();
+          }
+        }
         return;
       }
       if (tag == 'img') {
