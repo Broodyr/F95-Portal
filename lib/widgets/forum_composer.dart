@@ -26,6 +26,14 @@ class ForumComposer extends StatefulWidget {
   final String? draftKey;
   final Future<void> Function(String title, String message) onSubmit;
 
+  /// Optional extra controls above the message field (the review sheet's
+  /// star picker).
+  final Widget? header;
+
+  /// Optional fine print between the message field and the submit button
+  /// (the review sheet's rules pointer).
+  final Widget? footnote;
+
   const ForumComposer({
     super.key,
     required this.heading,
@@ -34,6 +42,8 @@ class ForumComposer extends StatefulWidget {
     this.withTitle = false,
     this.initialMessage = '',
     this.draftKey,
+    this.header,
+    this.footnote,
   });
 
   /// Returns true when something was posted.
@@ -45,6 +55,8 @@ class ForumComposer extends StatefulWidget {
     bool withTitle = false,
     String initialMessage = '',
     String? draftKey,
+    Widget? header,
+    Widget? footnote,
   }) async {
     final posted = await showModalBottomSheet<bool>(
       context: context,
@@ -58,6 +70,8 @@ class ForumComposer extends StatefulWidget {
         withTitle: withTitle,
         initialMessage: initialMessage,
         draftKey: draftKey,
+        header: header,
+        footnote: footnote,
       ),
     );
     return posted == true;
@@ -267,6 +281,7 @@ class _ForumComposerState extends State<ForumComposer> {
             ],
           ),
           const SizedBox(height: 10),
+          if (widget.header != null) ...[widget.header!, const SizedBox(height: 10)],
           if (widget.withTitle) ...[
             TextField(
               key: const Key('composer-title'),
@@ -292,6 +307,7 @@ class _ForumComposerState extends State<ForumComposer> {
             style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14, height: 1.4),
             decoration: _decoration('Write your message… BBCode works: [b]bold[/b], [spoiler]…[/spoiler]'),
           ),
+          if (widget.footnote != null) Padding(padding: const EdgeInsets.only(top: 8), child: widget.footnote),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),

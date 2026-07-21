@@ -72,6 +72,81 @@ class ForumService {
     });
   }
 
+  /// Fetches one page of a thread's reviews (`…/br-reviews/`, paginated
+  /// like the thread itself).
+  static Future<ThreadReviewsPage> fetchThreadReviews(
+    String url, {
+    int page = 1,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(AppDurations.mockRead);
+      return createMockThreadReviews(page: page);
+    }
+    final pageUrl = _withPage(url, page);
+    return _cached(
+      pageUrl,
+      () async => parseThreadReviews(await _fetchHtml(pageUrl, client: client, packageInfoLoader: packageInfoLoader)),
+    );
+  }
+
+  /// Fetches the rate-thread form. Uncached: the token is single-use, and
+  /// the form carries the viewer's current review, which posting changes.
+  static Future<RateForm> fetchRateForm(
+    String rateUrl, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(AppDurations.mockRead);
+      return const RateForm(action: 'https://example.com/threads/188349/br-rate', csrfToken: 'mock-csrf');
+    }
+    return parseRateForm(await _fetchHtml(rateUrl, client: client, packageInfoLoader: packageInfoLoader));
+  }
+
+  /// Submits a rating with its review message to a thread's br-rate action.
+  /// Posting again replaces the viewer's existing review.
+  static Future<void> sendRating(
+    String action,
+    String csrfToken, {
+    required int rating,
+    required String message,
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
+    return ThreadPageService.postAction(
+      action,
+      csrfToken,
+      fields: {'rating': '$rating', 'message': message},
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
+  /// Drops cached pages under [reviewsUrl] so the next fetch shows a
+  /// just-posted review instead of the cached page.
+  static void invalidateThreadReviews(String reviewsUrl) =>
+      _cache.removeWhere((key, _) => key.startsWith(reviewsUrl));
+
+  /// Toggles the viewer's like on a review. The same endpoint likes and
+  /// unlikes; the caller flips its own state.
+  static Future<void> likeReview(
+    int reviewId,
+    String csrfToken, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) {
+    if (kIsWeb) return Future.delayed(AppDurations.mockWrite);
+    return ThreadPageService.postAction(
+      'https://f95zone.to/bratr-ratings/$reviewId/like',
+      csrfToken,
+      client: client,
+      packageInfoLoader: packageInfoLoader,
+    );
+  }
+
   static Future<ReactionsPage> fetchReactions(
     String url, {
     http.Client? client,
@@ -706,6 +781,46 @@ class ForumService {
       replyUrl: 'https://example.com/threads/188349/add-reply',
       watchUrl: 'https://example.com/threads/188349/watch',
       threadUrl: 'https://example.com/threads/188349/',
+      score: const ThreadScore(rating: 4.3, votes: 233, reviewsUrl: 'https://example.com/threads/188349/br-reviews/'),
+    );
+  }
+
+  static ThreadReviewsPage createMockThreadReviews({int page = 1}) {
+    return ThreadReviewsPage(
+      reviews: [
+        ThreadReview(
+          reviewId: 7000 + page,
+          author: 'Toaster Moogle',
+          authorUrl: 'https://example.com/members/toaster-moogle.1438075/',
+          authorId: 1438075,
+          rating: 4,
+          date: 'Today at 12:37 AM',
+          pieces: const [
+            RichPiece.text('You got a little bit of everything — combat, story, and a simple shopkeeper backdrop. '),
+            RichPiece.text('Good', bold: true),
+            RichPiece.text(' but not amazing, which is an accolade around here.'),
+          ],
+          likeUrl: 'https://example.com/bratr-ratings/7001/like',
+          likeCount: 4,
+          reportUrl: 'https://example.com/bratr-ratings/7001/report',
+        ),
+        ThreadReview(
+          reviewId: 7100 + page,
+          author: 'Helmrim',
+          authorUrl: 'https://example.com/members/helmrim.2001/',
+          authorId: 2001,
+          rating: 2,
+          date: 'Yesterday at 9:12 PM',
+          pieces: const [RichPiece.text('Grindy and short. The animations carry it further than it deserves.')],
+          likeUrl: 'https://example.com/bratr-ratings/7101/like',
+          liked: true,
+          likeCount: 1,
+          reportUrl: 'https://example.com/bratr-ratings/7101/report',
+        ),
+      ],
+      currentPage: page,
+      totalPages: 3,
+      csrfToken: 'mock-csrf',
     );
   }
 

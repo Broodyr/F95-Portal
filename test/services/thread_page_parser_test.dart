@@ -204,7 +204,7 @@ void main() {
 
     setUpAll(
       () => page = parseFixture(
-        "post with videos embedded -  VN - Ren'Py - TimeLust [v0.41] [UnknownWhiteRaven] _ F95zone _ Adult Games _ Comics _ Mods _ Cheats.htm",
+        "thread_renpy_timelust_videos.htm",
       ),
     );
 

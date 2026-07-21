@@ -239,6 +239,10 @@ class ThreadPostsPage {
   /// pagination must build on this instead of the permalink.
   final String threadUrl;
 
+  /// The thread's review score; null when the thread has no Reviews tab
+  /// (non-game threads) or no ratings yet.
+  final ThreadScore? score;
+
   const ThreadPostsPage({
     this.title = '',
     this.posts = const [],
@@ -249,7 +253,99 @@ class ThreadPostsPage {
     this.watchUrl,
     this.watched = false,
     this.threadUrl = '',
+    this.score,
   });
+}
+
+/// A game thread's aggregate review score, linking to its reviews page.
+/// Present whenever the thread has a Reviews tab — a zero [rating] means
+/// nothing has been rated yet, and the strip invites the first review.
+class ThreadScore {
+  /// Average rating, 0–5 (e.g. 4.7); 0 when the thread has no ratings.
+  final double rating;
+
+  /// How many members rated the thread.
+  final int votes;
+
+  /// The thread's `/br-reviews/` page.
+  final String reviewsUrl;
+
+  /// The `/br-rate` endpoint of the rating widget, when the viewer may
+  /// rate (members only; guests get a read-only widget). Fetching it as a
+  /// page serves the rate form.
+  final String? rateUrl;
+
+  const ThreadScore({required this.rating, this.votes = 0, required this.reviewsUrl, this.rateUrl});
+}
+
+/// The rate-thread form (`/br-rate`): a 1–5 rating plus a required review
+/// message. Mirrors [ReportForm]: an empty action means the page had no
+/// form (e.g. a guest fetch), read via [isAvailable].
+class RateForm {
+  final String action;
+  final String csrfToken;
+
+  /// The viewer's existing rating, 0 when they haven't rated yet.
+  final int initialRating;
+
+  /// The viewer's existing review BBCode, empty when none.
+  final String initialMessage;
+
+  const RateForm({this.action = '', this.csrfToken = '', this.initialRating = 0, this.initialMessage = ''});
+
+  bool get isAvailable => action.isNotEmpty;
+}
+
+/// One review on a thread's reviews page.
+class ThreadReview {
+  final int reviewId;
+  final String author;
+  final String? avatarUrl;
+  final String? authorUrl;
+  final int authorId;
+
+  /// The reviewer's 1–5 star rating.
+  final double rating;
+  final String date;
+
+  /// The review text as rich content.
+  final List<RichPiece> pieces;
+
+  /// The like toggle endpoint (`/bratr-ratings/N/like`); XenForo renders
+  /// it only for members, which is the interaction gate.
+  final String? likeUrl;
+
+  /// Whether the viewer has liked this review (the action reads Unlike).
+  final bool liked;
+  final int likeCount;
+
+  /// The report overlay URL (`/bratr-ratings/N/report`).
+  final String? reportUrl;
+
+  const ThreadReview({
+    required this.reviewId,
+    this.author = '',
+    this.avatarUrl,
+    this.authorUrl,
+    this.authorId = 0,
+    this.rating = 0,
+    this.date = '',
+    this.pieces = const [],
+    this.likeUrl,
+    this.liked = false,
+    this.likeCount = 0,
+    this.reportUrl,
+  });
+}
+
+/// One page of a thread's reviews.
+class ThreadReviewsPage {
+  final List<ThreadReview> reviews;
+  final int currentPage;
+  final int totalPages;
+  final String csrfToken;
+
+  const ThreadReviewsPage({this.reviews = const [], this.currentPage = 1, this.totalPages = 1, this.csrfToken = ''});
 }
 
 /// One tab of the reactions overlay: a reaction type and how many members

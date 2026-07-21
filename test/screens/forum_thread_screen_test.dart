@@ -2,6 +2,8 @@ import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
+import 'package:f95_portal/screens/thread_reviews_screen.dart';
+import 'package:f95_portal/widgets/star_rating.dart';
 import 'package:f95_portal/widgets/image_gallery.dart';
 import 'package:f95_portal/widgets/rich_spoiler_text.dart';
 import 'package:flutter/material.dart';
@@ -138,6 +140,122 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(RichSpoilerText), findsOneWidget);
+  });
+
+  testWidgets('the OP carries the thread score, tappable into the reviews', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Scored',
+      score: const ThreadScore(rating: 4.3, votes: 233, reviewsUrl: 'https://example.com/threads/scored.1/br-reviews/'),
+      posts: const [
+        ForumPost(
+          postId: 1,
+          number: 1,
+          author: 'A',
+          blocks: [
+            ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('the game post')]),
+          ],
+        ),
+        ForumPost(
+          postId: 2,
+          number: 2,
+          author: 'B',
+          blocks: [
+            ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('a reply')]),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/scored.1/',
+          title: 'Scored',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+          fetchReviews: (url, {int page = 1}) async => const ThreadReviewsPage(
+            reviews: [
+              ThreadReview(reviewId: 1, author: 'Reviewer', rating: 5, pieces: [RichPiece.text('a review')]),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // One score strip, on the OP only.
+    expect(find.byType(StarBar), findsOneWidget);
+    expect(tester.widget<StarBar>(find.byType(StarBar)).rating, 4.3);
+    expect(find.text('4.3'), findsOneWidget);
+    expect(find.textContaining('233'), findsOneWidget);
+
+    await tester.tap(find.text('4.3'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ThreadReviewsScreen), findsOneWidget);
+    expect(find.text('Reviewer'), findsOneWidget);
+  });
+
+  testWidgets('an unrated but reviewable thread invites the first review', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Fresh',
+      score: const ThreadScore(rating: 0, votes: 0, reviewsUrl: 'https://example.com/threads/fresh.1/br-reviews/'),
+      posts: const [
+        ForumPost(
+          postId: 1,
+          number: 1,
+          author: 'A',
+          blocks: [
+            ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('brand new game')]),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/fresh.1/',
+          title: 'Fresh',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StarBar), findsOneWidget);
+    expect(find.text('No ratings yet'), findsOneWidget);
+  });
+
+  testWidgets('a thread without a score shows no star strip', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Unscored',
+      posts: const [
+        ForumPost(
+          postId: 1,
+          number: 1,
+          author: 'A',
+          blocks: [
+            ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('just a discussion')]),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/unscored.1/',
+          title: 'Unscored',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(StarBar), findsNothing);
   });
 
   testWidgets('quoting a post prefills author, post id, and member id', (tester) async {

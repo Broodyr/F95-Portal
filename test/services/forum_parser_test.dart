@@ -232,6 +232,75 @@ void main() {
       }
     });
 
+    test('reads the thread score off the JSON-LD and the reviews tab', () {
+      // The rpgm fixture carries absolute tab hrefs (browser-saved).
+      final rated = parseThreadPosts(fixture('thread_rpgm_completed.htm'));
+      expect(rated.score, isNotNull);
+      expect(rated.score!.rating, 3.7);
+      expect(rated.score!.votes, 6);
+      expect(
+        rated.score!.reviewsUrl,
+        'https://f95zone.to/threads/futanari-ninjas-descent-into-corruption-v1-0-food-adherent.274604/br-reviews/',
+      );
+      // The rating widget's endpoint, rendered live for members only.
+      expect(
+        rated.score!.rateUrl,
+        'https://f95zone.to/threads/futanari-ninjas-descent-into-corruption-v1-0-food-adherent.274604/br-rate',
+      );
+    });
+
+    test('a game thread with no reviews still gets a score entry', () {
+      // A thread nobody has reviewed renders no Reviews tab (and no JSON-LD
+      // rating) at all — the rating widget is the only marker, and the
+      // reviews page is derived from its br-rate href. The score strip is
+      // the app's door to writing the first review, so it must exist at zero.
+      final page = parseThreadPosts(fixture('thread_renpy_biohazard_no_reviews.htm'));
+      expect(page.score, isNotNull);
+      expect(page.score!.rating, 0);
+      expect(page.score!.votes, 0);
+      expect(
+        page.score!.reviewsUrl,
+        'https://f95zone.to/threads/biohazard-fallen-specimens-v0-1-zanesfm.307020/br-reviews/',
+      );
+      expect(page.score!.rateUrl, 'https://f95zone.to/threads/biohazard-fallen-specimens-v0-1-zanesfm.307020/br-rate');
+    });
+
+    test('a read-only rating widget yields no rate endpoint', () {
+      final page = parseThreadPosts('''
+        <html><body>
+          <a class="tabs-tab" href="/threads/game.1/br-reviews/">Reviews (3)</a>
+          <select name="rating" data-rating-href="/threads/game.1/br-rate"
+                  data-initial-rating="4.1" data-readonly="true"></select>
+          <div class="block-container"><article class="message message--post" data-content="post-1">
+            <div class="message-body"><div class="bbWrapper">guest view</div></div>
+          </article></div>
+        </body></html>
+      ''');
+      expect(page.score!.rating, 4.1);
+      expect(page.score!.rateUrl, isNull);
+    });
+
+    test('a relative reviews-tab href is absolutized', () {
+      // The TimeLust fixture kept the live site's relative hrefs.
+      final rated = parseThreadPosts(
+        fixture(
+          "thread_renpy_timelust_videos.htm",
+        ),
+      );
+      expect(rated.score!.rating, 4.0);
+      expect(rated.score!.votes, 4);
+      expect(rated.score!.reviewsUrl, 'https://f95zone.to/threads/timelust-v0-41-unknownwhiteraven.264757/br-reviews/');
+    });
+
+    test('a thread without a reviews tab has no score', () {
+      final page = parseThreadPosts('''
+        <div class="block-container"><article class="message message--post" data-content="post-1">
+          <div class="message-body"><div class="bbWrapper">no game here</div></div>
+        </article></div>
+      ''');
+      expect(page.score, isNull);
+    });
+
     test('a post without a signature yields none', () {
       final posts = parseThreadPosts('''
         <div class="block-container"><article class="message message--post" data-content="post-1">
@@ -255,6 +324,125 @@ void main() {
       expect(reactions!.topReactionIds, [1, 14, 12]);
       expect(reactions.count, 12837);
       expect(reactions.url, 'https://f95zone.to/posts/1565686/reactions');
+    });
+  });
+
+  group('parseThreadReviews', () {
+    late ThreadReviewsPage page;
+
+    setUpAll(
+      () => page = parseThreadReviews(
+        fixture(
+          "reviews_rpgm_freya.htm",
+        ),
+      ),
+    );
+
+    test('parses every review with pagination and the page CSRF', () {
+      expect(page.reviews, hasLength(20));
+      expect(page.currentPage, 1);
+      expect(page.totalPages, 2);
+      expect(page.csrfToken, isNotEmpty);
+    });
+
+    test('parses a review with attribution, rating, and actions', () {
+      final review = page.reviews.first;
+      expect(review.reviewId, 357379);
+      expect(review.author, 'Toaster Moogle');
+      expect(review.authorUrl, 'https://f95zone.to/members/toaster-moogle.1438075/');
+      expect(review.authorId, 1438075);
+      expect(review.rating, 4.0);
+      expect(review.date, 'Today at 12:37 AM');
+      expect(review.pieces.map((p) => p.text).join(), contains('shopkeeper'));
+      expect(review.likeUrl, 'https://f95zone.to/bratr-ratings/357379/like');
+      expect(review.liked, isFalse);
+      expect(review.likeCount, 0);
+      expect(review.reportUrl, 'https://f95zone.to/bratr-ratings/357379/report');
+    });
+
+    test('counts named likers plus the "and N other" tail', () {
+      final liked = page.reviews.firstWhere((r) => r.reviewId == 355588);
+      // "james_rocket, Sassas9669, naturaljunior and 1 other person"
+      expect(liked.likeCount, 4);
+    });
+
+    test('every star level parses', () {
+      final ratings = page.reviews.map((r) => r.rating).toSet();
+      expect(ratings, containsAll({1.0, 2.0, 3.0, 4.0, 5.0}));
+    });
+
+    test('an empty reviews page ignores the thread pageNav it carries', () {
+      // A no-review thread's br-reviews page still renders the thread's own
+      // reply pagination; without reviews there is nothing to page through.
+      final empty = parseThreadReviews('''
+        <html data-csrf="tok"><body>
+          <ul class="pageNav-main">
+            <li class="pageNav-page pageNav-page--current"><a href="/threads/x.1/">1</a></li>
+            <li class="pageNav-page"><a href="/threads/x.1/page-5">5</a></li>
+          </ul>
+        </body></html>
+      ''');
+      expect(empty.reviews, isEmpty);
+      expect(empty.currentPage, 1);
+      expect(empty.totalPages, 1);
+    });
+
+    test('an Unlike label and relative hrefs mark a review the viewer liked', () {
+      // Live pages serve relative hrefs; a liked review's action reads Unlike.
+      final synthetic = parseThreadReviews('''
+        <html data-csrf="tok"><body>
+          <div class="message message--post message--review js-review" data-author="Me" data-content="review-42">
+            <span class="ratingStars bratr-rating" title="5.00 star(s)"></span>
+            <article class="message-body"><div class="bbWrapper">mine</div></article>
+            <footer class="message-footer">
+              <a href="/bratr-ratings/42/like" class="actionBar-action actionBar-action--like">Unlike</a>
+              <a href="/bratr-ratings/42/report" class="actionBar-action actionBar-action--report">Report</a>
+            </footer>
+          </div>
+        </body></html>
+      ''');
+      final review = synthetic.reviews.single;
+      expect(review.liked, isTrue);
+      expect(review.likeUrl, 'https://f95zone.to/bratr-ratings/42/like');
+      expect(review.reportUrl, 'https://f95zone.to/bratr-ratings/42/report');
+      expect(review.rating, 5.0);
+    });
+  });
+
+  group('parseRateForm', () {
+    test('parses the fresh form: action, token, nothing pre-filled', () {
+      final form = parseRateForm(fixture('rate_form_freya.htm'));
+      expect(form.isAvailable, isTrue);
+      expect(form.action, 'https://f95zone.to/threads/freyas-potion-shop-v1-03-war-shop.305513/br-rate');
+      expect(form.csrfToken, '1784616885,913faa8a7b64b242e957d9e8a77f6374');
+      expect(form.initialRating, 0);
+      expect(form.initialMessage, isEmpty);
+    });
+
+    test('an existing review pre-fills rating and message', () {
+      // Synthetic until a real own-review br-rate fixture is saved; the
+      // message rides the same noscript textarea the post editor uses.
+      final form = parseRateForm('''
+        <html data-csrf="page-tok"><body>
+          <form action="/threads/game.1/br-rate" method="post">
+            <select name="rating" data-initial-rating="4" data-rating-href="/threads/game.1/br-rate"></select>
+            <noscript>
+              <textarea name="message" class="input">My earlier [b]review[/b] text.</textarea>
+            </noscript>
+            <input type="hidden" name="_xfToken" value="form-tok" />
+          </form>
+        </body></html>
+      ''');
+      expect(form.action, 'https://f95zone.to/threads/game.1/br-rate');
+      expect(form.csrfToken, 'form-tok');
+      expect(form.initialRating, 4);
+      expect(form.initialMessage, 'My earlier [b]review[/b] text.');
+    });
+
+    test('a page without the form reads as unavailable', () {
+      // Guests get redirected to the login page instead of the form.
+      final form = parseRateForm('<html><body><div class="p-body">Log in</div></body></html>');
+      expect(form.isAvailable, isFalse);
     });
   });
 

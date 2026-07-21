@@ -18,6 +18,11 @@ final RegExp _postIdPattern = RegExp(r'post-(\d+)');
 final RegExp _othersPattern = RegExp(r'and (\d+) others');
 final RegExp _tabReactionPattern = RegExp(r'tabs-tab--reaction(\d+)');
 final RegExp _tabCountPattern = RegExp(r'\((\d+)\)');
+final RegExp _reviewIdPattern = RegExp(r'review-(\d+)');
+// Singular "and 1 other person" and plural "and N others" both count.
+final RegExp _likeOthersPattern = RegExp(r'and (\d+) other');
+final RegExp _ratingValuePattern = RegExp(r'"ratingValue":\s*"([\d.]+)"');
+final RegExp _ratingCountPattern = RegExp(r'"ratingCount":\s*"(\d+)"');
 
 /// Parses the forum index (f95zone.to/forum/) into categories of forums.
 ForumIndex parseForumIndex(String htmlSource) {
@@ -108,6 +113,129 @@ ThreadPostsPage parseThreadPosts(String htmlSource) {
     watchUrl: watchHref == null ? null : _absoluteUrl(watchHref),
     watched: watchAnchor != null && _clean(watchAnchor.text).toLowerCase() == 'unwatch',
     threadUrl: canonical.isEmpty ? '' : _absoluteUrl(canonical.replaceFirst(RegExp(r'page-\d+/?$'), '')),
+    score: _parseThreadScore(document),
+  );
+}
+
+/// The thread's review score: the Reviews tab names the page, the JSON-LD
+/// aggregateRating block carries the exact average and vote count (the
+/// tab itself only shows a rounded count). Both are server-rendered.
+ThreadScore? _parseThreadScore(Document document) {
+  final select = document.querySelector('select[data-rating-href]');
+  String? reviewsHref;
+  for (final anchor in document.querySelectorAll('a[href]')) {
+    final href = anchor.attributes['href'] ?? '';
+    if (href.endsWith('/br-reviews/')) {
+      reviewsHref = href;
+      break;
+    }
+  }
+  // A thread nobody has reviewed renders no Reviews tab (nor JSON-LD
+  // rating) at all; the rating widget is the marker then, and its br-rate
+  // href names where the reviews page lives.
+  final ratingHref = select?.attributes['data-rating-href'];
+  reviewsHref ??= ratingHref?.replaceFirst(RegExp(r'br-rate/?$'), 'br-reviews/');
+  if (reviewsHref == null) return null;
+
+  double rating = 0;
+  int votes = 0;
+  for (final script in document.querySelectorAll('script[type="application/ld+json"]')) {
+    final match = _ratingValuePattern.firstMatch(script.text);
+    if (match != null) {
+      rating = double.tryParse(match.group(1)!) ?? 0;
+      votes = _idFrom(script.text, _ratingCountPattern);
+      break;
+    }
+  }
+  // Threads missing the JSON-LD block still state the average on the
+  // rating widget's select.
+  if (rating == 0) {
+    rating = double.tryParse(select?.attributes['data-initial-rating'] ?? '') ?? 0;
+  }
+  // The same select names the rate endpoint; read-only widgets (guests)
+  // don't get one, which is what gates the write-a-review flow.
+  final rateHref = select?.attributes['data-readonly'] == 'false' ? select?.attributes['data-rating-href'] : null;
+  // A zero rating with the tab present is a thread nobody rated yet — the
+  // score still exists so the strip can invite the first review.
+  return ThreadScore(
+    rating: rating,
+    votes: votes,
+    reviewsUrl: _absoluteUrl(reviewsHref),
+    rateUrl: rateHref == null ? null : _absoluteUrl(rateHref),
+  );
+}
+
+/// Parses the rate-thread form (`/br-rate` fetched as a page): the rating
+/// select, the review message, and the token. The message rides the same
+/// noscript BBCode textarea the post editor uses.
+RateForm parseRateForm(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final form = document.querySelector('form[action*="/br-rate"]');
+  if (form == null) return const RateForm();
+
+  // TODO: only the fresh (unrated) form has a saved fixture so far. Before
+  // trusting the edit flow end to end, verify the pre-filled rating and
+  // message against a br-rate page saved while holding an existing review.
+  final ratingAttr = form.querySelector('select[name="rating"]')?.attributes['data-initial-rating'] ?? '';
+  return RateForm(
+    action: _absoluteUrl(form.attributes['action'] ?? ''),
+    csrfToken:
+        form.querySelector('input[name="_xfToken"]')?.attributes['value'] ??
+        document.documentElement?.attributes['data-csrf'] ??
+        '',
+    initialRating: (double.tryParse(ratingAttr) ?? 0).round(),
+    initialMessage: parseEditBbcode(htmlSource),
+  );
+}
+
+/// Parses a thread's reviews page (`/threads/…/br-reviews/`). Reviews are
+/// BRATR add-on markup, not XenForo posts: `.message--review` rows with a
+/// star rating, a plain rich body, and Like/Report actions.
+ThreadReviewsPage parseThreadReviews(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final (currentPage, totalPages) = _parsePageNav(document);
+
+  final reviews = <ThreadReview>[];
+  for (final item in document.querySelectorAll('.message--review')) {
+    final username = item.querySelector('a.username');
+    final likeAnchor = item.querySelector('a.actionBar-action--like');
+    final ratingTitle = item.querySelector('.ratingStars')?.attributes['title'] ?? '';
+    final body = item.querySelector('.message-body .bbWrapper');
+
+    // Named likers plus the "and N other(s)" tail, as on post reactions.
+    int likeCount = 0;
+    final likeList = item.querySelector('.likesBar a');
+    if (likeList != null) {
+      likeCount = likeList.querySelectorAll('bdi').length + _idFrom(_clean(likeList.text), _likeOthersPattern);
+    }
+
+    reviews.add(
+      ThreadReview(
+        reviewId: _idFrom(item.attributes['data-content'] ?? '', _reviewIdPattern),
+        author: _clean(item.attributes['data-author'] ?? ''),
+        avatarUrl: _absoluteOrNull(item.querySelector('.contentRow-figure img')?.attributes['src']),
+        authorUrl: _absoluteOrNull(username?.attributes['href']),
+        authorId: int.tryParse(username?.attributes['data-user-id'] ?? '') ?? 0,
+        rating: double.tryParse(RegExp(r'[\d.]+').firstMatch(ratingTitle)?.group(0) ?? '') ?? 0,
+        date: _clean(item.querySelector('.message-footer time')?.text ?? ''),
+        pieces: body == null ? const [] : parseRichContent(body),
+        likeUrl: _absoluteOrNull(likeAnchor?.attributes['href']),
+        liked: _clean(likeAnchor?.text ?? '').toLowerCase() == 'unlike',
+        likeCount: likeCount,
+        reportUrl: _absoluteOrNull(item.querySelector('a.actionBar-action--report')?.attributes['href']),
+      ),
+    );
+  }
+
+  // A reviews page with no reviews still carries the thread's own pageNav,
+  // which counts reply pages, not review pages; with nothing listed there
+  // is nothing to paginate.
+  final bool empty = reviews.isEmpty;
+  return ThreadReviewsPage(
+    reviews: reviews,
+    currentPage: empty ? 1 : currentPage,
+    totalPages: empty ? 1 : totalPages,
+    csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
   );
 }
 

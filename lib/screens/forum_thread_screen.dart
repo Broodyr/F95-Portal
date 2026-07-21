@@ -16,14 +16,17 @@ import '../widgets/error_view.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/glass_fab.dart';
+import '../widgets/pagination_bar.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reaction_picker.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/report_dialog.dart';
 import '../widgets/rich_spoiler_text.dart';
 import '../widgets/sliding_reveal.dart';
+import '../widgets/star_rating.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
+import 'thread_reviews_screen.dart';
 
 typedef FetchThreadPosts = Future<ThreadPostsPage> Function(String url, {int page});
 typedef ReactSender = Future<void> Function(int postId, int reactionId, String csrfToken);
@@ -54,6 +57,9 @@ class ForumThreadScreen extends StatefulWidget {
   final ReportFormFetcher? reportFormFetcher;
   final ReportSender? reportSender;
   final PostDeleter? deleteSender;
+  final FetchThreadReviews? fetchReviews;
+  final RateFormFetcher? rateFormFetcher;
+  final RatingSender? ratingSender;
   final Future<bool> Function(Uri uri)? urlLauncher;
 
   const ForumThreadScreen({
@@ -71,6 +77,9 @@ class ForumThreadScreen extends StatefulWidget {
     this.reportFormFetcher,
     this.reportSender,
     this.deleteSender,
+    this.fetchReviews,
+    this.rateFormFetcher,
+    this.ratingSender,
     this.urlLauncher,
   });
 
@@ -349,6 +358,25 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     );
   }
 
+  void _openReviews(ThreadPostsPage page) {
+    final score = page.score!;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ThreadReviewsScreen(
+          url: score.reviewsUrl,
+          title: page.title.isNotEmpty ? page.title : widget.title,
+          score: score,
+          fetchReviews: widget.fetchReviews,
+          rateFormFetcher: widget.rateFormFetcher,
+          ratingSender: widget.ratingSender,
+          reportFormFetcher: widget.reportFormFetcher,
+          reportSender: widget.reportSender,
+          urlLauncher: widget.urlLauncher,
+        ),
+      ),
+    );
+  }
+
   void _openProfile(ForumPost post) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -600,243 +628,18 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 // Unlike the others this needs no per-post link: the report
                 // overlay hangs off the permalink, which every real post has.
                 onReport: post.postId > 0 ? () => _reportPost(post) : null,
+                // The thread score rides the OP, where the game's identity
+                // lives; tapping it opens the reviews.
+                score: _pageNumber == 1 && identical(post, page.posts.first) ? page.score : null,
+                onScoreTap: page.score == null ? null : () => _openReviews(page),
               ),
             ),
-          if (totalPages > 1) _buildPagination(colorScheme, totalPages),
+          if (totalPages > 1) PaginationBar(page: _pageNumber, totalPages: totalPages, onSelect: _goToPage),
         ],
       ),
     );
   }
 
-  // Pill metrics, shared by the widgets below and the width estimate that
-  // decides how many of them fit — the two must not drift apart.
-  static const double _chevronWidth = 34;
-  static const double _pillFontSize = 12;
-  static const double _pillHMargin = 2;
-  static const double _pillHPadding = 11;
-  static const double _gapHPadding = 9;
-  static const double _pillVPadding = 5;
-
-  // Both pills centre on the line box, which leaves their glyphs a shade off
-  // centre — a digit rides about 0.16px high (no descender to fill the space
-  // under it), an ellipsis sits a few px low (it hugs the baseline). Both are
-  // deliberate.
-  //
-  // The digit case was corrected once and reverted. The correction has to
-  // come from ascent, cap height and descent, which are the font's, so it
-  // only holds for Roboto: under SF Pro, which is what Flutter's Material
-  // typography uses on iOS, the same numbers overshoot by roughly 7x and tip
-  // the digits low instead. A sub-pixel gain is not worth pinning the layout
-  // to one platform's font, especially as correcting the geometry exactly
-  // still did not read as centred — what is left is optical, and optical
-  // tuning against one device is how this gets worse everywhere else.
-  //
-  // The ellipsis stays low on purpose too: it should read as punctuation. A
-  // vertically centred triple dot is a menu glyph, and the app now has real
-  // ones — the overflow buttons on posts and bookmark cards.
-
-  /// Chevrons plus a compact pill neighborhood: first, around current, last.
-  Widget _buildPagination(ColorScheme colorScheme, int totalPages) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Adjacent pages are what the row sheds first when it runs out of
-        // width. They carry the longest numbers, so they're the widest pills
-        // going — and the least worth their width, since telling 10001 from
-        // 10003 means reading five digits and diffing the last one. The
-        // chevrons already do ±1, and do it without any reading at all.
-        //
-        // The bar is a plain fit, not some allowance to shrink into: a pill
-        // is only ~23dp tall to begin with, which is already under a
-        // comfortable touch target on a phone, so there's no headroom to
-        // trade. Width goes to keeping the remaining pills full size.
-        final double available = constraints.maxWidth - _chevronWidth * 2;
-        List<int> pages = _pageWindow(totalPages, neighbours: true);
-        if (_clusterWidth(context, pages) > available) {
-          pages = _pageWindow(totalPages, neighbours: false);
-        }
-
-        final pills = <Widget>[];
-        int? previous;
-        for (final page in pages) {
-          if (previous != null && page - previous > 1) {
-            // Tappable gap: jump straight to a typed page number. Styled as a
-            // pill like its neighbors so it reads as tappable, with a dotted
-            // outline instead of a fill to keep it subordinate to real pages.
-            pills.add(
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _promptForPage(totalPages),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
-                  padding: const EdgeInsets.symmetric(horizontal: _gapHPadding, vertical: _pillVPadding),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadii.pill),
-                    border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.18)),
-                  ),
-                  child: Text(
-                    '…',
-                    // No explicit `height`: it would shorten this pill's line
-                    // box while the digits beside it keep the font's own, and
-                    // the padding is already the same, so the gap would sit
-                    // 4px shorter than every pill it separates.
-                    style: TextStyle(
-                      color: AppColors.of(context).bodyText,
-                      fontSize: _pillFontSize,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-          pills.add(_buildPagePill(colorScheme, page));
-          previous = page;
-        }
-
-        return Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildPageChevron(Icons.chevron_left, 'Previous page', _pageNumber - 1, totalPages),
-              // Dropping n±1 buys a lot of width but can't guarantee a fit on
-              // its own — five digits on a small phone still run long. Scale
-              // as the backstop so the row can never overflow, whatever the
-              // page count, font, or text scale turns out to be.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(mainAxisSize: MainAxisSize.min, children: pills),
-                ),
-              ),
-              _buildPageChevron(Icons.chevron_right, 'Next page', _pageNumber + 1, totalPages),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// The pages worth a pill: first, last, the current one, and optionally the
-  /// two either side of it.
-  List<int> _pageWindow(int totalPages, {required bool neighbours}) {
-    return <int>{
-      1,
-      if (neighbours && _pageNumber > 1) _pageNumber - 1,
-      _pageNumber,
-      if (neighbours && _pageNumber < totalPages) _pageNumber + 1,
-      totalPages,
-    }.where((p) => p >= 1 && p <= totalPages).toList()..sort();
-  }
-
-  /// What [pages] would take at full size, gap pills included. Measured
-  /// rather than assumed, so it holds up under a different font or a bumped
-  /// system text size.
-  double _clusterWidth(BuildContext context, List<int> pages) {
-    double width = 0;
-    int? previous;
-    for (final page in pages) {
-      if (previous != null && page - previous > 1) {
-        width += _labelWidth(context, '…') + (_gapHPadding + _pillHMargin) * 2;
-      }
-      width += _labelWidth(context, '$page') + (_pillHPadding + _pillHMargin) * 2;
-      previous = page;
-    }
-    return width;
-  }
-
-  /// Always measured at w600 — the current page's weight, and the widest a
-  /// pill's label ever renders.
-  double _labelWidth(BuildContext context, String label) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: const TextStyle(fontSize: _pillFontSize, fontWeight: FontWeight.w600, height: 1.1),
-      ),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout();
-    return painter.width;
-  }
-
-  /// A chevron narrowed from IconButton's 48px default: at full size the pair
-  /// ate a quarter of the row, which is what pushed it into overflow. Only the
-  /// width gives — shrinkWrap is what lets `constraints` actually apply, and
-  /// the 48px height keeps the tap target reachable.
-  Widget _buildPageChevron(IconData icon, String tooltip, int target, int totalPages) {
-    return IconButton(
-      onPressed: target >= 1 && target <= totalPages ? () => _goToPage(target) : null,
-      icon: Icon(icon, size: 18),
-      tooltip: tooltip,
-      color: AppColors.of(context).iconDefault,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: _chevronWidth, height: 48),
-      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-    );
-  }
-
-  Future<void> _promptForPage(int totalPages) async {
-    // No controller (the field tracks its own text); reading via onChanged
-    // avoids disposing a controller while the dialog is still animating out.
-    int? entered;
-    final page = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) => GlassDialog(
-        title: const Text('Go to page'),
-        content: TextField(
-          key: const Key('page-jump-field'),
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          onChanged: (value) => entered = int.tryParse(value.trim()),
-          onSubmitted: (value) => Navigator.of(dialogContext).pop(int.tryParse(value.trim())),
-          decoration: InputDecoration(
-            hintText: '1–$totalPages',
-            hintStyle: TextStyle(color: AppColors.of(context).hintText),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            style: GlassDialog.cancelStyle(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(entered),
-            style: GlassDialog.confirmStyle(context),
-            child: const Text('Go'),
-          ),
-        ],
-      ),
-    );
-    if (page != null && mounted) _goToPage(page.clamp(1, totalPages));
-  }
-
-  Widget _buildPagePill(ColorScheme colorScheme, int page) {
-    final bool current = page == _pageNumber;
-    return GestureDetector(
-      onTap: () => _goToPage(page),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: _pillHMargin),
-        padding: const EdgeInsets.symmetric(horizontal: _pillHPadding, vertical: _pillVPadding),
-        decoration: BoxDecoration(
-          // Opaque rather than the translucent chipFill chips elsewhere use:
-          // those sit on cards, while the pills sit on the page background,
-          // where 35% of a near-black surface all but disappears.
-          color: current ? colorScheme.primary.withValues(alpha: 0.3) : colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(color: current ? colorScheme.primary : Colors.transparent),
-        ),
-        child: Text(
-          '$page',
-          style: TextStyle(
-            fontSize: _pillFontSize,
-            color: current ? Colors.white : AppColors.of(context).bodyText,
-            fontWeight: current ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Bottom sheet with the three watch modes; pops the picked [WatchChoice].
@@ -947,6 +750,11 @@ class _PostCard extends StatefulWidget {
   final VoidCallback? onWatchToggle;
   final VoidCallback? onWatchLongPress;
 
+  /// The thread's review score, set on the OP only; tapping the strip
+  /// opens the reviews page.
+  final ThreadScore? score;
+  final VoidCallback? onScoreTap;
+
   /// Marks the post a permalink targeted, so the reader can spot it.
   final bool highlighted;
 
@@ -968,6 +776,8 @@ class _PostCard extends StatefulWidget {
     this.watched = false,
     this.onWatchToggle,
     this.onWatchLongPress,
+    this.score,
+    this.onScoreTap,
     this.highlighted = false,
   });
 
@@ -1077,6 +887,47 @@ class _PostCardState extends State<_PostCard> {
               if (widget.onReport != null) _buildOverflow(widget.onReport!),
             ],
           ),
+          // The thread score as the OP's second header row: the title bar
+          // and the attribution row are both full, and here it leads
+          // straight into the post the score is about.
+          if (widget.score != null) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              button: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onScoreTap,
+                child: Row(
+                  children: [
+                    StarBar(rating: widget.score!.rating, starSize: 15),
+                    const SizedBox(width: 6),
+                    if (widget.score!.rating > 0) ...[
+                      Text(
+                        widget.score!.rating.toStringAsFixed(1),
+                        style: TextStyle(
+                          color: AppColors.of(context).brightText,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (widget.score!.votes > 0) ...[
+                        const SizedBox(width: 5),
+                        Text(
+                          '· ${widget.score!.votes} rating${widget.score!.votes == 1 ? '' : 's'}',
+                          style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5),
+                        ),
+                      ],
+                    ] else
+                      // The door to the first review: an unrated game still
+                      // shows the strip, or the reviews page is unreachable.
+                      Text('No ratings yet', style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5)),
+                    const Spacer(),
+                    Icon(Icons.chevron_right, size: 16, color: AppColors.of(context).subtleText),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           ..._buildBlocks(colorScheme, post),
           if (post.signature.isNotEmpty) ...[
