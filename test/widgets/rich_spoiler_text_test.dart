@@ -116,4 +116,55 @@ void main() {
     final large = await pumpScaled(1.5);
     expect(large.width!, greaterThan(normal.width!));
   });
+
+  // An image with no reserved space grows the post when it lands, shoving
+  // whatever the reader was looking at down the screen. Where the markup
+  // states a size, the space is held in advance instead.
+  group('space held for an image before it loads', () {
+    Future<Size> placeholderSize(WidgetTester tester, RichPiece piece, {double width = 400}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            body: SizedBox(
+              width: width,
+              child: RichSpoilerText(pieces: [piece], onOpenLink: (_) {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      // The image never loads in a test, so what stands in its place is the
+      // reserved box itself.
+      return tester.getSize(find.byType(RemoteImage));
+    }
+
+    testWidgets('a stated size is held at the height the image will render', (tester) async {
+      // 480x360 fits under the 180 cap by height, so it lands scaled to 180
+      // tall and keeps its ratio.
+      final size = await placeholderSize(
+        tester,
+        const RichPiece.image('https://example.com/a.jpg', imageWidth: 480, imageHeight: 360),
+      );
+      expect(size.height, closeTo(180, 0.01));
+      expect(size.width, closeTo(240, 0.01));
+    });
+
+    testWidgets('a wide image is held at the height its column allows', (tester) async {
+      // 1920x620 in a 400 wide column: the width binds first, so the box is
+      // shorter than the cap rather than the full 180.
+      final size = await placeholderSize(
+        tester,
+        const RichPiece.image('https://example.com/a.jpg', imageWidth: 1920, imageHeight: 620),
+        width: 400,
+      );
+      expect(size.width, closeTo(400, 1));
+      expect(size.height, closeTo(400 * 620 / 1920, 1));
+    });
+
+    testWidgets('an unstated size falls back to the old fixed block', (tester) async {
+      final size = await placeholderSize(tester, const RichPiece.image('https://example.com/a.jpg'));
+      expect(size, const Size(120, 80));
+    });
+  });
 }

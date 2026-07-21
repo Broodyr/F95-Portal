@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -6,6 +8,39 @@ import '../theme/app_colors.dart';
 import 'remote_image.dart';
 import 'image_gallery.dart';
 import 'sfw_blur.dart';
+
+/// Ceiling on an inline image's height; some posts inline dozens.
+const double _maxImageHeight = 180;
+
+/// Stand-in size for an image whose dimensions the markup never stated,
+/// which is most of them.
+const Size _unsizedImagePlaceholder = Size(120, 80);
+
+/// The box an image will occupy once it loads, held for it in advance so the
+/// post doesn't grow under a reader already looking at it. Only as good as
+/// what the markup stated: with no size, this is the old fixed block and the
+/// post still shifts a little when the image arrives.
+Widget _imagePlaceholder(BuildContext context, RichPiece piece) {
+  final color = AppColors.of(context).placeholderSurface;
+  final height = piece.imageHeight;
+  final width = piece.imageWidth;
+  if (height == null || height <= 0) {
+    return Container(width: _unsizedImagePlaceholder.width, height: _unsizedImagePlaceholder.height, color: color);
+  }
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      // Mirrors BoxFit.contain under the same height cap: the image lands at
+      // its own size unless the cap or the column width shrinks it.
+      double boxHeight = math.min(_maxImageHeight, height.toDouble());
+      double boxWidth = width == null || width <= 0 ? _unsizedImagePlaceholder.width : boxHeight * width / height;
+      if (width != null && width > 0 && constraints.hasBoundedWidth && boxWidth > constraints.maxWidth) {
+        boxWidth = constraints.maxWidth;
+        boxHeight = boxWidth * height / width;
+      }
+      return Container(width: boxWidth, height: boxHeight, color: color);
+    },
+  );
+}
 
 /// Renders parsed spoiler content: styled text runs, tappable links, and
 /// inline images (tap for fullscreen). Selectable so things like magnet
@@ -106,19 +141,18 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 180),
+                    constraints: const BoxConstraints(maxHeight: _maxImageHeight),
                     child: SfwBlur(
                       child: RemoteImage(
                         url: imageUrl,
                         fit: BoxFit.contain,
-                        // Decode at the 180-logical-px render height, not
-                        // source size; some posts inline dozens of images.
-                        decodeHeight: (180 * MediaQuery.devicePixelRatioOf(context)).round(),
-                        placeholder: (context) =>
-                            Container(width: 120, height: 80, color: AppColors.of(context).placeholderSurface),
+                        // Decode at the render height, not source size; some
+                        // posts inline dozens of images.
+                        decodeHeight: (_maxImageHeight * MediaQuery.devicePixelRatioOf(context)).round(),
+                        placeholder: (context) => _imagePlaceholder(context, piece),
                         errorWidget: (context) => Container(
-                          width: 120,
-                          height: 80,
+                          width: _unsizedImagePlaceholder.width,
+                          height: _unsizedImagePlaceholder.height,
                           color: AppColors.of(context).placeholderSurface,
                           child: Icon(
                             Icons.broken_image_outlined,

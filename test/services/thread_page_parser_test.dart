@@ -230,6 +230,43 @@ void main() {
     });
   });
 
+  // Space for an image can only be reserved if its size is known before it
+  // loads, and the markup states one two ways — or, most often, not at all.
+  group('parseRichContent image dimensions', () {
+    List<RichPiece> rich(String body) =>
+        parseRichContent(html_parser.parse('<div class="bbWrapper">$body</div>').querySelector('.bbWrapper')!);
+
+    test('reads the size off the lazy-load placeholder', () {
+      // XenForo's placeholder is an empty SVG at the image's own dimensions.
+      final piece = rich(
+        '''<img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' '''
+        '''width='480' height='360' viewBox%3D'0 0 480 360'%2F%3E" '''
+        '''data-src="https://attachments.f95zone.to/a.jpg" class="bbImage lazyload" />''',
+      ).firstWhere((p) => p.imageUrl != null);
+      expect(piece.imageHeight, 360);
+      expect(piece.imageWidth, 480);
+    });
+
+    test('reads an author-set height off the style', () {
+      final piece = rich(
+        '<img src="https://attachments.f95zone.to/a.jpg" class="bbImage" style="height: 500px" />',
+      ).firstWhere((p) => p.imageUrl != null);
+      expect(piece.imageHeight, 500);
+      // No width stated, and height alone is what holds the layout still.
+      expect(piece.imageWidth, isNull);
+    });
+
+    test('leaves the size unknown when the markup states none', () {
+      // The common case: a 1x1 gif placeholder carrying nothing.
+      final piece = rich(
+        '<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" '
+        'data-src="https://attachments.f95zone.to/a.gif" class="bbImage lazyload" style="" />',
+      ).firstWhere((p) => p.imageUrl != null);
+      expect(piece.imageHeight, isNull);
+      expect(piece.imageWidth, isNull);
+    });
+  });
+
   group('parseRichContent line breaks', () {
     // The source newlines matter: XenForo emits them between the <br/>s,
     // and they are what used to leak through as spaces.

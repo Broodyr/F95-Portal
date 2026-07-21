@@ -86,6 +86,17 @@ class RichPiece {
   /// inline thumbnail ([imageUrl] is used when null).
   final String? fullImageUrl;
 
+  /// The image's height at source, when the markup gave one. Lets the view
+  /// reserve the right height before the image arrives, so posts don't grow
+  /// under a reader who is already looking at them. Null when unstated,
+  /// which is most of them.
+  final int? imageHeight;
+
+  /// The image's width at source; only set alongside [imageHeight], and only
+  /// to shape the space reserved for it. Height is what keeps the layout
+  /// still, so it is parsed on its own where the width isn't given.
+  final int? imageWidth;
+
   /// True for explicit line breaks (text/styles unused).
   final bool newline;
 
@@ -104,10 +115,12 @@ class RichPiece {
     this.url,
   }) : imageUrl = null,
        fullImageUrl = null,
+       imageHeight = null,
+       imageWidth = null,
        smilieAsset = null,
        newline = false;
 
-  const RichPiece.image(this.imageUrl, {this.fullImageUrl})
+  const RichPiece.image(this.imageUrl, {this.fullImageUrl, this.imageHeight, this.imageWidth})
     : text = '',
       bold = false,
       italic = false,
@@ -125,6 +138,8 @@ class RichPiece {
       url = null,
       imageUrl = null,
       fullImageUrl = null,
+      imageHeight = null,
+      imageWidth = null,
       smilieAsset = asset,
       newline = false;
 
@@ -137,6 +152,8 @@ class RichPiece {
       url = null,
       imageUrl = null,
       fullImageUrl = null,
+      imageHeight = null,
+      imageWidth = null,
       smilieAsset = null,
       newline = true;
 }

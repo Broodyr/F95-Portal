@@ -394,6 +394,23 @@ const int _spoilerImageCap = 30;
 List<RichPiece> _spoilerRich(Element spoiler) =>
     parseRichContent(spoiler.querySelector('.bbCodeSpoiler-content') ?? spoiler);
 
+/// The image's size at source as (width, height), for reserving its space
+/// before it loads. Two markers state it, and most images carry neither:
+/// XenForo's lazy-load placeholder is an empty SVG at the image's own
+/// dimensions, and an author-sized image carries a height in its style.
+/// Height can be known without a width, and is the half that matters —
+/// it is what keeps the post from growing once the image arrives.
+(int?, int?) _imageDimensions(Element node) {
+  final src = node.attributes['src'] ?? '';
+  if (src.startsWith('data:image/svg')) {
+    final width = int.tryParse(RegExp(r"width='(\d+)'").firstMatch(src)?.group(1) ?? '');
+    final height = int.tryParse(RegExp(r"height='(\d+)'").firstMatch(src)?.group(1) ?? '');
+    if (width != null && height != null) return (width, height);
+  }
+  final styled = RegExp(r'height:\s*(\d+)px').firstMatch(node.attributes['style'] ?? '');
+  return (null, int.tryParse(styled?.group(1) ?? ''));
+}
+
 /// Walks [content] into inline [RichPiece]s (bold/italic/underline/strike,
 /// bullets, links, images, smilies), capped for pathological posts.
 /// Shared by spoiler sections and the forum post-loop parser.
@@ -488,7 +505,15 @@ List<RichPiece> parseRichContent(Element content) {
         // low-quality preview variant when one exists.
         final display = toPreviewImageUrl(thumb) ?? thumb;
         imageCount++;
-        pieces.add(RichPiece.image(display, fullImageUrl: full == display ? null : full));
+        final (imageWidth, imageHeight) = _imageDimensions(node);
+        pieces.add(
+          RichPiece.image(
+            display,
+            fullImageUrl: full == display ? null : full,
+            imageWidth: imageWidth,
+            imageHeight: imageHeight,
+          ),
+        );
         return;
       }
 
