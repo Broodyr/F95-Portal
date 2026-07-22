@@ -41,23 +41,39 @@ class ProfileService {
     return parseProfilePage(await _fetchHtml(url, client: client, packageInfoLoader: packageInfoLoader));
   }
 
-  /// The postings tab lazy-loads on the site; fetching its URL directly
-  /// renders the member view with the pane filled in.
-  static Future<List<ProfilePosting>> fetchPostings(
-    String profileUrl, {
+  /// The Postings tab's first page: the member's "See more" query
+  /// (`/search/member?user_id=N`) redirects to a normal search results page,
+  /// which the GET follows automatically. Further pages come from
+  /// [fetchPostingsPage] against the returned [ProfilePostingsPage.searchUrl].
+  static Future<ProfilePostingsPage> fetchPostings(
+    String postingsSearchUrl, {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) async {
     if (kIsWeb) {
       await Future.delayed(AppDurations.mockRead);
-      return createMockPostings();
+      return createMockPostingsPage();
     }
-    final html = await _fetchHtml(
-      _join(profileUrl, 'recent-content'),
-      client: client,
-      packageInfoLoader: packageInfoLoader,
+    return parseProfilePostingsPage(
+      await _fetchHtml(postingsSearchUrl, client: client, packageInfoLoader: packageInfoLoader),
     );
-    return parseProfilePage(html).postings;
+  }
+
+  /// Page N of the postings query, via the results URL page 1 resolved to.
+  static Future<ProfilePostingsPage> fetchPostingsPage(
+    String searchUrl,
+    int page, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(AppDurations.mockRead);
+      return createMockPostingsPage(page: page);
+    }
+    final separator = searchUrl.contains('?') ? '&' : '?';
+    return parseProfilePostingsPage(
+      await _fetchHtml('$searchUrl${separator}page=$page', client: client, packageInfoLoader: packageInfoLoader),
+    );
   }
 
   /// The About tab, same lazy-pane arrangement as postings.
@@ -226,6 +242,19 @@ class ProfileService {
       ],
       csrfToken: 'mock-csrf',
       wallPostUrl: 'https://example.com/members/broodyr.1957582/post',
+      postingsSearchUrl: 'https://example.com/search/member?user_id=1957582',
+    );
+  }
+
+  /// One-page mock for the web build and widget tests: a single page keeps
+  /// the tab's load-more spinner from spinning forever where there's no next
+  /// page to fetch.
+  static ProfilePostingsPage createMockPostingsPage({int page = 1}) {
+    return ProfilePostingsPage(
+      postings: createMockPostings(),
+      currentPage: page,
+      totalPages: 1,
+      searchUrl: 'https://example.com/search/655136415/?c[users]=Broodyr&o=date',
     );
   }
 

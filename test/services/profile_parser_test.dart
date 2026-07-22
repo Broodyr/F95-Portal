@@ -151,6 +151,11 @@ void main() {
       expect(thread.date, 'Jun 2, 2026');
     });
 
+    test('captures the member-search query the Postings tab pages through', () {
+      // The all-content query, not the content=thread (threads-only) variant.
+      expect(page.postingsSearchUrl, 'https://f95zone.to/search/member?user_id=328002');
+    });
+
     test('a profile without an inline postings pane parses as empty', () {
       final other = parseProfilePage(fixture('profile_invader_incubus.htm'));
       expect(other.postings, isEmpty);
@@ -183,6 +188,46 @@ void main() {
     });
   });
 
+  group('parseProfilePostingsPage — member-search results', () {
+    late ProfilePostingsPage page;
+
+    setUpAll(() => page = parseProfilePostingsPage(fixture('profile_postings_search.htm')));
+
+    test('parses every result row as a posting', () {
+      expect(page.postings, hasLength(20));
+    });
+
+    test('reads the pagination the capped in-profile pane lacks', () {
+      expect(page.currentPage, 1);
+      expect(page.totalPages, 20);
+    });
+
+    test('captures the canonical results URL for further pages', () {
+      expect(page.searchUrl, 'https://f95zone.to/search/655136415/?c[users]=BaasB&o=date');
+    });
+
+    test('keeps the postings the same shape as the in-profile pane', () {
+      final reply = page.postings.firstWhere((p) => p.postInfo.startsWith('Post #'));
+      expect(reply.title, isNotEmpty);
+      expect(reply.url, startsWith('https://f95zone.to/threads/'));
+      expect(reply.forum, isNotEmpty);
+    });
+
+    // Live pages emit relative hrefs; the saved fixture absolutized them.
+    test('absolutizes the results URL on a live-shaped page', () {
+      const relative = '''
+<html><head><meta property="og:url" content="/search/655136415/?c[users]=BaasB&o=date" /></head>
+<body><div class="block-row"><div class="contentRow"><div class="contentRow-main">
+  <h3 class="contentRow-title"><a href="/threads/some-game.1/post-77">Some Game</a></h3>
+  <div class="contentRow-minor"><ul><li>Post #77</li><li>Forum: <a href="/forums/games.2/">Games</a></li></ul></div>
+</div></div></div></body></html>
+''';
+      final page = parseProfilePostingsPage(relative);
+      expect(page.searchUrl, 'https://f95zone.to/search/655136415/?c[users]=BaasB&o=date');
+      expect(page.postings.single.url, 'https://f95zone.to/threads/some-game.1/post-77');
+    });
+  });
+
   group('parseProfilePage — relative hrefs', () {
     // Live pages emit relative hrefs; browser-saved fixtures absolutize
     // them, so this synthetic page guards the live shape.
@@ -193,6 +238,7 @@ void main() {
   <div class="memberHeader-name"><span class="username">Someone</span></div>
 </div>
 <a href="/members/someone.99/recent-content" class="tabs-tab" id="recent-content">Postings</a>
+<a href="/search/member?user_id=99" class="fauxBlockLink-linkRow u-concealed">3</a>
 <ul class="tabPanes">
   <li role="tabpanel" id="profile-posts" aria-expanded="true">
     <form action="/members/someone.99/post" method="post" class="message message--simple"></form>
@@ -242,6 +288,7 @@ void main() {
       expect(page.wallPosts.single.comments.single.editUrl, 'https://f95zone.to/profile-posts/comments/9/edit');
       expect(page.wallPosts.single.comments.single.deleteUrl, 'https://f95zone.to/profile-posts/comments/9/delete');
       expect(page.postings.single.url, 'https://f95zone.to/threads/some-game.1/post-77');
+      expect(page.postingsSearchUrl, 'https://f95zone.to/search/member?user_id=99');
     });
 
     test('a default avatar offers no full-size image', () {

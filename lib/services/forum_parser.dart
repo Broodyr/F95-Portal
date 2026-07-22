@@ -698,6 +698,10 @@ ReactionsPage parseReactionsPage(String htmlSource) {
 
 /// Shared by thread and reaction pages too: XenForo's pageNav lists the
 /// current page plus a neighborhood and the last page.
+/// The XenForo page-nav reader (current, highest page), exposed for the
+/// profile postings parser — member-search results carry the same nav.
+(int, int) parsePageNav(Document document) => _parsePageNav(document);
+
 (int, int) _parsePageNav(Document document) {
   int current = 1;
   int total = 1;

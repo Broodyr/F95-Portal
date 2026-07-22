@@ -3,7 +3,7 @@ import 'package:html/parser.dart' as html_parser;
 
 import '../models/profile.dart';
 import '../models/thread_page.dart';
-import 'forum_parser.dart' show liftTitlePrefixes;
+import 'forum_parser.dart' show liftTitlePrefixes, parsePageNav;
 import 'thread_page_parser.dart' show parseRichContent;
 
 /// Parsers for XenForo member profile pages. As with the other parsers,
@@ -47,6 +47,19 @@ ProfilePage parseProfilePage(String htmlSource) {
     }
   }
 
+  // The member's "Find all content" / "See more" query, the entry to the
+  // full paginated postings. Every member page renders it (the concealed
+  // message-count link, the tools menu, the postings pane's See-more button
+  // all point here); the content=thread variant is the threads-only filter,
+  // which the plain "all content" URL is taken in preference to.
+  String? postingsSearchUrl;
+  for (final link in document.querySelectorAll('a[href*="search/member?user_id="]')) {
+    final href = link.attributes['href'] ?? '';
+    if (href.contains('content=')) continue;
+    postingsSearchUrl = _absoluteUrl(href);
+    break;
+  }
+
   // The wall composer only renders for viewers who can post on this wall.
   String? wallPostUrl;
   for (final form in document.querySelectorAll('form.message--simple')) {
@@ -68,8 +81,26 @@ ProfilePage parseProfilePage(String htmlSource) {
     profileUrl: profileUrl,
     wallPosts: _parseWallPosts(document),
     postings: _parsePostings(document),
+    postingsSearchUrl: postingsSearchUrl,
     csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
     wallPostUrl: wallPostUrl,
+  );
+}
+
+/// Parses a page of a member's full postings — the "See more" query's
+/// results (`/search/member?user_id=N` redirects to a normal search results
+/// page). The rows are the same `contentRow` markup the in-profile pane uses,
+/// so [_parsePostings] reads them; the page-nav and canonical URL drive
+/// pagination.
+ProfilePostingsPage parseProfilePostingsPage(String htmlSource) {
+  final document = html_parser.parse(htmlSource);
+  final (currentPage, totalPages) = parsePageNav(document);
+
+  return ProfilePostingsPage(
+    postings: _parsePostings(document),
+    currentPage: currentPage,
+    totalPages: totalPages,
+    searchUrl: _absoluteUrl(document.querySelector('meta[property="og:url"]')?.attributes['content'] ?? ''),
   );
 }
 

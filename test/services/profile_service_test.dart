@@ -69,22 +69,44 @@ void main() {
     expect(page.username, 'Invader Incubus');
   });
 
-  test('fetchPostings requests the recent-content tab URL', () async {
-    final fixture = File('test/fixtures/profile_gugatron.htm').readAsStringSync();
+  test('fetchPostings loads the member-search query and parses its page', () async {
+    final fixture = File('test/fixtures/profile_postings_search.htm').readAsStringSync();
     final urls = <String>[];
     final client = MockClient((request) async {
       urls.add(request.url.toString());
       return http.Response.bytes(fixture.codeUnits, 200);
     });
 
-    final postings = await ProfileService.fetchPostings(
-      'https://f95zone.to/members/gugatron.328002/',
+    final page = await ProfileService.fetchPostings(
+      'https://f95zone.to/search/member?user_id=801262',
       client: client,
       packageInfoLoader: () async => _packageInfo(),
     );
 
-    expect(urls, ['https://f95zone.to/members/gugatron.328002/recent-content']);
-    expect(postings, hasLength(15));
+    // The GET follows the redirect to the results page transparently.
+    expect(urls, ['https://f95zone.to/search/member?user_id=801262']);
+    expect(page.postings, hasLength(20));
+    expect(page.currentPage, 1);
+    expect(page.totalPages, 20);
+    expect(page.searchUrl, 'https://f95zone.to/search/655136415/?c[users]=BaasB&o=date');
+  });
+
+  test('fetchPostingsPage appends the page number to the results URL', () async {
+    final fixture = File('test/fixtures/profile_postings_search.htm').readAsStringSync();
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      return http.Response.bytes(fixture.codeUnits, 200);
+    });
+
+    await ProfileService.fetchPostingsPage(
+      'https://f95zone.to/search/655136415/?c[users]=BaasB&o=date',
+      3,
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    expect(urls.single, contains('&page=3'));
   });
 
   test('deleteProfilePost posts to the delete action with the CSRF token', () async {

@@ -43,6 +43,7 @@ void main() {
     WidgetTester tester, {
     FetchProfile? fetchProfile,
     FetchProfilePostings? fetchPostings,
+    FetchProfilePostingsPage? postingsPager,
     FetchProfileAbout? fetchAbout,
     ProfileMessagePoster? messagePoster,
     EditFetcher? editFetcher,
@@ -53,7 +54,8 @@ void main() {
       MaterialApp(
         home: ProfileScreen(
           fetchProfile: fetchProfile ?? () async => ProfileService.createMockProfilePage(),
-          fetchPostings: fetchPostings ?? (_) async => ProfileService.createMockPostings(),
+          fetchPostings: fetchPostings ?? (_) async => ProfileService.createMockPostingsPage(),
+          postingsPager: postingsPager,
           fetchAbout: fetchAbout ?? (_) async => ProfileService.createMockProfileAbout(),
           messagePoster: messagePoster,
           editFetcher: editFetcher,
@@ -572,47 +574,77 @@ void main() {
   group('postings tab', () {
     testWidgets('lazy loads and renders postings with their footer', (tester) async {
       await signIn();
-      int fetches = 0;
+      final searchedUrls = <String>[];
       await pumpProfile(
         tester,
-        fetchPostings: (_) async {
-          fetches++;
-          return ProfileService.createMockPostings();
+        fetchPostings: (url) async {
+          searchedUrls.add(url);
+          return ProfileService.createMockPostingsPage();
         },
       );
-      expect(fetches, 0);
+      expect(searchedUrls, isEmpty);
 
       await tester.tap(find.text('Postings'));
       await tester.pumpAndSettle();
 
-      expect(fetches, 1);
+      // The tab loads the member's "See more" query, not the profile URL.
+      expect(searchedUrls, ['https://example.com/search/member?user_id=1957582']);
       expect(find.textContaining('Myth of Slayer Walkthrough [Ch 11]'), findsOneWidget);
       expect(find.text('Post #29 · 21 minutes ago · Mods'), findsOneWidget);
       expect(find.text('Thread · Jun 2, 2026 · Replies: 1 · Mods'), findsOneWidget);
       expect(find.text('Mod'), findsWidgets);
     });
 
-    testWidgets('uses an inline postings pane without refetching', (tester) async {
+    testWidgets('shows the empty state when the query has no postings', (tester) async {
       await signIn();
-      int fetches = 0;
-      await pumpProfile(
-        tester,
-        fetchProfile: () async => ProfilePage(
-          username: 'Broodyr',
-          profileUrl: 'https://example.com/members/x.1/',
-          postings: ProfileService.createMockPostings(),
-        ),
-        fetchPostings: (_) async {
-          fetches++;
-          return const [];
-        },
-      );
+      await pumpProfile(tester, fetchPostings: (_) async => const ProfilePostingsPage());
 
       await tester.tap(find.text('Postings'));
       await tester.pumpAndSettle();
 
-      expect(fetches, 0);
-      expect(find.textContaining('Myth of Slayer Walkthrough [Ch 11]'), findsOneWidget);
+      expect(find.text('No postings yet.'), findsOneWidget);
+    });
+
+    testWidgets('pages in more postings as the list nears the end', (tester) async {
+      await signIn();
+      final pagesFetched = <int>[];
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => const ProfilePage(
+          username: 'Broodyr',
+          profileUrl: 'https://example.com/members/x.1/',
+          postingsSearchUrl: 'https://example.com/search/member?user_id=1',
+        ),
+        fetchPostings: (_) async => const ProfilePostingsPage(
+          postings: [ProfilePosting(title: 'First page hit', url: 'https://example.com/threads/a.1/post-1')],
+          totalPages: 2,
+          searchUrl: 'https://example.com/search/99/?c[users]=Broodyr',
+        ),
+        postingsPager: (url, page) async {
+          pagesFetched.add(page);
+          return const ProfilePostingsPage(
+            postings: [ProfilePosting(title: 'Second page hit', url: 'https://example.com/threads/b.2/post-2')],
+            currentPage: 2,
+            totalPages: 2,
+            searchUrl: 'https://example.com/search/99/?c[users]=Broodyr',
+          );
+        },
+      );
+
+      await tester.tap(find.text('Postings'));
+      // A load-more spinner rides the list while a next page exists, so it
+      // never settles — pump by hand rather than pumpAndSettle.
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('First page hit'), findsOneWidget);
+
+      // Crossing the 600px lead near the end pulls the next page in.
+      await tester.drag(find.text('First page hit'), const Offset(0, -1200));
+      await tester.pump();
+      await tester.pump();
+
+      expect(pagesFetched, [2]);
+      expect(find.text('Second page hit'), findsOneWidget);
     });
 
     testWidgets('tapping a posting opens the thread viewer on that post', (tester) async {
@@ -640,7 +672,7 @@ void main() {
             url: 'https://example.com/members/otherguy.42/',
             username: 'OtherGuy',
             fetchProfile: fetchProfile,
-            fetchPostings: (_) async => ProfileService.createMockPostings(),
+            fetchPostings: (_) async => ProfileService.createMockPostingsPage(),
             fetchAbout: (_) async => ProfileService.createMockProfileAbout(),
           ),
         ),
@@ -752,7 +784,7 @@ void main() {
                 RichPiece.text('the rules', url: 'https://f95zone.to/threads/general-rules.5589/'),
               ],
             ),
-            fetchPostings: (_) async => const [],
+            fetchPostings: (_) async => const ProfilePostingsPage(),
             fetchAbout: (_) async => const ProfileAbout(),
             urlLauncher: (uri) async {
               opened.add(uri);

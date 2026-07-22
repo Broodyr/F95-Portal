@@ -110,6 +110,27 @@ class ProfilePosting {
   });
 }
 
+/// One page of a member's full postings, as served by the "See more" query
+/// (`/search/member?user_id=N`, which redirects to a normal search results
+/// page). Carries the pagination the capped in-profile pane lacks, so the
+/// Postings tab can load a page at a time as the reader scrolls.
+class ProfilePostingsPage {
+  final List<ProfilePosting> postings;
+  final int currentPage;
+  final int totalPages;
+
+  /// The GET-able results URL (`/search/<id>/?c[users]=...`) further pages
+  /// append `&page=N` to. Empty when the page carried no canonical URL.
+  final String searchUrl;
+
+  const ProfilePostingsPage({
+    this.postings = const [],
+    this.currentPage = 1,
+    this.totalPages = 1,
+    this.searchUrl = '',
+  });
+}
+
 class ProfileAbout {
   /// The user-set bio as plain text, unparsed.
   final String bio;
@@ -134,13 +155,21 @@ class ProfilePage {
   final String joined;
   final String lastSeen;
 
-  /// Canonical member URL; base for the recent-content and about fetches.
+  /// Canonical member URL; base for the About tab fetch.
   final String profileUrl;
   final List<ProfilePost> wallPosts;
 
-  /// Pre-filled only when the postings pane happens to be inline (it lazy
-  /// loads on the live site); otherwise fetched separately.
+  /// The member page's own recent-content pane, when rendered inline (it lazy
+  /// loads on the live site) — a capped preview. The Postings tab shows the
+  /// fuller paginated query at [postingsSearchUrl] instead, so this is mostly
+  /// a faithful record of the page rather than what that tab reads.
   final List<ProfilePosting> postings;
+
+  /// The "See more" / "Find all content" query for this member
+  /// (`/search/member?user_id=N`); the Postings tab loads its paginated
+  /// results rather than the capped in-profile pane. Null when the page
+  /// carried no such link (guests, or an unrecognized layout).
+  final String? postingsSearchUrl;
   final String csrfToken;
 
   /// Wall composer form action; only rendered for viewers who can post.
@@ -157,6 +186,7 @@ class ProfilePage {
     this.profileUrl = '',
     this.wallPosts = const [],
     this.postings = const [],
+    this.postingsSearchUrl,
     this.csrfToken = '',
     this.wallPostUrl,
   });

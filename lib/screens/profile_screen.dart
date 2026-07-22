@@ -25,7 +25,11 @@ import 'forum_thread_screen.dart';
 import 'login_screen.dart';
 
 typedef FetchProfile = Future<ProfilePage> Function();
-typedef FetchProfilePostings = Future<List<ProfilePosting>> Function(String profileUrl);
+
+/// Loads the first page of a member's full postings from their "See more"
+/// query; [FetchProfilePostingsPage] loads the rest by page number.
+typedef FetchProfilePostings = Future<ProfilePostingsPage> Function(String postingsSearchUrl);
+typedef FetchProfilePostingsPage = Future<ProfilePostingsPage> Function(String searchUrl, int page);
 typedef FetchProfileAbout = Future<ProfileAbout> Function(String profileUrl);
 
 /// Wall writes: new profile posts and comments share one shape (action URL,
@@ -56,6 +60,7 @@ class ProfileScreen extends StatefulWidget {
 
   final FetchProfile? fetchProfile;
   final FetchProfilePostings? fetchPostings;
+  final FetchProfilePostingsPage? postingsPager;
   final FetchProfileAbout? fetchAbout;
   final ProfileMessagePoster? messagePoster;
   final EditFetcher? editFetcher;
@@ -79,6 +84,7 @@ class ProfileScreen extends StatefulWidget {
     this.username,
     this.fetchProfile,
     this.fetchPostings,
+    this.postingsPager,
     this.fetchAbout,
     this.messagePoster,
     this.editFetcher,
@@ -109,8 +115,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   int _tab = 0;
 
-  List<ProfilePosting>? _postings;
+  /// Postings accumulate across pages as the reader scrolls. [_postingsPage]
+  /// holds the last page's pagination (total pages, the GET-able results
+  /// URL); null until the first page lands, which is the "not yet loaded"
+  /// marker the tab reads.
+  final List<ProfilePosting> _postings = [];
+  ProfilePostingsPage? _postingsPage;
+  int _postingsLoadedPages = 0;
   bool _postingsLoading = false;
+  bool _postingsLoadingMore = false;
   String? _postingsError;
 
   ProfileAbout? _about;
@@ -150,12 +163,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loading = false;
     _error = null;
     _tab = 0;
-    _postings = null;
-    _postingsLoading = false;
-    _postingsError = null;
+    _resetPostings();
     _about = null;
     _aboutLoading = false;
     _aboutError = null;
+  }
+
+  void _resetPostings() {
+    _postings.clear();
+    _postingsPage = null;
+    _postingsLoadedPages = 0;
+    _postingsLoading = false;
+    _postingsLoadingMore = false;
+    _postingsError = null;
   }
 
   /// A pushed profile can't load for guests (the site serves member pages
@@ -195,8 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Pull-to-refresh and post-write reload: refetch the profile and drop
   /// the lazily loaded tabs so they refetch on next open.
   Future<void> _refresh() async {
-    _postings = null;
-    _postingsError = null;
+    _resetPostings();
     _about = null;
     _aboutError = null;
     await _loadProfile();
@@ -212,11 +231,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _ensurePostings() async {
     final page = _page;
-    if (page == null || _postings != null || _postingsLoading) return;
+    if (page == null || _postingsPage != null || _postingsLoading) return;
 
-    // The pane is usually a separate lazy fetch, but use it when inline.
-    if (page.postings.isNotEmpty) {
-      setState(() => _postings = page.postings);
+    // No "See more" query means nothing to page through — the empty state
+    // stands in, rather than a spinner that never resolves.
+    final searchUrl = page.postingsSearchUrl;
+    if (searchUrl == null || searchUrl.isEmpty) {
+      setState(() => _postingsPage = const ProfilePostingsPage());
       return;
     }
 
@@ -226,10 +247,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
     try {
       final fetch = widget.fetchPostings ?? ProfileService.fetchPostings;
-      final postings = await fetch(page.profileUrl);
+      final result = await fetch(searchUrl);
       if (!mounted) return;
       setState(() {
-        _postings = postings;
+        _postingsPage = result;
+        _postings
+          ..clear()
+          ..addAll(result.postings);
+        _postingsLoadedPages = 1;
         _postingsLoading = false;
       });
     } catch (e) {
@@ -238,6 +263,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _postingsError = e.toString();
         _postingsLoading = false;
       });
+    }
+  }
+
+  /// Fetches the next postings page as the reader nears the end. Mirrors the
+  /// forum search list: failures stay silent, so scrolling again retries.
+  Future<void> _loadMorePostings() async {
+    final page = _postingsPage;
+    if (page == null ||
+        _postingsLoadingMore ||
+        _postingsLoadedPages >= page.totalPages ||
+        page.searchUrl.isEmpty) {
+      return;
+    }
+    _postingsLoadingMore = true;
+    try {
+      final fetch = widget.postingsPager ?? ProfileService.fetchPostingsPage;
+      final next = await fetch(page.searchUrl, _postingsLoadedPages + 1);
+      if (!mounted) return;
+      setState(() {
+        _postings.addAll(next.postings);
+        _postingsLoadedPages++;
+      });
+    } catch (_) {
+      // Silent: scrolling further retries.
+    } finally {
+      _postingsLoadingMore = false;
     }
   }
 
@@ -505,21 +556,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(child: _errorStatus != null ? _buildUnavailable(_error!) : _buildError(_error!, _loadProfile))
         else if (page != null)
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: _refresh,
-              color: colorScheme.primary,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              child: ListView(
-                controller: widget.scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
-                children: [
-                  _buildHeader(page),
-                  const SizedBox(height: 14),
-                  _buildTabBar(colorScheme),
-                  const SizedBox(height: 12),
-                  ..._buildTabContent(colorScheme, page),
-                ],
+            // The whole profile scrolls as one list; the Postings tab pages in
+            // more as it nears the end, the same 600px lead the search list
+            // uses. Guarded on the tab so the wall and About don't trip it.
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (_tab == 1 && notification.metrics.extentAfter < 600) _loadMorePostings();
+                return false;
+              },
+              child: RefreshIndicator(
+                onRefresh: _refresh,
+                color: colorScheme.primary,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                child: ListView(
+                  controller: widget.scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+                  children: [
+                    _buildHeader(page),
+                    const SizedBox(height: 14),
+                    _buildTabBar(colorScheme),
+                    const SizedBox(height: 12),
+                    ..._buildTabContent(colorScheme, page),
+                  ],
+                ),
               ),
             ),
           ),
@@ -913,9 +973,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ];
     }
     if (_postingsError != null) return [_buildError(_postingsError!, _ensurePostings)];
-    final postings = _postings;
-    if (postings == null) return const [];
-    if (postings.isEmpty) {
+    final page = _postingsPage;
+    if (page == null) return const [];
+    if (_postings.isEmpty) {
       return [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 32),
@@ -925,7 +985,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ];
     }
-    return [for (final posting in postings) _buildPosting(colorScheme, posting)];
+    return [
+      for (final posting in _postings) _buildPosting(colorScheme, posting),
+      if (_postingsLoadedPages < page.totalPages)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+        ),
+    ];
   }
 
   Widget _buildPosting(ColorScheme colorScheme, ProfilePosting posting) {
