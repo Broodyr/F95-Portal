@@ -212,4 +212,89 @@ void main() {
       expect(size.width, closeTo(80 * 480 / 360, 0.01));
     });
   });
+
+  // The thin crimson is hard to read at body size, so a link is drawn a step
+  // heavier than surrounding text — but still under bold, so it never reads as
+  // emphasis.
+  group('link weight', () {
+    TextStyle? spanStyleFor(WidgetTester tester, String text) {
+      final root = tester.widget<Text>(find.byType(Text).first).textSpan! as TextSpan;
+      TextStyle? found;
+      root.visitChildren((span) {
+        if (span is TextSpan && span.text == text) {
+          found = span.style;
+          return false;
+        }
+        return true;
+      });
+      return found;
+    }
+
+    testWidgets('a link sits between body and bold weight, in the theme primary', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            body: RichSpoilerText(
+              pieces: const [
+                RichPiece.text('the docs', url: 'https://example.com'),
+                RichPiece.text(' now'),
+              ],
+              onOpenLink: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final link = spanStyleFor(tester, 'the docs')!;
+      final body = spanStyleFor(tester, ' now')!;
+      expect(link.fontWeight, FontWeight.w500);
+      expect(body.fontWeight, isNull); // inherits the body weight
+      expect(link.color, ThemeData.dark().colorScheme.primary);
+    });
+
+    testWidgets('a bold link keeps bold weight, not the lighter link weight', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            body: RichSpoilerText(
+              pieces: const [
+                RichPiece.text('boldlink', url: 'https://example.com', bold: true),
+              ],
+              onOpenLink: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(spanStyleFor(tester, 'boldlink')!.fontWeight, FontWeight.w600);
+    });
+
+    testWidgets('a link gets a muted crimson underline; [u] markup keeps its own', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            body: RichSpoilerText(
+              pieces: const [
+                RichPiece.text('underlined', underline: true),
+                RichPiece.text('a link', url: 'https://example.com'),
+              ],
+              onOpenLink: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final marked = spanStyleFor(tester, 'underlined')!;
+      final link = spanStyleFor(tester, 'a link')!;
+      expect(marked.decoration!.contains(TextDecoration.underline), isTrue);
+      expect(link.decoration!.contains(TextDecoration.underline), isTrue);
+      expect(link.decorationColor, ThemeData.dark().colorScheme.primary.withValues(alpha: 0.5));
+    });
+  });
 }

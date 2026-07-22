@@ -1090,8 +1090,11 @@ class _PostCardState extends State<_PostCard> {
                         style: TextStyle(
                           color: jumpable ? colorScheme.primary : AppColors.of(context).subtleText,
                           fontSize: 10.5,
+                          // A jumpable header reads as a link: crimson + weight,
+                          // with a muted underline hinting underneath.
+                          fontWeight: jumpable ? FontWeight.w500 : null,
                           decoration: jumpable ? TextDecoration.underline : null,
-                          decorationColor: jumpable ? colorScheme.primary : null,
+                          decorationColor: jumpable ? colorScheme.primary.withValues(alpha: 0.5) : null,
                         ),
                       ),
                     ),

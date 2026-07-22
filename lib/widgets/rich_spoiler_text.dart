@@ -209,13 +209,23 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
           recognizer: recognizer,
           style: baseStyle.copyWith(
             color: url != null ? colorScheme.primary : null,
-            fontWeight: piece.bold ? FontWeight.w600 : null,
+            // Links carry a touch more weight than body text so the thin crimson
+            // holds up at small sizes; kept under bold's w600 so a link never
+            // reads as emphasis.
+            fontWeight: piece.bold
+                ? FontWeight.w600
+                : (url != null ? FontWeight.w500 : null),
             fontStyle: piece.italic ? FontStyle.italic : null,
             decoration: TextDecoration.combine([
               if (piece.underline || url != null) TextDecoration.underline,
               if (piece.strike) TextDecoration.lineThrough,
             ]),
-            decorationColor: url != null ? colorScheme.primary : AppColors.of(context).brightText,
+            // A link's underline is a muted crimson whisper — the weight carries
+            // the salience, so the line just hints. Explicit [u]/strike keep the
+            // brighter default.
+            decorationColor: url != null
+                ? colorScheme.primary.withValues(alpha: 0.5)
+                : AppColors.of(context).brightText,
           ),
         ),
       );

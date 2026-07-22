@@ -211,8 +211,9 @@ class _ThreadReviewsScreenState extends State<ThreadReviewsScreen> {
             'Reviewing Rules',
             style: style.copyWith(
               color: colorScheme.primary,
+              fontWeight: FontWeight.w500,
               decoration: TextDecoration.underline,
-              decorationColor: colorScheme.primary,
+              decorationColor: colorScheme.primary.withValues(alpha: 0.5),
             ),
           ),
         ),
