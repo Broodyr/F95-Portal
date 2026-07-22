@@ -68,7 +68,7 @@ Future<void> pumpForum(
         threadPoster: threadPoster,
         searcher:
             searcher ??
-            (keywords, {titleOnly = false, user = '', order = 'relevance'}) async =>
+            (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async =>
                 ForumService.createMockSearchPage(),
         searchPager: searchPager ?? (url, page) async => ForumService.createMockSearchPage(page: page),
         fetchBookmarks: fetchBookmarks ?? ({page = 1}) async => ForumService.createMockBookmarks(page: page),
@@ -728,7 +728,7 @@ void main() {
     final openedThreads = <String>[];
     await pumpForum(
       tester,
-      searcher: (keywords, {titleOnly = false, user = '', order = 'relevance'}) async {
+      searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async {
         queries.add((keywords, titleOnly, order));
         return ForumService.createMockSearchPage();
       },

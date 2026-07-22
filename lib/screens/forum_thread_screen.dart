@@ -24,6 +24,7 @@ import '../widgets/report_dialog.dart';
 import '../widgets/rich_spoiler_text.dart';
 import '../widgets/sliding_reveal.dart';
 import '../widgets/star_rating.dart';
+import 'forum_search_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'thread_reviews_screen.dart';
@@ -62,6 +63,10 @@ class ForumThreadScreen extends StatefulWidget {
   final RatingSender? ratingSender;
   final Future<bool> Function(Uri uri)? urlLauncher;
 
+  /// Search plumbing handed on to the overflow's thread-scoped search.
+  final ForumSearcher? searcher;
+  final ForumSearchPager? searchPager;
+
   const ForumThreadScreen({
     super.key,
     required this.url,
@@ -81,6 +86,8 @@ class ForumThreadScreen extends StatefulWidget {
     this.rateFormFetcher,
     this.ratingSender,
     this.urlLauncher,
+    this.searcher,
+    this.searchPager,
   });
 
   @override
@@ -514,6 +521,33 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
     return '[QUOTE="${post.author}, post: ${post.postId}$member"]\n${buffer.toString().trim()}\n[/QUOTE]\n';
   }
 
+  /// The thread's numeric id, from the canonical URL when the page has
+  /// loaded (permalink openings land on /posts/N/, which carries no thread
+  /// id) or from the opening URL before then; null if neither names one.
+  int? get _threadId {
+    for (final url in [_page?.threadUrl ?? '', widget.url]) {
+      final match = RegExp(r'/threads/(?:[^/]*\.)?(\d+)').firstMatch(url);
+      if (match != null) return int.parse(match.group(1)!);
+    }
+    return null;
+  }
+
+  void _openThreadSearch(int threadId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ForumSearchScreen(
+          scopeThreadId: threadId,
+          searcher: widget.searcher,
+          searchPager: widget.searchPager,
+          fetchThreadPosts: widget.fetchPosts,
+          fetchReactions: widget.fetchReactions,
+          reactSender: widget.reactSender,
+          replySender: widget.replySender,
+        ),
+      ),
+    );
+  }
+
   Future<void> _launch(Uri uri) async {
     // Guest-rendered pages route masked links to the login page; open the
     // in-app sign-in (same flow as the details sheet) and reload after.
@@ -558,13 +592,22 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
             color: AppColors.of(context).chipSurface,
             icon: const Icon(Icons.more_vert, size: 20),
             onSelected: (action) => action(),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: () => _launch(Uri.parse(widget.url)),
-                height: 40,
-                child: const Text('Open in browser', style: TextStyle(fontSize: 13)),
-              ),
-            ],
+            itemBuilder: (context) {
+              final threadId = _threadId;
+              return [
+                if (threadId != null)
+                  PopupMenuItem(
+                    value: () => _openThreadSearch(threadId),
+                    height: 40,
+                    child: const Text('Search thread', style: TextStyle(fontSize: 13)),
+                  ),
+                PopupMenuItem(
+                  value: () => _launch(Uri.parse(widget.url)),
+                  height: 40,
+                  child: const Text('Open in browser', style: TextStyle(fontSize: 13)),
+                ),
+              ];
+            },
           ),
         ],
       ),

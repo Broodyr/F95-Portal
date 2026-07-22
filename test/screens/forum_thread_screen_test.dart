@@ -1,6 +1,7 @@
 import 'package:f95_portal/models/forum.dart';
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
+import 'package:f95_portal/screens/forum_search_screen.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
 import 'package:f95_portal/screens/thread_reviews_screen.dart';
 import 'package:f95_portal/widgets/star_rating.dart';
@@ -582,6 +583,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(launched, [Uri.parse('https://example.com/threads/overflow.1/')]);
+  });
+
+  // "Search thread" opens the search screen scoped to this thread, id taken
+  // from the canonical thread URL, with the screen's search plumbing along.
+  testWidgets('the overflow opens a thread-scoped search', (tester) async {
+    Future<ForumSearchPage> searcher(
+      String keywords, {
+      bool titleOnly = false,
+      String user = '',
+      String order = 'relevance',
+      int? threadId,
+    }) async => const ForumSearchPage(results: []);
+
+    final postsPage = ThreadPostsPage(
+      title: 'Searchable',
+      threadUrl: 'https://example.com/threads/searchable.207754/',
+      posts: const [ForumPost(postId: 1, number: 1, author: 'A', blocks: [])],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/searchable.207754/',
+          title: 'Searchable',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+          searcher: searcher,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Thread tools'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Search thread'));
+    await tester.pumpAndSettle();
+
+    final search = tester.widget<ForumSearchScreen>(find.byType(ForumSearchScreen));
+    expect(search.scopeThreadId, 207754);
+    expect(search.searcher, same(searcher));
   });
 
   // A mid-thread page shows the widest arrangement — 1 … n-1 n n+1 … last.

@@ -316,6 +316,29 @@ void main() {
     expect(page.totalPages, 50);
   });
 
+  // Same constraint the site's in-thread quick search posts ("This thread"
+  // sends constraints={"search_type":"post","c":{"thread":N}}).
+  test('search scoped to a thread posts the c[thread] constraint', () async {
+    final results = File('test/fixtures/search_results.htm').readAsStringSync();
+    late Map<String, String> posted;
+    final client = MockClient((request) async {
+      if (request.method == 'GET') return http.Response('<html data-csrf="tok,en"></html>', 200);
+      posted = request.bodyFields;
+      return http.Response.bytes(results.codeUnits, 200);
+    });
+
+    await ForumService.search(
+      'walkthrough',
+      order: 'date',
+      threadId: 207754,
+      client: client,
+      packageInfoLoader: () async => _packageInfo(),
+    );
+
+    expect(posted['c[thread]'], '207754');
+    expect(posted['search_type'], 'post');
+  });
+
   test('search follows a 303 location when the client does not', () async {
     final results = File('test/fixtures/search_results.htm').readAsStringSync();
     final client = MockClient((request) async {

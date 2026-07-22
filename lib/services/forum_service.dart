@@ -389,6 +389,7 @@ class ForumService {
     bool titleOnly = false,
     String user = '',
     String order = 'relevance',
+    int? threadId,
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
   }) async {
@@ -420,6 +421,9 @@ class ForumService {
           'order': order,
           if (titleOnly) 'c[title_only]': '1',
           if (user.trim().isNotEmpty) 'c[users]': user.trim(),
+          // The site's in-thread quick search sends the same constraint
+          // (as constraints={"search_type":"post","c":{"thread":N}}).
+          if (threadId != null) 'c[thread]': '$threadId',
           '_xfToken': csrf,
         },
       );

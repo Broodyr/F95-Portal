@@ -14,7 +14,8 @@ import 'forum_thread_screen.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 
-typedef ForumSearcher = Future<ForumSearchPage> Function(String keywords, {bool titleOnly, String user, String order});
+typedef ForumSearcher =
+    Future<ForumSearchPage> Function(String keywords, {bool titleOnly, String user, String order, int? threadId});
 typedef ForumSearchPager = Future<ForumSearchPage> Function(String searchUrl, int page);
 
 /// Forum search: keyword field with titles-only and sort options, post-level
@@ -28,6 +29,11 @@ class ForumSearchScreen extends StatefulWidget {
   final ReactSender? reactSender;
   final ReplySender? replySender;
 
+  /// Limits every search to one thread (the viewer's "Search thread").
+  /// Scoped search drops the options row — the scope stands in for them —
+  /// and returns matches newest first, as the forum's own does.
+  final int? scopeThreadId;
+
   const ForumSearchScreen({
     super.key,
     this.searcher,
@@ -36,7 +42,10 @@ class ForumSearchScreen extends StatefulWidget {
     this.fetchReactions,
     this.reactSender,
     this.replySender,
+    this.scopeThreadId,
   });
+
+  bool get isThreadScoped => scopeThreadId != null;
 
   @override
   State<ForumSearchScreen> createState() => _ForumSearchScreenState();
@@ -47,7 +56,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
   final ScrollController _scrollController = ScrollController();
 
   bool _titleOnly = false;
-  String _order = 'relevance';
+  late String _order = widget.isThreadScoped ? 'date' : 'relevance';
 
   ForumSearchPage? _page;
   final List<ForumSearchResult> _results = [];
@@ -81,7 +90,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
     });
     try {
       final run = widget.searcher ?? ForumService.search;
-      final page = await run(keywords, titleOnly: _titleOnly, user: '', order: _order);
+      final page = await run(keywords, titleOnly: _titleOnly, user: '', order: _order, threadId: widget.scopeThreadId);
       if (!mounted) return;
       setState(() {
         _page = page;
@@ -164,7 +173,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
           onSubmitted: (_) => _search(),
           style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14),
           decoration: InputDecoration(
-            hintText: 'Search the forum…',
+            hintText: widget.isThreadScoped ? 'Search this thread…' : 'Search the forum…',
             hintStyle: TextStyle(color: AppColors.of(context).hintText, fontSize: 14),
             border: InputBorder.none,
           ),
@@ -174,32 +183,33 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Row(
-              children: [
-                _buildToggle(colorScheme, 'Titles only', _titleOnly, () => setState(() => _titleOnly = !_titleOnly)),
-                Container(
-                  width: 1,
-                  height: 14,
-                  margin: const EdgeInsets.symmetric(horizontal: 9),
-                  // The app's divider weight. Not the segmented track beside
-                  // it: that's translucent black, which recesses against a
-                  // fill but on the page background lands darker than the
-                  // page and leaves no line at all.
-                  color: colorScheme.onSurface.withValues(alpha: 0.1),
-                ),
-                SegmentedSelector<String>(
-                  dense: true,
-                  shrinkWrap: true,
-                  values: const ['relevance', 'date'],
-                  isSelected: (order) => _order == order,
-                  label: (order) => order == 'date' ? 'Newest' : 'Relevance',
-                  onSelect: (order) => setState(() => _order = order),
-                ),
-              ],
+          if (!widget.isThreadScoped)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+              child: Row(
+                children: [
+                  _buildToggle(colorScheme, 'Titles only', _titleOnly, () => setState(() => _titleOnly = !_titleOnly)),
+                  Container(
+                    width: 1,
+                    height: 14,
+                    margin: const EdgeInsets.symmetric(horizontal: 9),
+                    // The app's divider weight. Not the segmented track beside
+                    // it: that's translucent black, which recesses against a
+                    // fill but on the page background lands darker than the
+                    // page and leaves no line at all.
+                    color: colorScheme.onSurface.withValues(alpha: 0.1),
+                  ),
+                  SegmentedSelector<String>(
+                    dense: true,
+                    shrinkWrap: true,
+                    values: const ['relevance', 'date'],
+                    isSelected: (order) => _order == order,
+                    label: (order) => order == 'date' ? 'Newest' : 'Relevance',
+                    onSelect: (order) => setState(() => _order = order),
+                  ),
+                ],
+              ),
             ),
-          ),
           Expanded(child: _buildBody(colorScheme)),
         ],
       ),
@@ -270,7 +280,10 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
     final page = _page;
     if (page == null) {
       return Center(
-        child: Text('Search threads and posts', style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13)),
+        child: Text(
+          widget.isThreadScoped ? 'Search this thread’s posts' : 'Search threads and posts',
+          style: TextStyle(color: AppColors.of(context).hintText, fontSize: 13),
+        ),
       );
     }
     if (_results.isEmpty) {

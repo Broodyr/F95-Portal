@@ -26,7 +26,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: ForumSearchScreen(
-          searcher: (keywords, {titleOnly = false, user = '', order = 'relevance'}) async =>
+          searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async =>
               ForumSearchPage(results: [result], searchUrl: 'https://example.com/search/1/'),
           fetchThreadPosts: (url, {page = 1}) async => const ThreadPostsPage(title: 'T', posts: []),
         ),
@@ -36,6 +36,60 @@ void main() {
     await tester.tap(find.byTooltip('Search'));
     await tester.pumpAndSettle();
   }
+
+  // The thread-scoped variant (the overflow's "Search thread"): no options
+  // row — the scope replaces them — and results come newest first.
+  group('thread scope', () {
+    testWidgets('hides the options row and searches the thread newest-first', (tester) async {
+      await AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
+      final calls = <(String, String, int?)>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ForumSearchScreen(
+            scopeThreadId: 207754,
+            searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async {
+              calls.add((keywords, order, threadId));
+              return const ForumSearchPage(results: [ForumSearchResult(title: 'Hit', url: 'u')]);
+            },
+          ),
+        ),
+      );
+
+      expect(find.text('Titles only'), findsNothing);
+      expect(find.text('Relevance'), findsNothing);
+      expect(find.text('Newest'), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('forum-search-field')), 'walkthrough');
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+
+      expect(calls, [('walkthrough', 'date', 207754)]);
+      expect(find.textContaining('Hit'), findsOneWidget);
+    });
+
+    testWidgets('an unscoped search sends no thread constraint', (tester) async {
+      int? sentThreadId = -1;
+      await AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ForumSearchScreen(
+            searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async {
+              sentThreadId = threadId;
+              return const ForumSearchPage(results: []);
+            },
+          ),
+        ),
+      );
+
+      expect(find.text('Titles only'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('forum-search-field')), 'anything');
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+
+      expect(sentThreadId, isNull);
+    });
+  });
 
   group('opening a result', () {
     testWidgets('a thread hit opens the thread viewer', (tester) async {
