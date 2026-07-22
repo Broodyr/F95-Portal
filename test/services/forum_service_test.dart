@@ -178,6 +178,18 @@ void main() {
     expect(urls, ['https://f95zone.to/account/unread-alert?alert_id=2047223592']);
   });
 
+  test('markAllAlertsRead hits the alerts page with the skip-mark-read override', () async {
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      return http.Response('ok', 200);
+    });
+
+    await ForumService.markAllAlertsRead(client: client, packageInfoLoader: () async => _packageInfo());
+
+    expect(urls, ['https://f95zone.to/account/alerts?skip_mark_read=0']);
+  });
+
   test('saving the pop-up preference replays the whole form with the flag flipped', () async {
     const formHtml = '''
       <html data-csrf="page-token"><body>

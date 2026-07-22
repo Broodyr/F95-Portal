@@ -346,6 +346,21 @@ class ForumService {
     }
   }
 
+  /// Marks the whole feed read via the alerts page's own "Mark all as read"
+  /// link — the same `?skip_mark_read=0` override the site renders, which
+  /// forces the mark-read the pop-up-skip preference otherwise suppresses.
+  static Future<void> markAllAlertsRead({
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      await _fetchHtml('$alertsUrl?skip_mark_read=0', client: client, packageInfoLoader: packageInfoLoader);
+    } finally {
+      invalidateAccountPages();
+    }
+  }
+
   /// XenForo page URLs: `<base>/page-N`, page 1 is the base itself.
   static String _withPage(String url, int page) {
     final base = url.endsWith('/') ? url : '$url/';

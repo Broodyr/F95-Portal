@@ -20,6 +20,8 @@ typedef FetchAlerts = Future<AlertsPage> Function({int page});
 typedef AlertsAcknowledger = Future<void> Function(List<int> unreadAlertIds);
 typedef AlertReadMarker = Future<void> Function(int alertId);
 typedef AlertUnreadMarker = Future<void> Function(int alertId);
+typedef AlertsBulkReadMarker = Future<void> Function();
+typedef AlertPreferencesFetcher = Future<AlertPreferences> Function();
 
 /// A thread or post permalink — the shapes [ForumThreadScreen] can open
 /// (`/posts/N/` from a reply or reaction, `/threads/slug.N/…` from a quote).
@@ -70,6 +72,12 @@ class AlertsScreen extends StatefulWidget {
   /// to url_launcher. Injected by tests.
   final Future<bool> Function(Uri uri)? urlLauncher;
 
+  /// Reads the whole feed at once (the app-bar "Mark all read"), and the
+  /// preference that gates whether that control even shows. Both default to
+  /// [ForumService]; injected by tests.
+  final AlertsBulkReadMarker? markAllReadMarker;
+  final AlertPreferencesFetcher? preferencesFetcher;
+
   const AlertsScreen({
     super.key,
     this.fetchAlerts,
@@ -79,6 +87,8 @@ class AlertsScreen extends StatefulWidget {
     this.alertReadMarker,
     this.alertUnreadMarker,
     this.urlLauncher,
+    this.markAllReadMarker,
+    this.preferencesFetcher,
   });
 
   @override
@@ -98,12 +108,20 @@ class _AlertsScreenState extends State<AlertsScreen> {
   /// A 403 or 404 will not change on a second ask, so the view drops Retry.
   bool _errorRetryable = true;
 
+  /// Whether the account keeps alerts unread until visited. Only then is a
+  /// "Mark all read" affordance useful — otherwise opening the feed already
+  /// read everything. Learned once per visit (the preference is per-session).
+  bool _popupSkipsMarkRead = false;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_maybeLoadMore);
     // The web build runs on mock data without a session.
-    if (kIsWeb || AuthService.instance.isLoggedIn) _load();
+    if (kIsWeb || AuthService.instance.isLoggedIn) {
+      _load();
+      _loadPreference();
+    }
   }
 
   @override
@@ -142,6 +160,20 @@ class _AlertsScreenState extends State<AlertsScreen> {
         _errorRetryable = e is! ContentUnavailableException;
         _loading = false;
       });
+    }
+  }
+
+  /// Learns whether the account keeps alerts unread until visited, which gates
+  /// the "Mark all read" control. Failure just leaves it hidden — it's an
+  /// affordance, not something worth a toast.
+  Future<void> _loadPreference() async {
+    try {
+      final fetch = widget.preferencesFetcher ?? ForumService.fetchAlertPreferences;
+      final prefs = await fetch();
+      if (!mounted) return;
+      setState(() => _popupSkipsMarkRead = prefs.popupSkipsMarkRead);
+    } catch (_) {
+      // No preference, no button.
     }
   }
 
@@ -292,6 +324,41 @@ class _AlertsScreenState extends State<AlertsScreen> {
     await launch(Uri.parse(url));
   }
 
+  /// Whether the currently-loaded feed has an unread row.
+  bool get _hasUnread => _groups.any((group) => group.alerts.any((alert) => alert.unread));
+
+  /// The "Mark all read" control only earns its place when the account keeps
+  /// alerts unread on view (otherwise opening the feed already read them) and
+  /// there's actually something unread to clear.
+  bool get _showMarkAll => _popupSkipsMarkRead && _hasUnread;
+
+  /// Reads the whole feed at once, clearing every row's tint optimistically
+  /// and restoring them all if the request fails.
+  Future<void> _markAllRead() async {
+    final wasUnread = [
+      for (final group in _groups)
+        for (final alert in group.alerts)
+          if (alert.unread) alert.alertId,
+    ];
+    if (wasUnread.isEmpty) return;
+    setState(() {
+      for (final id in wasUnread) {
+        _setUnread(id, false);
+      }
+    });
+    try {
+      await (widget.markAllReadMarker ?? ForumService.markAllAlertsRead)();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        for (final id in wasUnread) {
+          _setUnread(id, true);
+        }
+      });
+      AppToast.show(context, "Couldn't mark all read: $e", error: true);
+    }
+  }
+
   /// The per-row long-press menu: the read/unread toggle (the undo for a tap,
   /// and a manual read for anything the feed left new) plus opening the target
   /// in the browser — the only way to reach a type the app can't render yet.
@@ -338,7 +405,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Alerts', style: TextStyle(fontSize: 16))),
+      appBar: AppBar(
+        title: const Text('Alerts', style: TextStyle(fontSize: 16)),
+        actions: [
+          if (_showMarkAll)
+            IconButton(
+              tooltip: 'Mark all read',
+              icon: const Icon(Icons.done_all, size: 20),
+              onPressed: _markAllRead,
+            ),
+        ],
+      ),
       body: _buildBody(colorScheme),
     );
   }
@@ -357,7 +434,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 final success = await Navigator.of(
                   context,
                 ).push<bool>(MaterialPageRoute(builder: (_) => const LoginScreen()));
-                if (success == true && mounted) await _load();
+                if (success == true && mounted) {
+                  await _load();
+                  if (mounted) await _loadPreference();
+                }
               },
               child: const Text('Sign in'),
             ),

@@ -43,6 +43,8 @@ class ForumScreen extends StatefulWidget {
   final AlertReadMarker? alertReadMarker;
   final AlertUnreadMarker? alertUnreadMarker;
   final Future<bool> Function(Uri uri)? alertUrlLauncher;
+  final AlertsBulkReadMarker? alertMarkAllReadMarker;
+  final AlertPreferencesFetcher? alertPreferencesFetcher;
 
   const ForumScreen({
     super.key,
@@ -63,6 +65,8 @@ class ForumScreen extends StatefulWidget {
     this.alertReadMarker,
     this.alertUnreadMarker,
     this.alertUrlLauncher,
+    this.alertMarkAllReadMarker,
+    this.alertPreferencesFetcher,
   });
 
   @override
@@ -230,6 +234,8 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
                             alertReadMarker: widget.alertReadMarker,
                             alertUnreadMarker: widget.alertUnreadMarker,
                             urlLauncher: widget.alertUrlLauncher,
+                            markAllReadMarker: widget.alertMarkAllReadMarker,
+                            preferencesFetcher: widget.alertPreferencesFetcher,
                           ),
                         ),
                       );

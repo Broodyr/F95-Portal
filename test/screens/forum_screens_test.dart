@@ -56,6 +56,8 @@ Future<void> pumpForum(
   AlertReadMarker? alertReadMarker,
   AlertUnreadMarker? alertUnreadMarker,
   Future<bool> Function(Uri uri)? alertUrlLauncher,
+  AlertsBulkReadMarker? alertMarkAllReadMarker,
+  AlertPreferencesFetcher? alertPreferencesFetcher,
 }) async {
   useTestDrafts();
   await tester.pumpWidget(
@@ -82,6 +84,10 @@ Future<void> pumpForum(
         alertReadMarker: alertReadMarker ?? (id) async {},
         alertUnreadMarker: alertUnreadMarker ?? (id) async {},
         alertUrlLauncher: alertUrlLauncher ?? (uri) async => true,
+        alertMarkAllReadMarker: alertMarkAllReadMarker ?? () async {},
+        // Default off, so the mark-all control stays hidden and the preference
+        // fetch never hits the network.
+        alertPreferencesFetcher: alertPreferencesFetcher ?? () async => const AlertPreferences(),
       ),
     ),
   );
@@ -1223,6 +1229,7 @@ void main() {
         home: AlertsScreen(
           fetchAlerts: ({page = 1}) async => ForumService.createMockAlerts(page: page),
           alertsAcknowledger: (ids) async => acknowledged.add(ids),
+          preferencesFetcher: () async => const AlertPreferences(),
           fetchThreadPosts: (url, {page = 1}) async {
             openedThreads.add(url);
             return ForumService.createMockThreadPosts(page: page);
@@ -1261,6 +1268,7 @@ void main() {
         home: AlertsScreen(
           fetchAlerts: ({page = 1}) async => ForumService.createMockAlerts(page: page),
           alertsAcknowledger: (ids) async => throw Exception('Action failed (HTTP 403)'),
+          preferencesFetcher: () async => const AlertPreferences(),
         ),
       ),
     );
@@ -1291,6 +1299,7 @@ void main() {
           alertReadMarker: alertReadMarker ?? (id) async {},
           alertUnreadMarker: alertUnreadMarker ?? (id) async {},
           urlLauncher: urlLauncher ?? (uri) async => true,
+          preferencesFetcher: () async => const AlertPreferences(),
           fetchThreadPosts: fetchThreadPosts,
           fetchReactions: (url) async => ForumService.createMockReactionsPage(),
         ),
@@ -1425,6 +1434,86 @@ void main() {
 
     expect(find.textContaining("Couldn't mark read"), findsOneWidget);
     expect(find.textContaining('offline'), findsOneWidget);
+  });
+
+  /// Pumps the feed with a chosen skip-mark-read preference for the mark-all
+  /// control, which only shows when the account keeps alerts unread on view.
+  Future<void> pumpFeed(
+    WidgetTester tester,
+    List<AlertEntry> alerts, {
+    required bool popupSkipsMarkRead,
+    AlertsBulkReadMarker? markAllReadMarker,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: AlertsScreen(
+          fetchAlerts: ({page = 1}) async => AlertsPage(groups: [AlertGroup(title: 'Today', alerts: alerts)]),
+          alertsAcknowledger: (ids) async {},
+          alertReadMarker: (id) async {},
+          preferencesFetcher: () async => AlertPreferences(popupSkipsMarkRead: popupSkipsMarkRead),
+          markAllReadMarker: markAllReadMarker ?? () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  AlertEntry reply(int id, {bool unread = true}) => AlertEntry(
+    alertId: id,
+    username: 'A$id',
+    action: 'replied to the thread',
+    title: 'Thread $id',
+    url: 'https://f95zone.to/posts/$id/',
+    unread: unread,
+  );
+
+  testWidgets('mark-all appears when the account skips mark-read and clears the feed', (tester) async {
+    await signIn();
+    var markedAll = false;
+    await pumpFeed(
+      tester,
+      [reply(1), reply(2)],
+      popupSkipsMarkRead: true,
+      markAllReadMarker: () async => markedAll = true,
+    );
+
+    expect(find.byTooltip('Mark all read'), findsOneWidget);
+    await tester.tap(find.byTooltip('Mark all read'));
+    await tester.pumpAndSettle();
+
+    expect(markedAll, isTrue);
+    // Nothing unread left, so the control retires itself.
+    expect(find.byTooltip('Mark all read'), findsNothing);
+  });
+
+  testWidgets('mark-all stays hidden when the account marks read on view', (tester) async {
+    await signIn();
+    await pumpFeed(tester, [reply(1), reply(2)], popupSkipsMarkRead: false);
+    expect(find.byTooltip('Mark all read'), findsNothing);
+  });
+
+  testWidgets('mark-all stays hidden when nothing is unread', (tester) async {
+    await signIn();
+    await pumpFeed(tester, [reply(1, unread: false)], popupSkipsMarkRead: true);
+    expect(find.byTooltip('Mark all read'), findsNothing);
+  });
+
+  testWidgets('a failed mark-all restores the feed and shows an error', (tester) async {
+    await signIn();
+    await pumpFeed(
+      tester,
+      [reply(1)],
+      popupSkipsMarkRead: true,
+      markAllReadMarker: () async => throw Exception('offline'),
+    );
+
+    await tester.tap(find.byTooltip('Mark all read'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining("Couldn't mark all read"), findsOneWidget);
+    // Reverted, so the control is back.
+    expect(find.byTooltip('Mark all read'), findsOneWidget);
   });
 
   testWidgets('bookmarks and alerts prompt guests to sign in', (tester) async {
