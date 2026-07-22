@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../models/account.dart';
 import '../services/auth_service.dart';
@@ -16,10 +18,38 @@ import 'profile_screen.dart';
 
 typedef FetchAlerts = Future<AlertsPage> Function({int page});
 typedef AlertsAcknowledger = Future<void> Function(List<int> unreadAlertIds);
+typedef AlertReadMarker = Future<void> Function(int alertId);
+typedef AlertUnreadMarker = Future<void> Function(int alertId);
+
+/// A thread or post permalink — the shapes [ForumThreadScreen] can open
+/// (`/posts/N/` from a reply or reaction, `/threads/slug.N/…` from a quote).
+/// The `-` in `/profile-posts/` keeps those from matching here; they route to
+/// the member's wall instead.
+final RegExp _threadAlertUrl = RegExp(r'/(?:threads|posts)/');
+
+/// A bare member profile (`/members/slug.N/`), the target of a "started
+/// following you" alert — [ProfileScreen] renders it. Anchored to the id so a
+/// sub-page like `/members/slug.N/trophies` (a trophy award) doesn't match and
+/// stays non-actionable.
+final RegExp _memberProfileUrl = RegExp(r'/members/[^/]+\.\d+/?(?:$|\?)');
+
+bool isMemberProfileUrl(String url) => _memberProfileUrl.hasMatch(url);
+
+/// Whether tapping [alert] reaches a screen the app can render. The alerts
+/// feed carries many XenForo types — a trophy award, ticket and conversation
+/// notices, username-change verdicts — that the app has no destination for;
+/// this whitelist keeps those rows from opening a blank thread viewer.
+/// Openable: a post/thread permalink (the thread viewer), a profile
+/// post/comment, or a follower's profile (the member's wall).
+bool alertIsActionable(AlertEntry alert) =>
+    isProfilePostUrl(alert.url) || isMemberProfileUrl(alert.url) || _threadAlertUrl.hasMatch(alert.url);
 
 /// The account alerts feed: date-grouped rows (actor, action, target
 /// thread with its prefix labels), unread highlighting, and load-more
-/// pagination. Rows open in the thread viewer.
+/// pagination. A tap reads the row and opens it where the app can — the
+/// thread viewer or a member's wall (see [alertIsActionable]); a type with
+/// no in-app screen just reads and points at the browser. Long-press is a
+/// per-row menu: read/unread and open-in-browser.
 ///
 /// This screen is the app's bell, so opening it acknowledges the feed the
 /// same way the site's bell dropdown does: the just-fetched rows keep
@@ -31,12 +61,24 @@ class AlertsScreen extends StatefulWidget {
   final FetchThreadPosts? fetchThreadPosts;
   final FetchReactions? fetchReactions;
 
+  /// Reads/restores a single alert (a tap, or the row menu's toggle). Injected
+  /// by tests; both default to the [ForumService] endpoints.
+  final AlertReadMarker? alertReadMarker;
+  final AlertUnreadMarker? alertUnreadMarker;
+
+  /// Opens an alert's URL in the platform browser from the row menu; defaults
+  /// to url_launcher. Injected by tests.
+  final Future<bool> Function(Uri uri)? urlLauncher;
+
   const AlertsScreen({
     super.key,
     this.fetchAlerts,
     this.alertsAcknowledger,
     this.fetchThreadPosts,
     this.fetchReactions,
+    this.alertReadMarker,
+    this.alertUnreadMarker,
+    this.urlLauncher,
   });
 
   @override
@@ -158,13 +200,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
   }
 
   void _openAlert(AlertEntry alert) {
-    // A profile-post alert (a comment on your post, a like) opens the member's
-    // wall jumped to it, not the thread viewer; the permalink redirect resolves
-    // which wall page it sits on.
-    if (isProfilePostUrl(alert.url)) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ProfileScreen(url: alert.url)),
-      );
+    // Profile content (a comment on your post, a like) and a follow both open
+    // the member's wall, not the thread viewer: a profile-post permalink jumps
+    // to the post (its redirect resolves the wall page), while a bare member
+    // URL just lands on the wall.
+    if (isProfilePostUrl(alert.url) || isMemberProfileUrl(alert.url)) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProfileScreen(url: alert.url)));
       return;
     }
     Navigator.of(context).push(
@@ -177,6 +218,119 @@ class _AlertsScreenState extends State<AlertsScreen> {
         ),
       ),
     );
+  }
+
+  /// A row tap reads the alert (the site does the same on any click) and then,
+  /// if it points somewhere the app can render, opens it. For a type with no
+  /// in-app destination the read is the whole action, so it's confirmed by a
+  /// toast that also points at the one way to actually see it.
+  void _onTapAlert(AlertEntry alert) {
+    if (alertIsActionable(alert)) {
+      // The reader is leaving for the target, so the read is best-effort here:
+      // its failure stays silent, and the bulk ack and next fetch backstop it.
+      if (alert.unread) _markRead(alert, surfaceErrors: false);
+      _openAlert(alert);
+      return;
+    }
+    // The browser hint only makes sense when there's a link to open; some
+    // system notices carry none.
+    final hint = alert.url.isNotEmpty ? ' — long-press to open in browser' : '';
+    if (alert.unread) {
+      _markRead(alert, surfaceErrors: true);
+      AppToast.show(context, 'Marked as read$hint');
+    } else if (alert.url.isNotEmpty) {
+      AppToast.show(context, 'Long-press to open in browser');
+    }
+  }
+
+  /// Flips one alert's unread tint in place, keyed by its id so a page loaded
+  /// after the tap can't shift the wrong row.
+  void _setUnread(int alertId, bool unread) {
+    for (final group in _groups) {
+      final i = group.alerts.indexWhere((alert) => alert.alertId == alertId);
+      if (i >= 0) {
+        group.alerts[i] = group.alerts[i].copyWith(unread: unread);
+        return;
+      }
+    }
+  }
+
+  /// Marks [alert] read optimistically, reverting the tint if the request
+  /// fails. [surfaceErrors] toasts that failure — off for the tap that
+  /// navigates away, since the reader is no longer looking at this screen.
+  Future<void> _markRead(AlertEntry alert, {required bool surfaceErrors}) async {
+    setState(() => _setUnread(alert.alertId, false));
+    try {
+      await (widget.alertReadMarker ?? ForumService.markAlertRead)(alert.alertId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _setUnread(alert.alertId, true));
+      if (surfaceErrors) AppToast.show(context, "Couldn't mark read: $e", error: true);
+    }
+  }
+
+  /// The row menu's read/unread toggle: an explicit action, so its failure
+  /// always surfaces.
+  Future<void> _toggleRead(AlertEntry alert) async {
+    final markUnread = !alert.unread;
+    setState(() => _setUnread(alert.alertId, markUnread));
+    try {
+      final marker = markUnread
+          ? (widget.alertUnreadMarker ?? ForumService.markAlertUnread)
+          : (widget.alertReadMarker ?? ForumService.markAlertRead);
+      await marker(alert.alertId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _setUnread(alert.alertId, !markUnread));
+      AppToast.show(context, "Couldn't update alert: $e", error: true);
+    }
+  }
+
+  Future<void> _launch(String url) async {
+    final launch =
+        widget.urlLauncher ?? ((uri) => launcher.launchUrl(uri, mode: launcher.LaunchMode.externalApplication));
+    await launch(Uri.parse(url));
+  }
+
+  /// The per-row long-press menu: the read/unread toggle (the undo for a tap,
+  /// and a manual read for anything the feed left new) plus opening the target
+  /// in the browser — the only way to reach a type the app can't render yet.
+  Future<void> _showAlertMenu(AlertEntry alert) async {
+    HapticFeedback.vibrate();
+    final action = await showModalBottomSheet<VoidCallback>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetContext) {
+        Widget option(IconData icon, String label, VoidCallback onTap) => InkWell(
+          onTap: () => Navigator.of(sheetContext).pop(onTap),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+            child: Row(
+              children: [
+                Icon(icon, size: 19, color: AppColors.of(sheetContext).subtleText),
+                const SizedBox(width: 14),
+                Text(label, style: TextStyle(color: AppColors.of(sheetContext).brightText, fontSize: 13.5)),
+              ],
+            ),
+          ),
+        );
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              option(
+                alert.unread ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined,
+                alert.unread ? 'Mark as read' : 'Mark as unread',
+                () => _toggleRead(alert),
+              ),
+              if (alert.url.isNotEmpty) option(Icons.open_in_browser, 'Open in browser', () => _launch(alert.url)),
+            ],
+          ),
+        );
+      },
+    );
+    if (action != null) action();
   }
 
   @override
@@ -254,27 +408,25 @@ class _AlertsScreenState extends State<AlertsScreen> {
   }
 
   Widget _buildRow(ColorScheme colorScheme, AlertEntry alert) {
-    return InkWell(
-      onTap: () => _openAlert(alert),
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-        decoration: BoxDecoration(
-          color: alert.unread ? colorScheme.primary.withValues(alpha: 0.07) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ForumAvatar(username: alert.username, avatarUrl: alert.avatarUrl, size: 32),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text.rich(
-                    TextSpan(
-                      children: [
+    final row = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+      decoration: BoxDecoration(
+        color: alert.unread ? colorScheme.primary.withValues(alpha: 0.07) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ForumAvatar(username: alert.username, avatarUrl: alert.avatarUrl, size: 32),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      if (alert.username.isNotEmpty)
                         TextSpan(
                           text: alert.username,
                           style: TextStyle(
@@ -285,57 +437,72 @@ class _AlertsScreenState extends State<AlertsScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        TextSpan(
-                          text: ' ${alert.action} ',
-                          style: TextStyle(color: AppColors.of(context).subtleText),
-                        ),
-                        for (final label in alert.labels)
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 4),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: colorScheme.primary.withValues(alpha: 0.18),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(label, style: TextStyle(color: colorScheme.primary, fontSize: 9.5)),
+                      TextSpan(
+                        // A system alert (a trophy award) has no actor, so the
+                        // action leads the line and drops the actor's space.
+                        text: alert.username.isEmpty ? '${alert.action} ' : ' ${alert.action} ',
+                        style: TextStyle(color: AppColors.of(context).subtleText),
+                      ),
+                      for (final label in alert.labels)
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(4),
                               ),
+                              child: Text(label, style: TextStyle(color: colorScheme.primary, fontSize: 9.5)),
                             ),
                           ),
-                        TextSpan(
-                          text: alert.title,
-                          style: TextStyle(
-                            color: alert.unread ? AppColors.of(context).brightText : AppColors.of(context).bodyText,
-                          ),
                         ),
-                      ],
-                    ),
-                    style: const TextStyle(fontSize: 12.5, height: 1.4),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                      TextSpan(
+                        text: alert.title,
+                        style: TextStyle(
+                          color: alert.unread ? AppColors.of(context).brightText : AppColors.of(context).bodyText,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (alert.time.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Text(alert.time, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5)),
-                    ),
-                ],
+                  style: const TextStyle(fontSize: 12.5, height: 1.4),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (alert.time.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(alert.time, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5)),
+                  ),
+              ],
+            ),
+          ),
+          if (alert.unread)
+            Padding(
+              padding: const EdgeInsets.only(left: 6, top: 5),
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle),
               ),
             ),
-            if (alert.unread)
-              Padding(
-                padding: const EdgeInsets.only(left: 6, top: 5),
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
+    );
+
+    // A tap reads it, then opens it when the app has a screen for it; a type it
+    // can't render (a trophy award, other server notices) instead confirms the
+    // read and points at the browser. Long-press is the same row menu on every
+    // alert: read/unread and open-in-browser.
+    return InkWell(
+      onTap: () => _onTapAlert(alert),
+      onLongPress: () => _showAlertMenu(alert),
+      // The menu fires its own haptic; InkWell's built-in long-press feedback
+      // on top of it was the occasional double-buzz.
+      enableFeedback: false,
+      borderRadius: BorderRadius.circular(10),
+      child: row,
     );
   }
 }

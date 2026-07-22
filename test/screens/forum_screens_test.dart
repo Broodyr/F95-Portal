@@ -53,6 +53,9 @@ Future<void> pumpForum(
   BookmarkDeleter? bookmarkDeleter,
   FetchAlerts? fetchAlerts,
   AlertsAcknowledger? alertsAcknowledger,
+  AlertReadMarker? alertReadMarker,
+  AlertUnreadMarker? alertUnreadMarker,
+  Future<bool> Function(Uri uri)? alertUrlLauncher,
 }) async {
   useTestDrafts();
   await tester.pumpWidget(
@@ -75,6 +78,10 @@ Future<void> pumpForum(
         bookmarkDeleter: bookmarkDeleter,
         fetchAlerts: fetchAlerts ?? ({page = 1}) async => ForumService.createMockAlerts(page: page),
         alertsAcknowledger: alertsAcknowledger ?? (ids) async {},
+        // No-ops keep the mark-read that now rides every alert tap off the network.
+        alertReadMarker: alertReadMarker ?? (id) async {},
+        alertUnreadMarker: alertUnreadMarker ?? (id) async {},
+        alertUrlLauncher: alertUrlLauncher ?? (uri) async => true,
       ),
     ),
   );
@@ -915,6 +922,113 @@ void main() {
     );
   });
 
+  testWidgets('a reply alert opens the thread viewer on its post permalink', (tester) async {
+    await signIn();
+    await pumpForum(
+      tester,
+      fetchAlerts: ({page = 1}) async => const AlertsPage(
+        groups: [
+          AlertGroup(
+            title: 'Today',
+            alerts: [
+              AlertEntry(
+                alertId: 1,
+                username: 'TMakuboss',
+                action: 'replied to the thread',
+                title: 'A game thread',
+                url: 'https://f95zone.to/posts/20969203/',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Alerts'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('A game thread'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(ForumThreadScreen), findsOneWidget);
+    expect(tester.widget<ForumThreadScreen>(find.byType(ForumThreadScreen)).url, 'https://f95zone.to/posts/20969203/');
+  });
+
+  testWidgets('a follow alert opens the follower\'s wall, not the thread viewer', (tester) async {
+    await signIn();
+    await pumpForum(
+      tester,
+      fetchAlerts: ({page = 1}) async => const AlertsPage(
+        groups: [
+          AlertGroup(
+            title: 'Today',
+            alerts: [
+              AlertEntry(
+                alertId: 1,
+                username: 'BaasB',
+                action: 'started following you',
+                url: 'https://f95zone.to/members/baasb.801262/',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Alerts'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('started following you'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(ForumThreadScreen), findsNothing);
+    expect(tester.widget<ProfileScreen>(find.byType(ProfileScreen)).url, 'https://f95zone.to/members/baasb.801262/');
+  });
+
+  testWidgets('a trophy alert has no actor space and opens nothing when tapped', (tester) async {
+    await signIn();
+    await pumpForum(
+      tester,
+      // A system alert: no actor, and a member sub-page (the trophy list) the
+      // app has no screen for — and which the member-profile matcher must not
+      // sweep in as a bare profile.
+      fetchAlerts: ({page = 1}) async => const AlertsPage(
+        groups: [
+          AlertGroup(
+            title: 'Today',
+            alerts: [
+              AlertEntry(
+                alertId: 1,
+                action: 'You have been awarded a trophy:',
+                title: 'Novice',
+                url: 'https://f95zone.to/members/broodyr.1957582/trophies',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Alerts'));
+    await tester.pumpAndSettle();
+
+    // The actorless action leads the line with no leading space.
+    final line = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .map((w) => w.text.toPlainText())
+        .firstWhere((text) => text.contains('awarded'));
+    expect(line, 'You have been awarded a trophy: Novice');
+
+    // The row isn't openable, so a tap stays on the alerts feed.
+    await tester.tap(find.textContaining('You have been awarded a trophy'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(ForumThreadScreen), findsNothing);
+    expect(find.byType(ProfileScreen), findsNothing);
+    expect(find.byType(AlertsScreen), findsOneWidget);
+  });
+
   testWidgets('the bell badge appears on sign-in without a restart', (tester) async {
     final previousAuth = AuthService.instance;
     addTearDown(() => AuthService.instance = previousAuth);
@@ -1157,6 +1271,160 @@ void main() {
     expect(find.text('Today'), findsOneWidget);
     expect(find.textContaining("Couldn't mark alerts read"), findsOneWidget);
     expect(find.textContaining('HTTP 403'), findsOneWidget);
+  });
+
+  /// A single unread alert of a given shape, pumped straight into the screen.
+  Future<void> pumpAlert(
+    WidgetTester tester,
+    AlertEntry alert, {
+    AlertReadMarker? alertReadMarker,
+    AlertUnreadMarker? alertUnreadMarker,
+    Future<bool> Function(Uri uri)? urlLauncher,
+    FetchThreadPosts? fetchThreadPosts,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: AlertsScreen(
+          fetchAlerts: ({page = 1}) async => AlertsPage(groups: [AlertGroup(title: 'Today', alerts: [alert])]),
+          alertsAcknowledger: (ids) async {},
+          alertReadMarker: alertReadMarker ?? (id) async {},
+          alertUnreadMarker: alertUnreadMarker ?? (id) async {},
+          urlLauncher: urlLauncher ?? (uri) async => true,
+          fetchThreadPosts: fetchThreadPosts,
+          fetchReactions: (url) async => ForumService.createMockReactionsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('tapping a non-actionable alert marks it read and hints at the browser', (tester) async {
+    await signIn();
+    int? readId;
+    await pumpAlert(
+      tester,
+      const AlertEntry(
+        alertId: 7,
+        action: 'You have been awarded a trophy:',
+        title: 'Novice',
+        url: 'https://f95zone.to/members/broodyr.1957582/trophies',
+        unread: true,
+      ),
+      alertReadMarker: (id) async => readId = id,
+    );
+
+    await tester.tap(find.textContaining('awarded'));
+    await tester.pumpAndSettle();
+
+    expect(readId, 7);
+    expect(find.textContaining('Marked as read'), findsOneWidget);
+    // Nowhere to open: the feed stays put.
+    expect(find.byType(ForumThreadScreen), findsNothing);
+    expect(find.byType(ProfileScreen), findsNothing);
+  });
+
+  testWidgets('tapping a handleable alert marks it read and opens it', (tester) async {
+    await signIn();
+    int? readId;
+    final opened = <String>[];
+    await pumpAlert(
+      tester,
+      const AlertEntry(
+        alertId: 8,
+        username: 'TMakuboss',
+        action: 'replied to the thread',
+        title: 'A game thread',
+        url: 'https://f95zone.to/posts/20969203/',
+        unread: true,
+      ),
+      alertReadMarker: (id) async => readId = id,
+      fetchThreadPosts: (url, {page = 1}) async {
+        opened.add(url);
+        return ForumService.createMockThreadPosts(page: page);
+      },
+    );
+
+    await tester.tap(find.textContaining('A game thread'));
+    await tester.pumpAndSettle();
+
+    expect(readId, 8);
+    expect(find.byType(ForumThreadScreen), findsOneWidget);
+    expect(opened, ['https://f95zone.to/posts/20969203/']);
+  });
+
+  testWidgets('the row menu opens an alert in the browser', (tester) async {
+    await signIn();
+    final launched = <Uri>[];
+    await pumpAlert(
+      tester,
+      const AlertEntry(
+        alertId: 9,
+        action: 'You have been awarded a trophy:',
+        title: 'Novice',
+        url: 'https://f95zone.to/members/broodyr.1957582/trophies',
+        unread: true,
+      ),
+      urlLauncher: (uri) async {
+        launched.add(uri);
+        return true;
+      },
+    );
+
+    await tester.longPress(find.textContaining('awarded'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open in browser'));
+    await tester.pumpAndSettle();
+
+    expect(launched, [Uri.parse('https://f95zone.to/members/broodyr.1957582/trophies')]);
+  });
+
+  testWidgets('the row menu marks a read alert unread again', (tester) async {
+    await signIn();
+    int? unreadId;
+    await pumpAlert(
+      tester,
+      const AlertEntry(
+        alertId: 10,
+        username: 'BaasB',
+        action: 'replied to the thread',
+        title: 'Already read',
+        url: 'https://f95zone.to/posts/1/',
+        unread: false,
+      ),
+      alertUnreadMarker: (id) async => unreadId = id,
+    );
+
+    await tester.longPress(find.textContaining('Already read'));
+    await tester.pumpAndSettle();
+
+    // A read alert offers the reverse action.
+    expect(find.text('Mark as read'), findsNothing);
+    await tester.tap(find.text('Mark as unread'));
+    await tester.pumpAndSettle();
+
+    expect(unreadId, 10);
+  });
+
+  testWidgets('a failed mark-read reverts and surfaces the error', (tester) async {
+    await signIn();
+    await pumpAlert(
+      tester,
+      const AlertEntry(
+        alertId: 11,
+        action: 'You have been awarded a trophy:',
+        title: 'Novice',
+        url: 'https://f95zone.to/members/broodyr.1957582/trophies',
+        unread: true,
+      ),
+      alertReadMarker: (id) async => throw Exception('offline'),
+    );
+
+    await tester.tap(find.textContaining('awarded'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining("Couldn't mark read"), findsOneWidget);
+    expect(find.textContaining('offline'), findsOneWidget);
   });
 
   testWidgets('bookmarks and alerts prompt guests to sign in', (tester) async {

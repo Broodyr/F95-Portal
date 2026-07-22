@@ -40,6 +40,9 @@ class ForumScreen extends StatefulWidget {
   final BookmarkDeleter? bookmarkDeleter;
   final FetchAlerts? fetchAlerts;
   final AlertsAcknowledger? alertsAcknowledger;
+  final AlertReadMarker? alertReadMarker;
+  final AlertUnreadMarker? alertUnreadMarker;
+  final Future<bool> Function(Uri uri)? alertUrlLauncher;
 
   const ForumScreen({
     super.key,
@@ -57,6 +60,9 @@ class ForumScreen extends StatefulWidget {
     this.bookmarkDeleter,
     this.fetchAlerts,
     this.alertsAcknowledger,
+    this.alertReadMarker,
+    this.alertUnreadMarker,
+    this.alertUrlLauncher,
   });
 
   @override
@@ -221,6 +227,9 @@ class _ForumScreenState extends State<ForumScreen> with WidgetsBindingObserver {
                             alertsAcknowledger: widget.alertsAcknowledger,
                             fetchThreadPosts: widget.fetchThreadPosts,
                             fetchReactions: widget.fetchReactions,
+                            alertReadMarker: widget.alertReadMarker,
+                            alertUnreadMarker: widget.alertUnreadMarker,
+                            urlLauncher: widget.alertUrlLauncher,
                           ),
                         ),
                       );

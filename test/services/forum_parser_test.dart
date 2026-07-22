@@ -492,8 +492,8 @@ void main() {
       expect(page.totalPages, 17);
       // Needed to POST the mark-read action.
       expect(page.csrfToken, '1783912232,9d248ff0e3701055def2de9cbe5e0dd0');
-      // The nav bell counter: 0 in the fixture even though rows carry
-      // unread stars — viewed and read are separate states.
+      // No row is highlighted here, matching the 0 bell counter — the rows
+      // carry the lagging "new" star, which the parser no longer reads.
       expect(page.badgeCount, 0);
     });
 
@@ -527,12 +527,36 @@ void main() {
       expect(first.title, "Mage Kanade's Futanari Dungeon Quest [Final] [Dieselmine]");
       expect(first.url, 'https://f95zone.to/posts/20969203/');
       expect(first.time, '13 minutes ago');
-      expect(first.unread, isTrue);
+      // None of this fixture's rows are highlighted (they're starred but read).
+      expect(first.unread, isFalse);
     });
 
-    test('counts unread alerts across groups', () {
-      expect(page.unreadCount, greaterThan(0));
-      expect(page.unreadCount, lessThanOrEqualTo(10));
+    test('no highlighted rows means nothing counts as unread', () {
+      expect(page.unreadCount, 0);
+    });
+  });
+
+  group('parseAlerts highlight state', () {
+    late AlertsPage page;
+
+    setUpAll(() => page = parseAlerts(fixture('account_alerts_mixed.htm')));
+
+    test('unread tracks the row highlight, not the new star', () {
+      AlertEntry byId(int id) => [
+        for (final group in page.groups)
+          for (final alert in group.alerts)
+            if (alert.alertId == id) alert,
+      ].single;
+
+      // The highlighted row is unread; a star-only row and the fully-read
+      // rows are not — the star no longer feeds our unread state.
+      expect(byId(2057028474).unread, isTrue); // highlighted + star
+      expect(byId(2057028148).unread, isFalse); // star only
+      expect(byId(2057014588).unread, isFalse); // read
+
+      // Exactly the highlighted row, matching the bell counter.
+      expect(page.badgeCount, 1);
+      expect(page.unreadCount, 1);
     });
   });
 

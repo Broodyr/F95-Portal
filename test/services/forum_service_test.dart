@@ -153,6 +153,31 @@ void main() {
     expect(urls, ['https://f95zone.to/account/preferences', 'https://f95zone.to/account/alerts-popup']);
   });
 
+  test('markAlertRead visits /account/alert for the id, ignoring the skip preference', () async {
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      return http.Response('ok', 200);
+    });
+
+    // An explicit tap always reads: no preferences round-trip, no pop-up.
+    await ForumService.markAlertRead(2047223592, client: client, packageInfoLoader: () async => _packageInfo());
+
+    expect(urls, ['https://f95zone.to/account/alert?alert_id=2047223592']);
+  });
+
+  test('markAlertUnread visits /account/unread-alert for the id', () async {
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      return http.Response('ok', 200);
+    });
+
+    await ForumService.markAlertUnread(2047223592, client: client, packageInfoLoader: () async => _packageInfo());
+
+    expect(urls, ['https://f95zone.to/account/unread-alert?alert_id=2047223592']);
+  });
+
   test('saving the pop-up preference replays the whole form with the flag flipped', () async {
     const formHtml = '''
       <html data-csrf="page-token"><body>

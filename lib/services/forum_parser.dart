@@ -462,7 +462,11 @@ AlertEntry _parseAlertRow(Element row) {
     title: _clean(content?.text ?? ''),
     url: _absoluteUrl(content?.attributes['href'] ?? ''),
     time: _clean(row.querySelector('time')?.text ?? ''),
-    unread: row.querySelector('.user-alert--newIcon') != null,
+    // The row's highlight is the bell-aligned unread state (the `data-badge`
+    // count is exactly these), and it clears the moment an alert is read. The
+    // `.user-alert--newIcon` star is a separate, lagging "new" flag the app
+    // deliberately drops — reading it here highlighted read rows for minutes.
+    unread: row.classes.contains('block-row--highlighted'),
   );
 }
 

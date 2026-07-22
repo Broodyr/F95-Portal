@@ -93,6 +93,11 @@ class AlertEntry {
   /// The target content's URL (usually a post permalink).
   final String url;
   final String time;
+
+  /// The bell-aligned unread state: the site's row highlight, which clears the
+  /// moment an alert is read (its `data-badge` counter counts exactly these).
+  /// Drives both the row's tint and its dot. The addon's separate lagging
+  /// "new" star is deliberately ignored — see the alerts screen.
   final bool unread;
 
   const AlertEntry({
@@ -106,6 +111,20 @@ class AlertEntry {
     this.time = '',
     this.unread = false,
   });
+
+  /// Only [unread] ever changes locally — a tap or the row menu flips it while
+  /// the mark-read/unread request is in flight (and back, if it fails).
+  AlertEntry copyWith({bool? unread}) => AlertEntry(
+    alertId: alertId,
+    username: username,
+    avatarUrl: avatarUrl,
+    action: action,
+    title: title,
+    labels: labels,
+    url: url,
+    time: time,
+    unread: unread ?? this.unread,
+  );
 }
 
 /// Alerts under one of the page's date headers ("Today", "Yesterday").

@@ -305,6 +305,47 @@ class ForumService {
     }
   }
 
+  /// Marks one alert read, the way clicking its link on the site does — the
+  /// addon reads an alert on any view of `/account/alert`. Unlike
+  /// [acknowledgeAlerts] this ignores the pop-up-skip preference: an explicit
+  /// tap is a visit, so it always reads. Account feeds are dropped so the next
+  /// alerts fetch and bell count reflect the change.
+  static Future<void> markAlertRead(
+    int alertId, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      await _fetchHtml(
+        'https://f95zone.to/account/alert?alert_id=$alertId',
+        client: client,
+        packageInfoLoader: packageInfoLoader,
+      );
+    } finally {
+      invalidateAccountPages();
+    }
+  }
+
+  /// Restores one alert's unread/new marker through the same `/account/
+  /// unread-alert` link the row's own "Mark unread" control points at.
+  static Future<void> markAlertUnread(
+    int alertId, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) return;
+    try {
+      await _fetchHtml(
+        'https://f95zone.to/account/unread-alert?alert_id=$alertId',
+        client: client,
+        packageInfoLoader: packageInfoLoader,
+      );
+    } finally {
+      invalidateAccountPages();
+    }
+  }
+
   /// XenForo page URLs: `<base>/page-N`, page 1 is the base itself.
   static String _withPage(String url, int page) {
     final base = url.endsWith('/') ? url : '$url/';
