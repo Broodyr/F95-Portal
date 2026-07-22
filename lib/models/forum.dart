@@ -205,6 +205,14 @@ class ForumSearchResult {
   });
 }
 
+/// One hit from the member finder behind the site's auto-complete fields.
+class UserSuggestion {
+  final String username;
+  final String? avatarUrl;
+
+  const UserSuggestion({required this.username, this.avatarUrl});
+}
+
 /// A page of search results plus the GET-able URL for further pages.
 class ForumSearchPage {
   final List<ForumSearchResult> results;

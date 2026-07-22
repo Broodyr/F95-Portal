@@ -462,6 +462,28 @@ class ForumService {
     );
   }
 
+  /// Username suggestions for a partial name, from the member finder the
+  /// site's own auto-complete fields query (min. two characters there;
+  /// callers gate that themselves).
+  static Future<List<UserSuggestion>> findUsers(
+    String query, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(AppDurations.mockRead);
+      return createMockUserSuggestions(query);
+    }
+    return parseUserSuggestions(
+      await _fetchHtml(
+        'https://f95zone.to/members/find?q=${Uri.encodeQueryComponent(query)}&_xfResponseType=json',
+        client: client,
+        packageInfoLoader: packageInfoLoader,
+        extraHeaders: {'Accept': 'application/json'},
+      ),
+    );
+  }
+
   // --- Edit -----------------------------------------------------------------
 
   /// Fetches the BBCode source of an editable post from its edit page.
@@ -855,6 +877,15 @@ class ForumService {
       totalPages: 1,
       searchUrl: 'https://example.com/search/649178657/?q=mock',
     );
+  }
+
+  static List<UserSuggestion> createMockUserSuggestions(String query) {
+    const names = ['Dragons Are Romance', 'DarkVault', 'Dr4kon', 'BaasB', 'Brodie', 'bro cha-cha', 'Sam Serif'];
+    final q = query.toLowerCase();
+    return [
+      for (final name in names)
+        if (name.toLowerCase().contains(q)) UserSuggestion(username: name),
+    ];
   }
 
   /// The live site's reason list at the time of writing; the web build can't

@@ -17,6 +17,7 @@ import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/glass_fab.dart';
 import '../widgets/pagination_bar.dart';
+import '../widgets/posted_by_dialog.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reaction_picker.dart';
 import '../widgets/reactions_sheet.dart';
@@ -66,6 +67,7 @@ class ForumThreadScreen extends StatefulWidget {
   /// Search plumbing handed on to the overflow's thread-scoped search.
   final ForumSearcher? searcher;
   final ForumSearchPager? searchPager;
+  final UserFinder? userFinder;
 
   const ForumThreadScreen({
     super.key,
@@ -88,6 +90,7 @@ class ForumThreadScreen extends StatefulWidget {
     this.urlLauncher,
     this.searcher,
     this.searchPager,
+    this.userFinder,
   });
 
   @override
@@ -539,6 +542,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           scopeThreadId: threadId,
           searcher: widget.searcher,
           searchPager: widget.searchPager,
+          userFinder: widget.userFinder,
           fetchThreadPosts: widget.fetchPosts,
           fetchReactions: widget.fetchReactions,
           reactSender: widget.reactSender,

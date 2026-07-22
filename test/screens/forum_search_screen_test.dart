@@ -58,6 +58,8 @@ void main() {
       expect(find.text('Titles only'), findsNothing);
       expect(find.text('Relevance'), findsNothing);
       expect(find.text('Newest'), findsNothing);
+      // The scope replaces the sort options but not the member filter.
+      expect(find.text('Posted by'), findsOneWidget);
 
       await tester.enterText(find.byKey(const Key('forum-search-field')), 'walkthrough');
       await tester.tap(find.byTooltip('Search'));
@@ -88,6 +90,95 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(sentThreadId, isNull);
+    });
+  });
+
+  group('posted by', () {
+    testWidgets('picking a member labels the chip and scopes the search', (tester) async {
+      await AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
+      final sentUsers = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ForumSearchScreen(
+            searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async {
+              sentUsers.add(user);
+              return const ForumSearchPage(results: []);
+            },
+            userFinder: (query) async => const [UserSuggestion(username: 'Bro 04')],
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Posted by'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('posted-by-field')), 'Bro');
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bro 04'));
+      await tester.pump();
+      await tester.tap(find.text('Apply'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('By Bro 04'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('forum-search-field')), 'walkthrough');
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+
+      expect(sentUsers, ['Bro 04']);
+    });
+
+    testWidgets('multiple names join with commas and abbreviate the chip', (tester) async {
+      await AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
+      final sentUsers = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ForumSearchScreen(
+            searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async {
+              sentUsers.add(user);
+              return const ForumSearchPage(results: []);
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Posted by'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('posted-by-field')), 'Alice');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('posted-by-field')), 'Bob');
+      await tester.tap(find.text('Apply'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('By Alice +1'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('forum-search-field')), 'walkthrough');
+      await tester.tap(find.byTooltip('Search'));
+      await tester.pumpAndSettle();
+
+      expect(sentUsers, ['Alice, Bob']);
+    });
+
+    testWidgets('cancelling the dialog keeps the current filter', (tester) async {
+      await AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ForumSearchScreen(
+            searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async =>
+                const ForumSearchPage(results: []),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Posted by'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('posted-by-field')), 'Ghost');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Posted by'), findsOneWidget);
+      expect(find.text('By Ghost'), findsNothing);
     });
   });
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:html/dom.dart';
 import 'package:html/parser.dart' as html_parser;
 
@@ -507,6 +509,40 @@ ForumSearchPage parseSearchResults(String htmlSource) {
     totalPages: totalPages,
     searchUrl: _absoluteUrl(document.querySelector('meta[property="og:url"]')?.attributes['content'] ?? ''),
   );
+}
+
+/// Parses the member finder's JSON (`/members/find?q=…&_xfResponseType=json`)
+/// into suggestions. Names come from `text` (falling back to `id`); the
+/// avatar, when the member has one, is the `<img>` inside `iconHtml` —
+/// members without one get a rendered-initial span instead, left null here
+/// so the app draws its own letter avatar. Lenient on shape: anything
+/// unexpected yields no suggestions rather than an error.
+List<UserSuggestion> parseUserSuggestions(String jsonSource) {
+  final Object? decoded;
+  try {
+    decoded = json.decode(jsonSource);
+  } on FormatException {
+    return const [];
+  }
+  final results = decoded is Map ? decoded['results'] : null;
+  if (results is! List) return const [];
+
+  final suggestions = <UserSuggestion>[];
+  for (final entry in results) {
+    if (entry is! Map) continue;
+    final username = (entry['text'] ?? entry['id'] ?? '').toString().trim();
+    if (username.isEmpty) continue;
+
+    String? avatarUrl;
+    final iconHtml = entry['iconHtml'];
+    if (iconHtml is String) {
+      final src = RegExp(r'<img[^>]*\ssrc="([^"]+)"').firstMatch(iconHtml)?.group(1);
+      // The src sits in HTML, so its query separator arrives as &amp;.
+      if (src != null) avatarUrl = _absoluteUrl(src.replaceAll('&amp;', '&'));
+    }
+    suggestions.add(UserSuggestion(username: username, avatarUrl: avatarUrl));
+  }
+  return suggestions;
 }
 
 /// Extracts the BBCode source from a post's edit page (`/posts/<id>/edit`

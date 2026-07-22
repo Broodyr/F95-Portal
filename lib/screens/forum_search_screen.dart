@@ -7,6 +7,7 @@ import '../services/forum_service.dart';
 import '../services/site_error.dart';
 import '../theme/app_colors.dart';
 import '../widgets/error_view.dart';
+import '../widgets/posted_by_dialog.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/segmented_selector.dart';
@@ -28,6 +29,7 @@ class ForumSearchScreen extends StatefulWidget {
   final FetchReactions? fetchReactions;
   final ReactSender? reactSender;
   final ReplySender? replySender;
+  final UserFinder? userFinder;
 
   /// Limits every search to one thread (the viewer's "Search thread").
   /// Scoped search drops the options row — the scope stands in for them —
@@ -42,6 +44,7 @@ class ForumSearchScreen extends StatefulWidget {
     this.fetchReactions,
     this.reactSender,
     this.replySender,
+    this.userFinder,
     this.scopeThreadId,
   });
 
@@ -57,6 +60,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
 
   bool _titleOnly = false;
   late String _order = widget.isThreadScoped ? 'date' : 'relevance';
+  List<String> _postedBy = const [];
 
   ForumSearchPage? _page;
   final List<ForumSearchResult> _results = [];
@@ -90,7 +94,14 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
     });
     try {
       final run = widget.searcher ?? ForumService.search;
-      final page = await run(keywords, titleOnly: _titleOnly, user: '', order: _order, threadId: widget.scopeThreadId);
+      final page = await run(
+        keywords,
+        titleOnly: _titleOnly,
+        // Comma-separated, as the site's own member field posts them.
+        user: _postedBy.join(', '),
+        order: _order,
+        threadId: widget.scopeThreadId,
+      );
       if (!mounted) return;
       setState(() {
         _page = page;
@@ -183,36 +194,62 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!widget.isThreadScoped)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            // Scrolls sideways rather than overflow: narrow phones can't fit
+            // every option once a chosen member lengthens the last chip.
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildToggle(colorScheme, 'Titles only', _titleOnly, () => setState(() => _titleOnly = !_titleOnly)),
-                  Container(
-                    width: 1,
-                    height: 14,
-                    margin: const EdgeInsets.symmetric(horizontal: 9),
-                    // The app's divider weight. Not the segmented track beside
-                    // it: that's translucent black, which recesses against a
-                    // fill but on the page background lands darker than the
-                    // page and leaves no line at all.
-                    color: colorScheme.onSurface.withValues(alpha: 0.1),
-                  ),
-                  SegmentedSelector<String>(
-                    dense: true,
-                    shrinkWrap: true,
-                    values: const ['relevance', 'date'],
-                    isSelected: (order) => _order == order,
-                    label: (order) => order == 'date' ? 'Newest' : 'Relevance',
-                    onSelect: (order) => setState(() => _order = order),
-                  ),
+                  if (!widget.isThreadScoped) ...[
+                    _buildToggle(colorScheme, 'Titles only', _titleOnly, () => setState(() => _titleOnly = !_titleOnly)),
+                    _buildDivider(colorScheme),
+                    SegmentedSelector<String>(
+                      dense: true,
+                      shrinkWrap: true,
+                      values: const ['relevance', 'date'],
+                      isSelected: (order) => _order == order,
+                      label: (order) => order == 'date' ? 'Newest' : 'Relevance',
+                      onSelect: (order) => setState(() => _order = order),
+                    ),
+                    _buildDivider(colorScheme),
+                  ],
+                  _buildToggle(colorScheme, _postedByLabel, _postedBy.isNotEmpty, _editPostedBy),
                 ],
               ),
             ),
+          ),
           Expanded(child: _buildBody(colorScheme)),
         ],
       ),
+    );
+  }
+
+  String get _postedByLabel {
+    if (_postedBy.isEmpty) return 'Posted by';
+    if (_postedBy.length == 1) return 'By ${_postedBy.first}';
+    return 'By ${_postedBy.first} +${_postedBy.length - 1}';
+  }
+
+  Future<void> _editPostedBy() async {
+    final names = await PostedByDialog.show(context, initial: _postedBy, finder: widget.userFinder);
+    if (names == null || !mounted) return;
+    final changed = names.join(',') != _postedBy.join(',');
+    setState(() => _postedBy = names);
+    // Results on screen were made under the old filter; remake them.
+    if (changed && _page != null) _search();
+  }
+
+  Widget _buildDivider(ColorScheme colorScheme) {
+    return Container(
+      width: 1,
+      height: 14,
+      margin: const EdgeInsets.symmetric(horizontal: 9),
+      // The app's divider weight. Not the segmented track beside it: that's
+      // translucent black, which recesses against a fill but on the page
+      // background lands darker than the page and leaves no line at all.
+      color: colorScheme.onSurface.withValues(alpha: 0.1),
     );
   }
 

@@ -356,6 +356,37 @@ void main() {
     expect(page.results, hasLength(20));
   });
 
+  // The member finder behind the site's auto-complete fields. Avatar URLs
+  // inside iconHtml come back relative on the live site — absolutized here.
+  test('findUsers queries the member finder and parses suggestions', () async {
+    final urls = <String>[];
+    final client = MockClient((request) async {
+      urls.add(request.url.toString());
+      return http.Response(
+        '{"q":"bro","results":['
+        '{"id":"Bro 04","text":"Bro 04","iconHtml":"<span class=\\"avatar\\"><img src=\\"/data/avatars/s/1/123.jpg?456\\" alt=\\"Bro 04\\" /></span>"},'
+        '{"id":"bro cha-cha","text":"bro cha-cha","iconHtml":"<span class=\\"avatar avatar--default avatar--default--dynamic\\">b</span>"}'
+        ']}',
+        200,
+      );
+    });
+
+    final users = await ForumService.findUsers('bro', client: client, packageInfoLoader: () async => _packageInfo());
+
+    expect(urls, ['https://f95zone.to/members/find?q=bro&_xfResponseType=json']);
+    expect(users, hasLength(2));
+    expect(users[0].username, 'Bro 04');
+    expect(users[0].avatarUrl, 'https://f95zone.to/data/avatars/s/1/123.jpg?456');
+    expect(users[1].username, 'bro cha-cha');
+    expect(users[1].avatarUrl, isNull);
+  });
+
+  test('findUsers survives an unexpected response shape', () async {
+    final client = MockClient((request) async => http.Response('{"status":"ok"}', 200));
+    final users = await ForumService.findUsers('bro', client: client, packageInfoLoader: () async => _packageInfo());
+    expect(users, isEmpty);
+  });
+
   test('searchPage appends the page parameter to the results URL', () async {
     final results = File('test/fixtures/search_results.htm').readAsStringSync();
     final urls = <String>[];

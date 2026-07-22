@@ -595,6 +595,7 @@ void main() {
       String order = 'relevance',
       int? threadId,
     }) async => const ForumSearchPage(results: []);
+    Future<List<UserSuggestion>> userFinder(String query) async => const [];
 
     final postsPage = ThreadPostsPage(
       title: 'Searchable',
@@ -610,6 +611,7 @@ void main() {
           title: 'Searchable',
           fetchPosts: (url, {page = 1}) async => postsPage,
           searcher: searcher,
+          userFinder: userFinder,
         ),
       ),
     );
@@ -623,6 +625,7 @@ void main() {
     final search = tester.widget<ForumSearchScreen>(find.byType(ForumSearchScreen));
     expect(search.scopeThreadId, 207754);
     expect(search.searcher, same(searcher));
+    expect(search.userFinder, same(userFinder));
   });
 
   // A mid-thread page shows the widest arrangement — 1 … n-1 n n+1 … last.
