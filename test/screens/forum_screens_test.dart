@@ -860,6 +860,61 @@ void main() {
     expect(find.text('Today'), findsOneWidget);
   });
 
+  testWidgets('a bookmarked profile post opens the member wall, not the thread viewer', (tester) async {
+    await signIn();
+    await pumpForum(
+      tester,
+      fetchBookmarks: ({page = 1}) async => const BookmarksPage(
+        entries: [BookmarkEntry(title: 'A saved wall note', url: 'https://example.com/profile-posts/143769/')],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Bookmarks'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('A saved wall note'));
+    // The pushed profile's real fetch stays pending; pump the transition.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(ForumThreadScreen), findsNothing);
+    expect(tester.widget<ProfileScreen>(find.byType(ProfileScreen)).url, 'https://example.com/profile-posts/143769/');
+  });
+
+  testWidgets('a profile-post alert opens the member wall, not the thread viewer', (tester) async {
+    await signIn();
+    await pumpForum(
+      tester,
+      fetchAlerts: ({page = 1}) async => const AlertsPage(
+        groups: [
+          AlertGroup(
+            title: 'Today',
+            alerts: [
+              AlertEntry(
+                alertId: 1,
+                username: 'BaasB',
+                action: 'commented on your profile post',
+                title: 'A wall reply',
+                url: 'https://example.com/profile-posts/comments/169480/',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Alerts'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('A wall reply'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(ForumThreadScreen), findsNothing);
+    expect(
+      tester.widget<ProfileScreen>(find.byType(ProfileScreen)).url,
+      'https://example.com/profile-posts/comments/169480/',
+    );
+  });
+
   testWidgets('the bell badge appears on sign-in without a restart', (tester) async {
     final previousAuth = AuthService.instance;
     addTearDown(() => AuthService.instance = previousAuth);

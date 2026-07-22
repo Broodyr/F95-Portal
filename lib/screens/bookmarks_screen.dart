@@ -15,6 +15,7 @@ import '../widgets/reactions_sheet.dart';
 import '../widgets/segmented_selector.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 typedef FetchBookmarks = Future<BookmarksPage> Function({int page});
 typedef BookmarkDeleter = Future<void> Function(String bookmarkUrl, String csrfToken);
@@ -145,6 +146,14 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   }
 
   void _openEntry(BookmarkEntry entry) {
+    // A bookmarked profile post opens the member's wall jumped to it, not the
+    // thread viewer; the permalink's redirect resolves which wall page it's on.
+    if (isProfilePostUrl(entry.url)) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ProfileScreen(url: entry.url)),
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ForumThreadScreen(

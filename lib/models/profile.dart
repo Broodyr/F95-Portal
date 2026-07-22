@@ -155,9 +155,18 @@ class ProfilePage {
   final String joined;
   final String lastSeen;
 
-  /// Canonical member URL; base for the About tab fetch.
+  /// Canonical member URL; base for the About tab fetch, and the base the
+  /// wall pages off (`<profileUrl>page-N`).
   final String profileUrl;
   final List<ProfilePost> wallPosts;
+
+  /// The profile-post wall's own pagination. The wall pages independently of
+  /// the member page — `/members/<slug>.<id>/page-N` serves page N of the
+  /// feed — so [wallPosts] is only the page this parse landed on. [wallPage]
+  /// is that page; [wallTotalPages] the count the pager offers (1 when the
+  /// wall fits on one page and renders no nav).
+  final int wallPage;
+  final int wallTotalPages;
 
   /// The member page's own recent-content pane, when rendered inline (it lazy
   /// loads on the live site) — a capped preview. The Postings tab shows the
@@ -185,6 +194,8 @@ class ProfilePage {
     this.lastSeen = '',
     this.profileUrl = '',
     this.wallPosts = const [],
+    this.wallPage = 1,
+    this.wallTotalPages = 1,
     this.postings = const [],
     this.postingsSearchUrl,
     this.csrfToken = '',

@@ -9,6 +9,7 @@ import 'package:f95_portal/services/site_error.dart';
 import 'package:f95_portal/services/forum_service.dart';
 import 'package:f95_portal/services/profile_service.dart';
 import 'package:f95_portal/widgets/image_gallery.dart';
+import 'package:f95_portal/widgets/pagination_bar.dart';
 import 'package:f95_portal/widgets/reaction_icon.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +45,7 @@ void main() {
     FetchProfile? fetchProfile,
     FetchProfilePostings? fetchPostings,
     FetchProfilePostingsPage? postingsPager,
+    FetchProfileWallPage? wallPager,
     FetchProfileAbout? fetchAbout,
     ProfileMessagePoster? messagePoster,
     EditFetcher? editFetcher,
@@ -56,6 +58,7 @@ void main() {
           fetchProfile: fetchProfile ?? () async => ProfileService.createMockProfilePage(),
           fetchPostings: fetchPostings ?? (_) async => ProfileService.createMockPostingsPage(),
           postingsPager: postingsPager,
+          wallPager: wallPager,
           fetchAbout: fetchAbout ?? (_) async => ProfileService.createMockProfileAbout(),
           messagePoster: messagePoster,
           editFetcher: editFetcher,
@@ -336,6 +339,160 @@ void main() {
     });
   });
 
+  group('wall pagination', () {
+    ProfilePage wall({required int page, required int total, required String body}) => ProfilePage(
+      username: 'Broodyr',
+      profileUrl: 'https://example.com/members/broodyr.1957582/',
+      wallPage: page,
+      wallTotalPages: total,
+      wallPosts: [ProfilePost(id: page, author: 'Visitor', body: body)],
+    );
+
+    testWidgets('shows the page bar only when the wall runs past one page', (tester) async {
+      await signIn();
+      await pumpProfile(tester, fetchProfile: () async => wall(page: 1, total: 1, body: 'The only page'));
+
+      expect(find.byType(PaginationBar), findsNothing);
+    });
+
+    testWidgets('jumps to a page through its pill, swapping the feed', (tester) async {
+      await signIn();
+      final requested = <(String, int)>[];
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => wall(page: 1, total: 3, body: 'First wall page'),
+        wallPager: (url, page) async {
+          requested.add((url, page));
+          return wall(page: page, total: 3, body: 'Third wall page');
+        },
+      );
+
+      expect(find.byType(PaginationBar), findsOneWidget);
+      expect(find.text('First wall page'), findsOneWidget);
+
+      // Tap the last-page pill: a non-adjacent jump, straight through the bar.
+      await tester.tap(find.text('3'));
+      await tester.pumpAndSettle();
+
+      expect(requested.single, ('https://example.com/members/broodyr.1957582/', 3));
+      expect(find.text('Third wall page'), findsOneWidget);
+      expect(find.text('First wall page'), findsNothing);
+    });
+
+    testWidgets('a failed page jump keeps the current page and warns', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => wall(page: 1, total: 2, body: 'First wall page'),
+        wallPager: (url, page) async => throw Exception('network down'),
+      );
+
+      await tester.tap(find.byTooltip('Next page'));
+      await tester.pumpAndSettle();
+
+      // The current page stays; the failure surfaces as a toast, not a swap.
+      expect(find.text('First wall page'), findsOneWidget);
+      expect(find.byType(PaginationBar), findsOneWidget);
+    });
+  });
+
+  group('jump to a permalinked post or comment', () {
+    // A wall with two posts; the second may carry comments. The permalink's
+    // id decides the target, so it lands whichever the url names.
+    ProfilePage wall({List<ProfileComment> comments = const []}) => ProfilePage(
+      username: 'Owner',
+      profileUrl: 'https://example.com/members/owner.1/',
+      wallPosts: [
+        const ProfilePost(id: 500, author: 'Someone', body: 'An ordinary post'),
+        ProfilePost(id: 146954, author: 'Writer', body: 'The targeted post', comments: comments),
+      ],
+    );
+
+    Future<void> pumpJump(WidgetTester tester, {required String url, ProfilePage? page}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ProfileScreen(
+            url: url,
+            fetchProfile: () async => page ?? wall(),
+            fetchPostings: (_) async => const ProfilePostingsPage(),
+            fetchAbout: (_) async => const ProfileAbout(),
+          ),
+        ),
+      );
+      // Drains the load, the scroll animation, and the settle window.
+      await tester.pumpAndSettle();
+    }
+
+    // The nearest ancestor Container that carries a border: the post card for
+    // a post target, a comment's own rail segment for a comment target.
+    BoxDecoration borderedAncestor(WidgetTester tester, Finder of) {
+      for (final c in tester.widgetList<Container>(find.ancestor(of: of, matching: find.byType(Container)))) {
+        final d = c.decoration;
+        if (d is BoxDecoration && d.border != null) return d;
+      }
+      fail('no bordered Container above $of');
+    }
+
+    bool hasBorderedAncestor(WidgetTester tester, Finder of) => tester
+        .widgetList<Container>(find.ancestor(of: of, matching: find.byType(Container)))
+        .any((c) => c.decoration is BoxDecoration && (c.decoration as BoxDecoration).border != null);
+
+    testWidgets('a post permalink outlines the targeted post in primary', (tester) async {
+      await signIn();
+      await pumpJump(tester, url: 'https://example.com/profile-posts/146954/');
+
+      final primary = Theme.of(tester.element(find.text('The targeted post'))).colorScheme.primary;
+      final border = borderedAncestor(tester, find.text('The targeted post')).border! as Border;
+      expect(border.top.color, primary.withValues(alpha: 0.45));
+
+      // The other post carries no outline.
+      expect(hasBorderedAncestor(tester, find.text('An ordinary post')), isFalse);
+    });
+
+    testWidgets("a comment permalink lights only that comment's rail segment", (tester) async {
+      await signIn();
+      await pumpJump(
+        tester,
+        url: 'https://example.com/profile-posts/comments/222/',
+        page: wall(
+          comments: const [
+            ProfileComment(id: 111, author: 'A', body: 'first reply'),
+            ProfileComment(id: 222, author: 'B', body: 'the targeted reply'),
+          ],
+        ),
+      );
+
+      final ctx = tester.element(find.text('the targeted reply'));
+      final primary = Theme.of(ctx).colorScheme.primary;
+      final neutral = Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.15);
+
+      // The jumped-to reply's rail turns primary and its row takes a faint wash.
+      final target = borderedAncestor(tester, find.text('the targeted reply'));
+      expect((target.border! as Border).left.color, primary);
+      expect(target.color, primary.withValues(alpha: 0.08));
+
+      // Its neighbour's segment stays the neutral rail colour.
+      final sibling = borderedAncestor(tester, find.text('first reply'));
+      expect((sibling.border! as Border).left.color, neutral);
+
+      // The post around the comment stays plain — the rail carries the accent,
+      // so the post body has no outlined card above it.
+      expect(hasBorderedAncestor(tester, find.text('The targeted post')), isFalse);
+    });
+  });
+
+  group('classifying a content URL', () {
+    test('profile-post and comment permalinks are wall content', () {
+      expect(isProfilePostUrl('https://f95zone.to/profile-posts/143769/'), isTrue);
+      expect(isProfilePostUrl('https://f95zone.to/profile-posts/comments/169480/'), isTrue);
+    });
+
+    test('threads and member pages are not', () {
+      expect(isProfilePostUrl('https://f95zone.to/threads/some-game.1/post-77'), isFalse);
+      expect(isProfilePostUrl('https://f95zone.to/members/baasb.801262/'), isFalse);
+    });
+  });
+
   group('own post actions', () {
     // A wall with one viewer-owned post (edit/delete links present) and one
     // visitor post without them, mirroring what the parser produces.
@@ -398,11 +555,12 @@ void main() {
       await signIn();
       await pumpProfile(tester, fetchProfile: () async => ownPostPage());
 
-      // A comment sits inside exactly two Containers: its own comments block,
-      // then the post card. Innermost first.
+      // A comment sits inside three Containers: its own rail segment, the
+      // comments block, then the post card. Innermost first, so the block —
+      // whose filled bottom the footer clears — is the middle one.
       final wrappers = find.ancestor(of: find.text('A visitor comment'), matching: find.byType(Container));
-      expect(wrappers, findsNWidgets(2));
-      final commentsBlock = tester.getRect(wrappers.first);
+      expect(wrappers, findsNWidgets(3));
+      final commentsBlock = tester.getRect(wrappers.at(1));
       // The card's rect runs to the far side of the 8pt margin separating it
       // from the next card, so its drawn edge is that much higher.
       final cardEdge = tester.getRect(wrappers.last).bottom - 8;
@@ -661,6 +819,29 @@ void main() {
       // The /post-N suffix rides along so the viewer scrolls to the reply,
       // the same as bookmarks and alerts.
       expect(screen.url, 'https://example.com/threads/myth-of-slayer.276090/post-20908354');
+    });
+
+    testWidgets('a profile-post posting opens the member wall, not the thread viewer', (tester) async {
+      await signIn();
+      await pumpProfile(
+        tester,
+        fetchPostings: (_) async => const ProfilePostingsPage(
+          postings: [ProfilePosting(title: 'Left a note', url: 'https://example.com/profile-posts/143769/')],
+          searchUrl: 'https://example.com/search/1/',
+        ),
+      );
+
+      await tester.tap(find.text('Postings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Left a note'));
+      // The pushed profile's real fetch stays pending under fake async; pump
+      // the route transition rather than settling on it.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byType(ForumThreadScreen), findsNothing);
+      final pushed = tester.widgetList<ProfileScreen>(find.byType(ProfileScreen)).firstWhere((s) => s.url != null);
+      expect(pushed.url, 'https://example.com/profile-posts/143769/');
     });
   });
 

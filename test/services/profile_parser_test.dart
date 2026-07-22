@@ -90,6 +90,59 @@ void main() {
     });
   });
 
+  group('parseProfilePage — wall pagination', () {
+    test('reads the wall page-nav on a multi-page wall', () {
+      final page = parseProfilePage(fixture('profile_wall_multipage.htm'));
+      // The saved page is BaasB's wall page 3 of 4.
+      expect(page.wallPage, 3);
+      expect(page.wallTotalPages, 4);
+    });
+
+    test('a single-page wall reports one page', () {
+      final page = parseProfilePage(fixture('profile_invader_incubus.htm'));
+      expect(page.wallPosts, isNotEmpty);
+      expect(page.wallPage, 1);
+      expect(page.wallTotalPages, 1);
+    });
+
+    test('an empty wall reports one page', () {
+      final page = parseProfilePage(fixture('profile_gugatron.htm'));
+      expect(page.wallPage, 1);
+      expect(page.wallTotalPages, 1);
+    });
+
+    test("does not read a sibling pane's page-nav as the wall's", () {
+      // The postings pane paginates on its own; scoping the wall nav to
+      // #profile-posts keeps that count from leaking into the wall's.
+      const html = '''
+<html><body><ul class="tabPanes">
+  <li role="tabpanel" id="profile-posts">
+    <article class="message--simple" data-content="profile-post-1" data-author="X">
+      <article class="message-body">A post</article>
+    </article>
+    <nav class="pageNavWrapper"><div class="pageNav">
+      <ul class="pageNav-main">
+        <li class="pageNav-page "><a href="/members/x.1/">1</a></li>
+        <li class="pageNav-page pageNav-page--current "><a href="/members/x.1/page-2">2</a></li>
+      </ul>
+    </div></nav>
+  </li>
+  <li role="tabpanel" aria-labelledby="recent-content">
+    <nav class="pageNavWrapper"><div class="pageNav">
+      <ul class="pageNav-main">
+        <li class="pageNav-page "><a href="/x?page=8">8</a></li>
+        <li class="pageNav-page "><a href="/x?page=9">9</a></li>
+      </ul>
+    </div></nav>
+  </li>
+</ul></body></html>
+''';
+      final page = parseProfilePage(html);
+      expect(page.wallPage, 2);
+      expect(page.wallTotalPages, 2, reason: "the postings pane's 9 must not count");
+    });
+  });
+
   group('parseProfilePage — own post actions', () {
     late ProfilePage page;
 

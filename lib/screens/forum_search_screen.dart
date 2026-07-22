@@ -12,6 +12,7 @@ import '../widgets/reactions_sheet.dart';
 import '../widgets/segmented_selector.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 typedef ForumSearcher = Future<ForumSearchPage> Function(String keywords, {bool titleOnly, String user, String order});
 typedef ForumSearchPager = Future<ForumSearchPage> Function(String searchUrl, int page);
@@ -124,6 +125,14 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
   }
 
   void _openResult(ForumSearchResult result) {
+    // A profile-post hit belongs on the member's wall, jumped to the post;
+    // the permalink's redirect resolves which wall page it sits on.
+    if (isProfilePostUrl(result.url)) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ProfileScreen(url: result.url)),
+      );
+      return;
+    }
     // Result URLs carry a /post-N permalink; the viewer resolves it to the
     // right page and scrolls to the matched post.
     Navigator.of(context).push(

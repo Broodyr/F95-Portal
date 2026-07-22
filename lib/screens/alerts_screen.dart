@@ -12,6 +12,7 @@ import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import 'forum_thread_screen.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 typedef FetchAlerts = Future<AlertsPage> Function({int page});
 typedef AlertsAcknowledger = Future<void> Function(List<int> unreadAlertIds);
@@ -157,6 +158,15 @@ class _AlertsScreenState extends State<AlertsScreen> {
   }
 
   void _openAlert(AlertEntry alert) {
+    // A profile-post alert (a comment on your post, a like) opens the member's
+    // wall jumped to it, not the thread viewer; the permalink redirect resolves
+    // which wall page it sits on.
+    if (isProfilePostUrl(alert.url)) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ProfileScreen(url: alert.url)),
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ForumThreadScreen(

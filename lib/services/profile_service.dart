@@ -76,6 +76,24 @@ class ProfileService {
     );
   }
 
+  /// A wall page other than the one the profile arrived on: the member page
+  /// at `/members/<slug>.<id>/page-N` serves page N of the profile-post feed,
+  /// re-parsed for its wall and pagination. Page 1 is the bare member URL, so
+  /// it round-trips through [fetchProfile]'s form.
+  static Future<ProfilePage> fetchProfileWallPage(
+    String profileUrl,
+    int page, {
+    http.Client? client,
+    PackageInfoLoader? packageInfoLoader,
+  }) async {
+    if (kIsWeb) {
+      await Future.delayed(AppDurations.mockRead);
+      return createMockProfilePage();
+    }
+    final url = page <= 1 ? profileUrl : _join(profileUrl, 'page-$page');
+    return parseProfilePage(await _fetchHtml(url, client: client, packageInfoLoader: packageInfoLoader));
+  }
+
   /// The About tab, same lazy-pane arrangement as postings.
   static Future<ProfileAbout> fetchAbout(
     String profileUrl, {

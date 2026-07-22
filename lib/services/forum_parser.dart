@@ -702,16 +702,25 @@ ReactionsPage parseReactionsPage(String htmlSource) {
 /// profile postings parser — member-search results carry the same nav.
 (int, int) parsePageNav(Document document) => _parsePageNav(document);
 
-(int, int) _parsePageNav(Document document) {
+/// The same reader confined to one element, for a page that renders more than
+/// one pageNav: a member page's profile-post wall paginates inside its own
+/// tab pane, and must not read a sibling pane's nav. Whole-document callers
+/// use [parsePageNav].
+(int, int) parsePageNavIn(Element scope) {
   int current = 1;
   int total = 1;
-  for (final li in document.querySelectorAll('.pageNav-page')) {
+  for (final li in scope.querySelectorAll('.pageNav-page')) {
     final page = int.tryParse(_clean(li.text)) ?? 0;
     if (page <= 0) continue;
     if (total < page) total = page;
     if (li.classes.contains('pageNav-page--current')) current = page;
   }
   return (current, total);
+}
+
+(int, int) _parsePageNav(Document document) {
+  final root = document.documentElement;
+  return root == null ? (1, 1) : parsePageNavIn(root);
 }
 
 ForumNode _parseNode(Element node) {

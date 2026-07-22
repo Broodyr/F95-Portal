@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
@@ -16,6 +19,7 @@ import '../widgets/error_view.dart';
 import '../widgets/forum_composer.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/image_gallery.dart';
+import '../widgets/pagination_bar.dart';
 import '../widgets/reaction_icon.dart';
 import '../widgets/reactions_sheet.dart';
 import '../widgets/report_dialog.dart';
@@ -30,6 +34,10 @@ typedef FetchProfile = Future<ProfilePage> Function();
 /// query; [FetchProfilePostingsPage] loads the rest by page number.
 typedef FetchProfilePostings = Future<ProfilePostingsPage> Function(String postingsSearchUrl);
 typedef FetchProfilePostingsPage = Future<ProfilePostingsPage> Function(String searchUrl, int page);
+
+/// Loads a wall page other than the one the profile arrived on
+/// (`/members/<slug>.<id>/page-N`), re-parsing the member page for its feed.
+typedef FetchProfileWallPage = Future<ProfilePage> Function(String profileUrl, int page);
 typedef FetchProfileAbout = Future<ProfileAbout> Function(String profileUrl);
 
 /// Wall writes: new profile posts and comments share one shape (action URL,
@@ -38,6 +46,15 @@ typedef ProfileMessagePoster = Future<void> Function(String url, String csrfToke
 
 /// Deletes a viewer-owned wall post through its delete action.
 typedef ProfilePostDeleter = Future<void> Function(String deleteUrl, String csrfToken);
+
+/// The permalink shapes a member's wall serves: a root post
+/// (`/profile-posts/N`) or a reply (`/profile-posts/comments/N`). Postings and
+/// search rows can carry either, and both belong on the wall — a pushed
+/// [ProfileScreen] jumps to the post — rather than in the thread viewer, which
+/// can't render one. Every other content URL is a thread.
+final RegExp _profilePostUrl = RegExp(r'/profile-posts/(?:comments/)?\d+');
+
+bool isProfilePostUrl(String url) => _profilePostUrl.hasMatch(url);
 
 /// A member profile: identity header, then the profile-post wall, recent
 /// postings, and About as segmented tabs.
@@ -61,6 +78,7 @@ class ProfileScreen extends StatefulWidget {
   final FetchProfile? fetchProfile;
   final FetchProfilePostings? fetchPostings;
   final FetchProfilePostingsPage? postingsPager;
+  final FetchProfileWallPage? wallPager;
   final FetchProfileAbout? fetchAbout;
   final ProfileMessagePoster? messagePoster;
   final EditFetcher? editFetcher;
@@ -85,6 +103,7 @@ class ProfileScreen extends StatefulWidget {
     this.fetchProfile,
     this.fetchPostings,
     this.postingsPager,
+    this.wallPager,
     this.fetchAbout,
     this.messagePoster,
     this.editFetcher,
@@ -104,9 +123,36 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  /// Vertical gap between wall cards, and how long a landed jump keeps
+  /// re-aligning as avatars and inline images above it settle. Both mirror
+  /// the thread viewer, which solves the same scroll-to-a-post problem.
+  static const double _cardGap = 8;
+  static const Duration _settleWindow = Duration(seconds: 2);
+
   ProfilePage? _page;
   bool _loading = false;
   String? _error;
+
+  /// The wall's own scroll driver. The own-profile tab hands one down (it
+  /// hides the bottom nav on scroll); a pushed member profile passes none, so
+  /// one is minted here — a jump to a post needs a controller to move.
+  ScrollController? _ownedScrollController;
+  ScrollController get _scrollController => widget.scrollController ?? (_ownedScrollController ??= ScrollController());
+
+  /// A profile-post permalink lands the reader on the wall page holding one
+  /// post or comment, then scrolls to it — the /profile-posts/N and
+  /// /profile-posts/comments/N shapes, parsed from [ProfileScreen.url]. Only
+  /// one is ever set. The key rides whichever card is the target.
+  final GlobalKey _targetKey = GlobalKey();
+  int? _targetPostId;
+  int? _targetCommentId;
+  bool _scrolledToTarget = false;
+
+  /// Set once the reader drags the list, which ends any settling correction
+  /// still nudging the target into place.
+  bool _readerTookOver = false;
+  bool _settling = false;
+  Timer? _settleTimer;
 
   /// Set when [_error] is one the site won't answer differently next time,
   /// to the status it answered with: no retry, and 403 and 404 each get
@@ -114,6 +160,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _errorStatus;
 
   int _tab = 0;
+
+  /// Set while a wall page other than the loaded one is fetching. The wall
+  /// pages a whole member page at a time (unlike the Postings tab's scroll),
+  /// so [_page] is swapped wholesale on arrival; the header stays put.
+  bool _wallLoading = false;
 
   /// Postings accumulate across pages as the reader scrolls. [_postingsPage]
   /// holds the last page's pagination (total pages, the GET-able results
@@ -140,12 +191,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     AuthService.instance.addListener(_onAuthChanged);
+    // A comment permalink nests the id under /comments/; check it first so the
+    // shared /profile-posts/ prefix doesn't swallow it as a post.
+    final url = widget.url ?? '';
+    final comment = RegExp(r'/profile-posts/comments/(\d+)').firstMatch(url);
+    if (comment != null) {
+      _targetCommentId = int.tryParse(comment.group(1)!);
+    } else {
+      _targetPostId = int.tryParse(RegExp(r'/profile-posts/(\d+)').firstMatch(url)?.group(1) ?? '');
+    }
     if (_showProfile) _loadProfile();
   }
 
   @override
   void dispose() {
     AuthService.instance.removeListener(_onAuthChanged);
+    _settleTimer?.cancel();
+    _ownedScrollController?.dispose();
     super.dispose();
   }
 
@@ -163,6 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loading = false;
     _error = null;
     _tab = 0;
+    _wallLoading = false;
     _resetPostings();
     _about = null;
     _aboutLoading = false;
@@ -202,6 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _page = page;
         _loading = false;
       });
+      _maybeScrollToTarget();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -270,10 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// forum search list: failures stay silent, so scrolling again retries.
   Future<void> _loadMorePostings() async {
     final page = _postingsPage;
-    if (page == null ||
-        _postingsLoadingMore ||
-        _postingsLoadedPages >= page.totalPages ||
-        page.searchUrl.isEmpty) {
+    if (page == null || _postingsLoadingMore || _postingsLoadedPages >= page.totalPages || page.searchUrl.isEmpty) {
       return;
     }
     _postingsLoadingMore = true;
@@ -290,6 +351,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } finally {
       _postingsLoadingMore = false;
     }
+  }
+
+  /// Jumps the wall to another page through its page-nav. The member page for
+  /// that page carries the same header, so the whole [_page] is swapped and
+  /// the identity block above the tabs doesn't flinch. Failures surface as a
+  /// toast and leave the current page in place.
+  Future<void> _goToWallPage(int page) async {
+    final current = _page;
+    if (current == null || page == current.wallPage || _wallLoading) return;
+
+    setState(() => _wallLoading = true);
+    try {
+      final fetch = widget.wallPager ?? ProfileService.fetchProfileWallPage;
+      final next = await fetch(current.profileUrl, page);
+      if (!mounted) return;
+      setState(() {
+        _page = next;
+        _wallLoading = false;
+        // A page the reader picked by hand leaves any jump highlight behind —
+        // the targeted post isn't on this page, and its border would mislead.
+        _targetPostId = null;
+        _targetCommentId = null;
+      });
+      // Land at the top of the new page.
+      if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _wallLoading = false);
+      AppToast.show(context, '$e', error: true);
+    }
+  }
+
+  // --- Jump to a permalinked post or comment --------------------------------
+
+  bool get _hasTarget => _targetPostId != null || _targetCommentId != null;
+
+  /// True once the landed page actually holds the target — a post by id, or a
+  /// comment nested under any post. Guards the scroll so a stale permalink (or
+  /// a redirect that missed) is a quiet no-op rather than a scroll to nowhere.
+  bool _targetIsPresent(ProfilePage page) {
+    if (_targetPostId != null) return page.wallPosts.any((p) => p.id == _targetPostId);
+    if (_targetCommentId != null) {
+      return page.wallPosts.any((p) => p.comments.any((c) => c.id == _targetCommentId));
+    }
+    return false;
+  }
+
+  /// One-time scroll to the permalink's post or comment after the wall first
+  /// renders. Mirrors the thread viewer's jump.
+  void _maybeScrollToTarget() {
+    final page = _page;
+    if (!_hasTarget || _scrolledToTarget || page == null || !_targetIsPresent(page)) return;
+    _scrolledToTarget = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _stepScrollToTarget());
+  }
+
+  /// The list lays out lazily, so the target may not exist until its offset is
+  /// reached: step down until it mounts, then align it. Permalinks open at the
+  /// top and search downward.
+  Future<void> _stepScrollToTarget() async {
+    while (mounted &&
+        _targetKey.currentContext == null &&
+        _scrollController.hasClients &&
+        _scrollController.offset < _scrollController.position.maxScrollExtent) {
+      final position = _scrollController.position;
+      _scrollController.jumpTo(
+        (_scrollController.offset + 600).clamp(position.minScrollExtent, position.maxScrollExtent),
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    final targetContext = _targetKey.currentContext;
+    if (targetContext != null && targetContext.mounted) {
+      await Scrollable.ensureVisible(targetContext, duration: Motion.duration, curve: Motion.curve);
+      _alignTarget();
+      await _holdTargetWhileSettling();
+    }
+  }
+
+  /// Where the scroll must sit for the target to rest just below the tabs,
+  /// backed off half a card gap so it doesn't touch the chrome. Null once the
+  /// target leaves the tree.
+  double? _targetOffset() {
+    final targetContext = _targetKey.currentContext;
+    if (targetContext == null || !targetContext.mounted) return null;
+    final box = targetContext.findRenderObject();
+    if (box == null || !box.attached || !_scrollController.hasClients) return null;
+    final reveal = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset - _cardGap / 2;
+    final position = _scrollController.position;
+    return reveal.clamp(position.minScrollExtent, position.maxScrollExtent);
+  }
+
+  /// Puts the target where [_targetOffset] says it belongs if it has drifted.
+  /// Instant, not animated: this is a correction, and easing it would read as
+  /// the page moving on its own.
+  bool _alignTarget() {
+    final desired = _targetOffset();
+    if (desired == null || (desired - _scrollController.offset).abs() <= 0.5) return false;
+    _scrollController.jumpTo(desired);
+    return true;
+  }
+
+  /// Avatars and inline images carry no height until they load, so cards above
+  /// the target grow after the scroll lands and push it down. Hold it in place
+  /// while the page settles; the reader taking hold ends this at once.
+  Future<void> _holdTargetWhileSettling() async {
+    _readerTookOver = false;
+    _settleTimer?.cancel();
+    _settling = true;
+    _settleTimer = Timer(_settleWindow, () => _settling = false);
+    while (mounted && _settling && !_readerTookOver) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted || _readerTookOver || !_scrollController.hasClients) break;
+      _alignTarget();
+    }
+    _settleTimer?.cancel();
+    _settleTimer = null;
+    _settling = false;
   }
 
   Future<void> _ensureAbout() async {
@@ -410,6 +588,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _openPosting(ProfilePosting posting) {
+    // A profile-post row opens the member's wall jumped to that post, not the
+    // thread viewer; the wall page is resolved by the permalink's redirect.
+    if (isProfilePostUrl(posting.url)) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ProfileScreen(url: posting.url)),
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ForumThreadScreen(
@@ -562,6 +748,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: NotificationListener<ScrollNotification>(
               onNotification: (notification) {
                 if (_tab == 1 && notification.metrics.extentAfter < 600) _loadMorePostings();
+                // A drag is the reader taking over, which ends a jump's
+                // settling correction; a programmatic align carries no drag.
+                if (notification is ScrollStartNotification && notification.dragDetails != null) {
+                  _readerTookOver = true;
+                }
                 return false;
               },
               child: RefreshIndicator(
@@ -569,7 +760,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: colorScheme.primary,
                 backgroundColor: Theme.of(context).colorScheme.surface,
                 child: ListView(
-                  controller: widget.scrollController,
+                  controller: _scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
                   children: [
@@ -687,6 +878,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // --- Profile posts (wall) -------------------------------------------------
 
   List<Widget> _buildWallTab(ColorScheme colorScheme, ProfilePage page) {
+    // A page jump swaps the whole member page; hold a spinner under the tabs
+    // meanwhile, the same as the Postings and About tabs' first load.
+    if (_wallLoading) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
+    }
     return [
       if (page.wallPostUrl != null)
         Padding(
@@ -722,6 +923,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         )
       else
         for (final post in page.wallPosts) _buildWallPost(colorScheme, post),
+      // The wall's own page-nav, the shared pill bar the thread and reviews
+      // pages use. Only when the feed runs past one page.
+      if (page.wallTotalPages > 1)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: PaginationBar(page: page.wallPage, totalPages: page.wallTotalPages, onSelect: _goToWallPage),
+        ),
     ];
   }
 
@@ -776,7 +984,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildWallPost(ColorScheme colorScheme, ProfilePost post) {
     final hasActions = post.editUrl != null || post.deleteUrl != null || post.commentUrl != null;
+    // A post a permalink jumped to: the whole card takes a primary outline,
+    // the same mark the thread viewer puts on a jumped-to post. A comment
+    // target leaves the card plain — its own rail segment carries the accent.
+    final bool isTarget = post.id == _targetPostId;
     return Container(
+      key: isTarget ? _targetKey : null,
       margin: const EdgeInsets.only(bottom: 8),
       // No bottom padding under the footer row: its buttons are 48pt tap
       // targets around ~16pt of label, so they already carry a matching band
@@ -784,7 +997,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // them, leaving the row visibly closer to the content above it than to
       // the card edge. Posts without a footer still need the real padding.
       padding: EdgeInsets.fromLTRB(12, 10, 12, hasActions ? 0 : 8),
-      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: isTarget ? Border.all(color: colorScheme.primary.withValues(alpha: 0.45)) : null,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -829,20 +1046,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (post.comments.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.fromLTRB(9, 6, 8, 6),
-              // The thread viewer's nested-block treatment — a faint fill
-              // behind a left rail — so the comments read as one group rather
-              // than as loose rows a thin line happens to touch. The rail
-              // stays neutral where a quote's is primary: a quote is another
-              // member's voice inserted into a post and earns the accent,
-              // while these are just the replies to the post above.
-              decoration: BoxDecoration(
-                color: colorScheme.onSurface.withValues(alpha: 0.04),
-                border: Border(left: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.15), width: 1.5)),
-              ),
+              // Left padding drops to zero: the rail — the thread viewer's
+              // nested-block treatment, a faint fill behind a left line — now
+              // rides each comment so a jumped-to one can light its own
+              // segment, and the 9px inset moves onto the comments with it.
+              padding: const EdgeInsets.fromLTRB(0, 6, 8, 6),
+              decoration: BoxDecoration(color: colorScheme.onSurface.withValues(alpha: 0.04)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [for (final comment in post.comments) _buildComment(comment)],
+                children: [for (final comment in post.comments) _buildComment(colorScheme, comment)],
               ),
             ),
           if (hasActions)
@@ -892,71 +1104,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildComment(ProfileComment comment) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () => _openMember(comment.authorUrl, comment.author),
-            behavior: HitTestBehavior.opaque,
-            child: ForumAvatar(username: comment.author, avatarUrl: comment.avatarUrl, size: 17),
+  Widget _buildComment(ColorScheme colorScheme, ProfileComment comment) {
+    // The rail runs the height of every comment; a jumped-to one turns its
+    // own segment primary — the one accent that marks the reply a permalink
+    // pointed at — with a faint wash so the row itself reads as the target.
+    final bool isTarget = comment.id == _targetCommentId;
+    return Container(
+      key: isTarget ? _targetKey : null,
+      padding: const EdgeInsets.only(left: 9),
+      decoration: BoxDecoration(
+        color: isTarget ? colorScheme.primary.withValues(alpha: 0.08) : null,
+        border: Border(
+          left: BorderSide(
+            color: isTarget ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.15),
+            width: 1.5,
           ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _openMember(comment.authorUrl, comment.author),
-                        behavior: HitTestBehavior.opaque,
-                        child: Text(
-                          comment.author,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.of(context).brightText,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 7),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () => _openMember(comment.authorUrl, comment.author),
+              behavior: HitTestBehavior.opaque,
+              child: ForumAvatar(username: comment.author, avatarUrl: comment.avatarUrl, size: 17),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _openMember(comment.authorUrl, comment.author),
+                          behavior: HitTestBehavior.opaque,
+                          child: Text(
+                            comment.author,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.of(context).brightText,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    // Same colour as a top-level post's date; the smaller size
-                    // already sets a comment apart without darkening it too.
-                    Text(comment.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10)),
-                    // One overflow rather than a row of glyphs. A comment's
-                    // header is already tight, and adding report to the icons
-                    // would have put three controls beside an 11px name —
-                    // where the post above it gets one. Edit and Delete come
-                    // along, still gated on the per-comment links.
-                    if (comment.id > 0)
-                      _buildOverflow([
-                        if (comment.editUrl != null) ('Edit', () => _editViaComposer(comment.editUrl!)),
-                        if (comment.deleteUrl != null)
-                          (
-                            'Delete',
-                            () => _deleteWithConfirm(
-                              comment.deleteUrl!,
-                              title: 'Delete comment?',
-                              message: 'The comment will be removed.',
+                      // Same colour as a top-level post's date; the smaller size
+                      // already sets a comment apart without darkening it too.
+                      Text(comment.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10)),
+                      // One overflow rather than a row of glyphs. A comment's
+                      // header is already tight, and adding report to the icons
+                      // would have put three controls beside an 11px name —
+                      // where the post above it gets one. Edit and Delete come
+                      // along, still gated on the per-comment links.
+                      if (comment.id > 0)
+                        _buildOverflow([
+                          if (comment.editUrl != null) ('Edit', () => _editViaComposer(comment.editUrl!)),
+                          if (comment.deleteUrl != null)
+                            (
+                              'Delete',
+                              () => _deleteWithConfirm(
+                                comment.deleteUrl!,
+                                title: 'Delete comment?',
+                                message: 'The comment will be removed.',
+                              ),
                             ),
-                          ),
-                        ('Report…', () => _reportComment(comment)),
-                      ], dense: true),
-                  ],
-                ),
-                DefaultTextStyle.merge(
-                  style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5, height: 1.4),
-                  child: RichSpoilerText(pieces: _piecesOf(comment.rich, comment.body), onOpenLink: _launch),
-                ),
-              ],
+                          ('Report…', () => _reportComment(comment)),
+                        ], dense: true),
+                    ],
+                  ),
+                  DefaultTextStyle.merge(
+                    style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5, height: 1.4),
+                    child: RichSpoilerText(pieces: _piecesOf(comment.rich, comment.body), onOpenLink: _launch),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1177,8 +1406,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Falls back to the plain body for anything built by hand — mock data,
   /// tests — which carries no pieces.
-  List<RichPiece> _piecesOf(List<RichPiece> rich, String body) =>
-      rich.isNotEmpty ? rich : [RichPiece.text(body)];
+  List<RichPiece> _piecesOf(List<RichPiece> rich, String body) => rich.isNotEmpty ? rich : [RichPiece.text(body)];
 
   Future<void> _launch(Uri uri) async {
     final launch =

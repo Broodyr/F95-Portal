@@ -3,7 +3,7 @@ import 'package:html/parser.dart' as html_parser;
 
 import '../models/profile.dart';
 import '../models/thread_page.dart';
-import 'forum_parser.dart' show liftTitlePrefixes, parsePageNav;
+import 'forum_parser.dart' show liftTitlePrefixes, parsePageNav, parsePageNavIn;
 import 'thread_page_parser.dart' show parseRichContent;
 
 /// Parsers for XenForo member profile pages. As with the other parsers,
@@ -70,6 +70,13 @@ ProfilePage parseProfilePage(String htmlSource) {
     }
   }
 
+  // The wall's page-nav, scoped to its own tab pane: the postings and
+  // latest-activity panes carry their own navs, and reading the document
+  // whole would let whichever renders confuse the wall's page count. Same
+  // pane [_parseWallPosts] reads, with the same fallback for pane-less markup.
+  final wallPane = document.querySelector('#profile-posts') ?? document.documentElement;
+  final (wallPage, wallTotalPages) = wallPane == null ? (1, 1) : parsePageNavIn(wallPane);
+
   return ProfilePage(
     username: _clean(header?.querySelector('.username')?.text ?? ''),
     memberTitle: _clean(header?.querySelector('.userTitle')?.text ?? ''),
@@ -80,6 +87,8 @@ ProfilePage parseProfilePage(String htmlSource) {
     lastSeen: lastSeen,
     profileUrl: profileUrl,
     wallPosts: _parseWallPosts(document),
+    wallPage: wallPage,
+    wallTotalPages: wallTotalPages,
     postings: _parsePostings(document),
     postingsSearchUrl: postingsSearchUrl,
     csrfToken: document.documentElement?.attributes['data-csrf'] ?? '',
