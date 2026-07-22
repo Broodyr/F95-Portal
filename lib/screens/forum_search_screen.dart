@@ -86,8 +86,9 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
   }
 
   Future<void> _search() async {
+    // No keywords is a valid ask: alone it's the site's newest-posts feed,
+    // and with a member or thread scope it lists their posts newest-first.
     final keywords = _controller.text.trim();
-    if (keywords.isEmpty) return;
     setState(() {
       _searching = true;
       _error = null;

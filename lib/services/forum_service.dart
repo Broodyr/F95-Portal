@@ -462,9 +462,16 @@ class ForumService {
     );
   }
 
+  /// The session token findUsers sends; the finder answers nothing without
+  /// it. Fetched once and reused — a keystroke-rate endpoint can't afford
+  /// a token round-trip each call. Dropped with the caches on auth change.
+  static String? _finderCsrf;
+
   /// Username suggestions for a partial name, from the member finder the
   /// site's own auto-complete fields query (min. two characters there;
-  /// callers gate that themselves).
+  /// callers gate that themselves). Mirrors the site's ajax GET: the
+  /// index.php route (the friendly /members/find URL doesn't answer) with
+  /// the _xfToken its JS appends.
   static Future<List<UserSuggestion>> findUsers(
     String query, {
     http.Client? client,
@@ -474,9 +481,13 @@ class ForumService {
       await Future.delayed(AppDurations.mockRead);
       return createMockUserSuggestions(query);
     }
+    final csrf = _finderCsrf ??= parseCsrfToken(
+      await _fetchHtml('https://f95zone.to/search/', client: client, packageInfoLoader: packageInfoLoader),
+    );
     return parseUserSuggestions(
       await _fetchHtml(
-        'https://f95zone.to/members/find?q=${Uri.encodeQueryComponent(query)}&_xfResponseType=json',
+        'https://f95zone.to/index.php?members/find&q=${Uri.encodeQueryComponent(query)}'
+        '&_xfRequestUri=%2Fsearch%2F&_xfWithData=1&_xfToken=${Uri.encodeQueryComponent(csrf)}&_xfResponseType=json',
         client: client,
         packageInfoLoader: packageInfoLoader,
         extraHeaders: {'Accept': 'application/json'},
@@ -609,7 +620,10 @@ class ForumService {
     );
   }
 
-  static void clearCache() => _cache.clear();
+  static void clearCache() {
+    _cache.clear();
+    _finderCsrf = null;
+  }
 
   /// Guest renditions differ from member ones (unread markers, visibility);
   /// drop everything when the session changes, including the per-session

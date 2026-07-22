@@ -356,35 +356,62 @@ void main() {
     expect(page.results, hasLength(20));
   });
 
-  // The member finder behind the site's auto-complete fields. Avatar URLs
-  // inside iconHtml come back relative on the live site — absolutized here.
+  // The member finder behind the site's auto-complete fields. It answers
+  // only on its index.php route with the session token the site's JS
+  // appends to every ajax GET; the token is fetched once and reused.
+  // Payload below is (a trimmed copy of) a live capture: members with a
+  // real avatar carry an <img>, the rest a rendered-initial span.
   test('findUsers queries the member finder and parses suggestions', () async {
-    final urls = <String>[];
+    ForumService.clearCache();
+    final finderRequests = <Uri>[];
     final client = MockClient((request) async {
-      urls.add(request.url.toString());
+      if (request.url.path == '/search/') return http.Response('<html data-csrf="tok,en"></html>', 200);
+      finderRequests.add(request.url);
       return http.Response(
-        '{"q":"bro","results":['
-        '{"id":"Bro 04","text":"Bro 04","iconHtml":"<span class=\\"avatar\\"><img src=\\"/data/avatars/s/1/123.jpg?456\\" alt=\\"Bro 04\\" /></span>"},'
-        '{"id":"bro cha-cha","text":"bro cha-cha","iconHtml":"<span class=\\"avatar avatar--default avatar--default--dynamic\\">b</span>"}'
-        ']}',
+        '{"results":['
+        '{"id":"Bro 04","iconHtml":"<span class=\\"avatar avatar--xxs avatar--default avatar--default--dynamic\\" data-user-id=\\"7932812\\" style=\\"background-color: #388e3c; color: #b9f6ca\\">\\n\\t\\t\\t<span class=\\"avatar-u7932812-s\\">B</span> \\n\\t\\t</span>","text":"Bro 04","q":"Bro"},'
+        '{"id":"bro i amcooked","iconHtml":"<span class=\\"avatar avatar--xxs\\" data-user-id=\\"8604736\\">\\n\\t\\t\\t<img src=\\"/data/avatars/s/8604/8604736.jpg?1778536916\\"  alt=\\"bro i amcooked\\" class=\\"avatar-u8604736-s\\" /> \\n\\t\\t</span>","text":"bro i amcooked","q":"Bro"}'
+        '],"q":"Bro","visitor":{"conversations_unread":"0","alerts_unread":"53","total_unread":"53"}}',
         200,
       );
     });
 
-    final users = await ForumService.findUsers('bro', client: client, packageInfoLoader: () async => _packageInfo());
+    final users = await ForumService.findUsers('Bro', client: client, packageInfoLoader: () async => _packageInfo());
 
-    expect(urls, ['https://f95zone.to/members/find?q=bro&_xfResponseType=json']);
+    expect(finderRequests, hasLength(1));
+    expect(finderRequests.single.path, '/index.php');
+    expect(finderRequests.single.queryParameters, {
+      'members/find': '',
+      'q': 'Bro',
+      '_xfRequestUri': '/search/',
+      '_xfWithData': '1',
+      '_xfToken': 'tok,en',
+      '_xfResponseType': 'json',
+    });
     expect(users, hasLength(2));
     expect(users[0].username, 'Bro 04');
-    expect(users[0].avatarUrl, 'https://f95zone.to/data/avatars/s/1/123.jpg?456');
-    expect(users[1].username, 'bro cha-cha');
-    expect(users[1].avatarUrl, isNull);
+    expect(users[0].avatarUrl, isNull);
+    expect(users[1].username, 'bro i amcooked');
+    expect(users[1].avatarUrl, 'https://f95zone.to/data/avatars/s/8604/8604736.jpg?1778536916');
   });
 
-  test('findUsers survives an unexpected response shape', () async {
-    final client = MockClient((request) async => http.Response('{"status":"ok"}', 200));
-    final users = await ForumService.findUsers('bro', client: client, packageInfoLoader: () async => _packageInfo());
-    expect(users, isEmpty);
+  test('findUsers reuses the fetched token and survives odd responses', () async {
+    ForumService.clearCache();
+    int csrfFetches = 0;
+    final client = MockClient((request) async {
+      if (request.url.path == '/search/') {
+        csrfFetches++;
+        return http.Response('<html data-csrf="tok,en"></html>', 200);
+      }
+      return http.Response('{"status":"ok"}', 200);
+    });
+
+    final first = await ForumService.findUsers('bro', client: client, packageInfoLoader: () async => _packageInfo());
+    final second = await ForumService.findUsers('brod', client: client, packageInfoLoader: () async => _packageInfo());
+
+    expect(first, isEmpty);
+    expect(second, isEmpty);
+    expect(csrfFetches, 1);
   });
 
   test('searchPage appends the page parameter to the results URL', () async {

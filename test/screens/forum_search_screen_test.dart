@@ -93,6 +93,31 @@ void main() {
     });
   });
 
+  // The site accepts a bare submit — no keywords, no member — and answers
+  // with the newest posts sitewide; keyword-less member searches work too.
+  testWidgets('an empty query still searches (the newest-posts feed)', (tester) async {
+    await AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
+    final sent = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ForumSearchScreen(
+          searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async {
+            sent.add(keywords);
+            return const ForumSearchPage(
+              results: [ForumSearchResult(title: 'Freshest post', url: 'https://example.com/threads/f.1/post-9')],
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+
+    expect(sent, ['']);
+    expect(find.textContaining('Freshest post'), findsOneWidget);
+  });
+
   group('posted by', () {
     testWidgets('picking a member labels the chip and scopes the search', (tester) async {
       await AuthService.instance.saveCookies({'xf_user': '1957582,tok'});
