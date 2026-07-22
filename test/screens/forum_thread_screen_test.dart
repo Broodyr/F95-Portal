@@ -549,6 +549,41 @@ void main() {
     });
   });
 
+  // The title bar's only action is an overflow menu; opening the thread in
+  // the browser lives inside it (more options will join it later).
+  testWidgets('the title-bar overflow opens the thread externally', (tester) async {
+    final launched = <Uri>[];
+    final postsPage = ThreadPostsPage(
+      title: 'Overflow',
+      posts: const [ForumPost(postId: 1, number: 1, author: 'A', blocks: [])],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/overflow.1/',
+          title: 'Overflow',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+          urlLauncher: (uri) async {
+            launched.add(uri);
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Thread tools'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Thread tools'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open in browser'));
+    await tester.pumpAndSettle();
+
+    expect(launched, [Uri.parse('https://example.com/threads/overflow.1/')]);
+  });
+
   // A mid-thread page shows the widest arrangement — 1 … n-1 n n+1 … last.
   // Long page numbers blow that past a phone's width, so the row sheds its
   // adjacent pages and, failing that, scales; either way it never overflows

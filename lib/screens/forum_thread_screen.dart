@@ -551,10 +551,20 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            tooltip: 'Open in browser',
-            icon: const Icon(Icons.open_in_new, size: 20),
-            onPressed: () => _launch(Uri.parse(widget.url)),
+          // Room for the thread-level options to grow; opening externally is
+          // just the first tenant.
+          PopupMenuButton<VoidCallback>(
+            tooltip: 'Thread tools',
+            color: AppColors.of(context).chipSurface,
+            icon: const Icon(Icons.more_vert, size: 20),
+            onSelected: (action) => action(),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: () => _launch(Uri.parse(widget.url)),
+                height: 40,
+                child: const Text('Open in browser', style: TextStyle(fontSize: 13)),
+              ),
+            ],
           ),
         ],
       ),
