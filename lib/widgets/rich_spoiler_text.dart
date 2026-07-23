@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/thread_page.dart';
 import '../theme/app_colors.dart';
 import 'remote_image.dart';
@@ -220,11 +221,10 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
               if (piece.underline || url != null) TextDecoration.underline,
               if (piece.strike) TextDecoration.lineThrough,
             ]),
-            // A link's underline is a muted crimson whisper — the weight carries
-            // the salience, so the line just hints. Explicit [u]/strike keep the
-            // brighter default.
+            // Explicit [u]/strike keep the brighter default; see
+            // [AppAlphas.linkUnderline] for why a link's line only hints.
             decorationColor: url != null
-                ? colorScheme.primary.withValues(alpha: 0.5)
+                ? colorScheme.primary.withValues(alpha: AppAlphas.linkUnderline)
                 : AppColors.of(context).brightText,
           ),
         ),

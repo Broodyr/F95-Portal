@@ -1,3 +1,4 @@
+import 'package:f95_portal/constants.dart';
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/widgets/remote_image.dart';
 import 'package:f95_portal/widgets/rich_spoiler_text.dart';
@@ -294,7 +295,7 @@ void main() {
       final link = spanStyleFor(tester, 'a link')!;
       expect(marked.decoration!.contains(TextDecoration.underline), isTrue);
       expect(link.decoration!.contains(TextDecoration.underline), isTrue);
-      expect(link.decorationColor, ThemeData.dark().colorScheme.primary.withValues(alpha: 0.5));
+      expect(link.decorationColor, ThemeData.dark().colorScheme.primary.withValues(alpha: AppAlphas.linkUnderline));
     });
   });
 }

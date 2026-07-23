@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
+import '../constants.dart';
 import '../models/forum.dart';
 import '../services/api_service.dart' show ApiException;
 import '../services/forum_service.dart';
@@ -214,7 +215,7 @@ class _ThreadReviewsScreenState extends State<ThreadReviewsScreen> {
               color: colorScheme.primary,
               fontWeight: FontWeight.w500,
               decoration: TextDecoration.underline,
-              decorationColor: colorScheme.primary.withValues(alpha: 0.5),
+              decorationColor: colorScheme.primary.withValues(alpha: AppAlphas.linkUnderline),
             ),
           ),
         ),

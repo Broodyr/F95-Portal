@@ -1229,7 +1229,9 @@ class _PostCardState extends State<_PostCard> {
                           // with a muted underline hinting underneath.
                           fontWeight: jumpable ? FontWeight.w500 : null,
                           decoration: jumpable ? TextDecoration.underline : null,
-                          decorationColor: jumpable ? colorScheme.primary.withValues(alpha: 0.5) : null,
+                          decorationColor: jumpable
+                              ? colorScheme.primary.withValues(alpha: AppAlphas.linkUnderline)
+                              : null,
                         ),
                       ),
                     ),

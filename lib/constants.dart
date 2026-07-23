@@ -78,6 +78,11 @@ abstract final class AppAlphas {
   /// of its own. Half [subtleEdge] — at that strength a divider stops
   /// reading as a gap between rows and starts reading as a box around them.
   static const double hairline = 0.1;
+
+  /// A link's underline, over the link's own colour: a muted whisper of it.
+  /// The crimson and the weight already carry the salience, so the line only
+  /// hints. An explicit [u] keeps the brighter default instead.
+  static const double linkUnderline = 0.5;
 }
 
 abstract final class AppLimits {
