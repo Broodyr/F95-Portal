@@ -130,6 +130,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const double _cardGap = 8;
   static const Duration _settleWindow = Duration(seconds: 2);
 
+  /// The comment block's inset above and below its rail. The fill's left
+  /// corners round by this same amount, so the faint fill curves in to meet
+  /// the rail's ends instead of overhanging them in a hard square corner.
+  static const double _commentBlockPad = 6;
+
   ProfilePage? _page;
   bool _loading = false;
   String? _error;
@@ -1038,12 +1043,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (post.comments.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
-              // Left padding drops to zero: the rail — the thread viewer's
-              // nested-block treatment, a faint fill behind a left line — now
-              // rides each comment so a jumped-to one can light its own
-              // segment, and the 9px inset moves onto the comments with it.
-              padding: const EdgeInsets.fromLTRB(0, 6, 8, 6),
-              decoration: BoxDecoration(color: colorScheme.onSurface.withValues(alpha: 0.04)),
+              // Horizontal padding drops to zero: the rail — the thread
+              // viewer's nested-block treatment, a faint fill behind a left
+              // line — now rides each comment so a jumped-to one can light its
+              // own segment, and the side insets move onto the comments so that
+              // segment's wash spans the block's full width, edge to edge.
+              padding: const EdgeInsets.fromLTRB(0, _commentBlockPad, 0, _commentBlockPad),
+              // Round only the left corners, by the inset, so the fill tucks in
+              // to where the rail starts and stops rather than squaring off past
+              // it. The open right side stays square.
+              decoration: BoxDecoration(
+                color: colorScheme.onSurface.withValues(alpha: 0.04),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(_commentBlockPad),
+                  bottomLeft: Radius.circular(_commentBlockPad),
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [for (final comment in post.comments) _buildComment(colorScheme, comment)],
@@ -1103,9 +1118,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool isTarget = comment.id == _targetCommentId;
     return Container(
       key: isTarget ? _targetKey : null,
-      padding: const EdgeInsets.only(left: 9),
+      // Both side insets ride the comment (9 past the rail, 8 before the edge)
+      // rather than the block, so a target comment's wash fills the block width
+      // instead of stopping short of a right padding.
+      padding: const EdgeInsets.only(left: 9, right: 8),
       decoration: BoxDecoration(
-        color: isTarget ? colorScheme.primary.withValues(alpha: 0.08) : null,
+        color: isTarget ? colorScheme.primary.withValues(alpha: AppAlphas.highlightWash) : null,
         border: Border(
           left: BorderSide(
             color: isTarget ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.15),
@@ -1114,7 +1132,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.only(top: 7),
+        // Symmetric so replies aren't packed shoulder to shoulder, and — since
+        // it sits inside the rail — the bottom half gives a jumped-to comment
+        // somewhere empty to land: the scroll backs off half a root-card gap
+        // (4px), which would otherwise slice the reply above where comments
+        // abut. 6 clears that back-off with room to spare.
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1253,7 +1276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: colorScheme.primary.withValues(alpha: 0.18),
+                              color: colorScheme.primary.withValues(alpha: AppAlphas.labelChip),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(prefix, style: TextStyle(color: colorScheme.primary, fontSize: 9.5)),

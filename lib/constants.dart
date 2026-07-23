@@ -50,6 +50,18 @@ abstract final class AppAlphas {
 
   /// Fill for chips, tiles, and unselected pill tracks.
   static const double chipFill = 0.35;
+
+  /// Primary-tinted fill behind a selected pill or an active toggle — the
+  /// segmented selector's slider, the sort/filter pills, the current page.
+  static const double selectedFill = 0.25;
+
+  /// Primary-tinted fill behind a prefix or label chip — thread prefixes,
+  /// alert labels, the picked-member name chip.
+  static const double labelChip = 0.2;
+
+  /// Primary-tinted wash marking a row as highlighted or unread — an unread
+  /// alert, a jumped-to profile comment.
+  static const double highlightWash = 0.15;
 }
 
 abstract final class AppLimits {

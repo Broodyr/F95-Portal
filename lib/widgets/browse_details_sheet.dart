@@ -688,7 +688,9 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
-                      color: i == selectedIndex ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
+                      color: i == selectedIndex
+                          ? colorScheme.primary.withValues(alpha: AppAlphas.selectedFill)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                       border: Border.all(
                         color: i == selectedIndex ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.4),

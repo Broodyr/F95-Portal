@@ -1,3 +1,4 @@
+import 'package:f95_portal/constants.dart';
 import 'package:f95_portal/models/profile.dart';
 import 'package:f95_portal/models/thread_page.dart';
 import 'package:f95_portal/screens/forum_thread_screen.dart';
@@ -469,7 +470,7 @@ void main() {
       // The jumped-to reply's rail turns primary and its row takes a faint wash.
       final target = borderedAncestor(tester, find.text('the targeted reply'));
       expect((target.border! as Border).left.color, primary);
-      expect(target.color, primary.withValues(alpha: 0.08));
+      expect(target.color, primary.withValues(alpha: AppAlphas.highlightWash));
 
       // Its neighbour's segment stays the neutral rail colour.
       final sibling = borderedAncestor(tester, find.text('first reply'));

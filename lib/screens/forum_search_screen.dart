@@ -262,7 +262,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
         decoration: BoxDecoration(
           color: selected
-              ? colorScheme.primary.withValues(alpha: 0.25)
+              ? colorScheme.primary.withValues(alpha: AppAlphas.selectedFill)
               : Colors.black.withValues(alpha: AppAlphas.chipFill),
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: selected ? colorScheme.primary : Colors.transparent),
@@ -370,7 +370,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.primary.withValues(alpha: 0.18),
+                                  color: colorScheme.primary.withValues(alpha: AppAlphas.labelChip),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(prefix, style: TextStyle(color: colorScheme.primary, fontSize: 9.5)),

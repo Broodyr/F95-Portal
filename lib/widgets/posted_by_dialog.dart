@@ -160,7 +160,7 @@ class _PostedByDialogState extends State<PostedByDialog> {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 3, 6, 3),
       decoration: BoxDecoration(
-        color: colorScheme.primary.withValues(alpha: 0.18),
+        color: colorScheme.primary.withValues(alpha: AppAlphas.labelChip),
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Row(

@@ -56,7 +56,7 @@ class SegmentedSelector<T> extends StatelessWidget {
                   heightFactor: 1,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.25),
+                      color: colorScheme.primary.withValues(alpha: AppAlphas.selectedFill),
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                       border: Border.all(color: colorScheme.primary, width: 1.5),
                     ),

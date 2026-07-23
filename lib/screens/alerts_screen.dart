@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart' as launcher;
 
+import '../constants.dart';
 import '../models/account.dart';
 import '../services/auth_service.dart';
 import '../services/forum_service.dart';
@@ -477,7 +478,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final row = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
       decoration: BoxDecoration(
-        color: alert.unread ? colorScheme.primary.withValues(alpha: 0.07) : Colors.transparent,
+        color: alert.unread ? colorScheme.primary.withValues(alpha: AppAlphas.highlightWash) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -517,7 +518,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                               decoration: BoxDecoration(
-                                color: colorScheme.primary.withValues(alpha: 0.18),
+                                color: colorScheme.primary.withValues(alpha: AppAlphas.labelChip),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(label, style: TextStyle(color: colorScheme.primary, fontSize: 9.5)),

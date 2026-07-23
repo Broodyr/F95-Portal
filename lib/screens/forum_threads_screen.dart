@@ -318,7 +318,7 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                 decoration: BoxDecoration(
-                                  color: colorScheme.primary.withValues(alpha: 0.18),
+                                  color: colorScheme.primary.withValues(alpha: AppAlphas.labelChip),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(prefix.label, style: TextStyle(color: colorScheme.primary, fontSize: 9.5)),

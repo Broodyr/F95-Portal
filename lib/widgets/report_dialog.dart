@@ -187,7 +187,7 @@ class _ReportDialogState extends State<ReportDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? colorScheme.primary.withValues(alpha: 0.25) : Colors.transparent,
+          color: selected ? colorScheme.primary.withValues(alpha: AppAlphas.selectedFill) : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: selected ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.4)),
         ),

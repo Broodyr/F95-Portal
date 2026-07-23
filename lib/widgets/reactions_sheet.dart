@@ -186,7 +186,9 @@ class _ReactionsSheetState extends State<ReactionsSheet> {
           // itself surface, so surface-derived tokens land back on its own
           // colour and the pill disappears. Staying translucent also keeps
           // the blur reading through it.
-          color: selected ? colorScheme.primary.withValues(alpha: 0.25) : colorScheme.onSurface.withValues(alpha: 0.06),
+          color: selected
+              ? colorScheme.primary.withValues(alpha: AppAlphas.selectedFill)
+              : colorScheme.onSurface.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: selected ? colorScheme.primary : Colors.transparent),
         ),

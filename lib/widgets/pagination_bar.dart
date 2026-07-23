@@ -228,7 +228,7 @@ class PaginationBar extends StatelessWidget {
           // Opaque rather than the translucent chipFill chips elsewhere use:
           // those sit on cards, while the pills sit on the page background,
           // where 35% of a near-black surface all but disappears.
-          color: current ? colorScheme.primary.withValues(alpha: 0.3) : colorScheme.surface,
+          color: current ? colorScheme.primary.withValues(alpha: AppAlphas.selectedFill) : colorScheme.surface,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           border: Border.all(color: current ? colorScheme.primary : Colors.transparent),
         ),
