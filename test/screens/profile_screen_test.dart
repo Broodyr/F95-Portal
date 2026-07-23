@@ -537,9 +537,9 @@ void main() {
       );
     }
 
-    /// An entry in an open overflow. Scoped to the menu because a wall post's
+    /// An entry in an open overflow. Scoped to the sheet because a wall post's
     /// footer carries buttons with these same labels.
-    Finder menuItem(String label) => find.widgetWithText(PopupMenuItem<VoidCallback>, label);
+    Finder menuItem(String label) => find.descendant(of: find.byType(BottomSheet), matching: find.text(label));
 
     testWidgets('shows Edit and Delete only on posts carrying their action URLs', (tester) async {
       await signIn();

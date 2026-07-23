@@ -14,6 +14,7 @@ import '../services/forum_service.dart';
 import '../services/profile_service.dart';
 import '../services/site_error.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_action_sheet.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/error_view.dart';
 import '../widgets/forum_composer.dart';
@@ -961,24 +962,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// [dense] is for a comment's header, whose text is 11.5px against a wall
   /// post's 12.5 — at the post's size this control set the row height and
   /// pushed the card taller.
-  Widget _buildOverflow(List<(String, VoidCallback)> actions, {bool dense = false}) {
-    return PopupMenuButton<VoidCallback>(
+  Widget _buildOverflow(List<AppSheetAction> actions, {bool dense = false}) {
+    return AppOverflowButton(
       tooltip: 'Post tools',
-      padding: EdgeInsets.zero,
-      color: AppColors.of(context).chipSurface,
-      onSelected: (action) => action(),
-      itemBuilder: (context) => [
-        for (final (label, action) in actions)
-          PopupMenuItem(
-            value: action,
-            height: 40,
-            child: Text(label, style: const TextStyle(fontSize: 13)),
-          ),
-      ],
-      child: Padding(
-        padding: dense ? const EdgeInsets.fromLTRB(8, 0, 0, 0) : const EdgeInsets.fromLTRB(8, 4, 2, 4),
-        child: Icon(Icons.more_vert, size: dense ? 14 : 16, color: AppColors.of(context).iconDefault),
-      ),
+      actions: actions,
+      padding: dense ? const EdgeInsets.fromLTRB(8, 0, 0, 0) : const EdgeInsets.fromLTRB(8, 4, 2, 4),
+      iconSize: dense ? 14 : 16,
     );
   }
 
@@ -1035,7 +1024,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // Edit and Delete stay in the footer row here: a wall post has
               // room for them, and they are the actions its own author reaches
               // for. Only report, which anyone may want, is tucked away.
-              if (post.id > 0) _buildOverflow([('Report…', () => _reportWallPost(post))]),
+              if (post.id > 0)
+                _buildOverflow([
+                  AppSheetAction(icon: Icons.outlined_flag, label: 'Report…', onTap: () => _reportWallPost(post)),
+                ]),
             ],
           ),
           const SizedBox(height: 6),
@@ -1163,17 +1155,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // along, still gated on the per-comment links.
                       if (comment.id > 0)
                         _buildOverflow([
-                          if (comment.editUrl != null) ('Edit', () => _editViaComposer(comment.editUrl!)),
+                          if (comment.editUrl != null)
+                            AppSheetAction(
+                              icon: Icons.edit_outlined,
+                              label: 'Edit',
+                              onTap: () => _editViaComposer(comment.editUrl!),
+                            ),
                           if (comment.deleteUrl != null)
-                            (
-                              'Delete',
-                              () => _deleteWithConfirm(
+                            AppSheetAction(
+                              icon: Icons.delete_outline,
+                              label: 'Delete',
+                              destructive: true,
+                              onTap: () => _deleteWithConfirm(
                                 comment.deleteUrl!,
                                 title: 'Delete comment?',
                                 message: 'The comment will be removed.',
                               ),
                             ),
-                          ('Report…', () => _reportComment(comment)),
+                          AppSheetAction(icon: Icons.outlined_flag, label: 'Report…', onTap: () => _reportComment(comment)),
                         ], dense: true),
                     ],
                   ),

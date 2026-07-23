@@ -78,10 +78,7 @@ void main() {
           blocks: [
             ForumPostBlock(kind: PostBlockKind.rich, pieces: [RichPiece.text('the message')]),
           ],
-          signature: [
-            RichPiece.text('my signature', italic: true),
-            RichPiece.image('https://example.com/banner.gif'),
-          ],
+          signature: [RichPiece.text('my signature', italic: true), RichPiece.image('https://example.com/banner.gif')],
         ),
       ],
     );
@@ -294,13 +291,116 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Quote'));
+    await tester.tap(find.byTooltip('Quote'));
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(find.byType(TextField).last);
     // The member id is what makes the site alert the quoted user; smilies
     // come through as their shortcode.
     expect(field.controller!.text, '[QUOTE="VoidTraveler, post: 42, member: 3590149"]\nhello there:love:\n[/QUOTE]\n');
+  });
+
+  testWidgets('the post bookmark toggle sends add then remove and flips its state', (tester) async {
+    final sent = <(String, String, Map<String, String>)>[];
+    final postsPage = ThreadPostsPage(
+      title: 'Bookmark me',
+      csrfToken: 'tok',
+      replyUrl: 'https://example.com/threads/b.1/add-reply',
+      posts: const [ForumPost(postId: 42, number: 1, author: 'A', bookmarkUrl: 'https://f95zone.to/posts/42/bookmark')],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/b.1/',
+          title: 'Bookmark me',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+          bookmarkSender: (url, csrf, fields) async => sent.add((url, csrf, fields)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Opens un-bookmarked.
+    expect(find.byTooltip('Bookmark'), findsOneWidget);
+    // The circle sizes to itself (36), not an M3 48px tap target that would
+    // inflate the footer row's height.
+    expect(tester.getSize(find.byTooltip('Bookmark')).height, lessThan(40));
+
+    await tester.tap(find.byTooltip('Bookmark'));
+    await tester.pumpAndSettle();
+    // A plain POST adds it; the icon flips to the filled remove state.
+    expect(sent, hasLength(1));
+    expect(sent.single.$1, 'https://f95zone.to/posts/42/bookmark');
+    expect(sent.single.$2, 'tok');
+    expect(sent.single.$3, isEmpty);
+    expect(find.byTooltip('Remove bookmark'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Remove bookmark'));
+    await tester.pumpAndSettle();
+    // Removal carries delete=1, and the toggle returns to Bookmark.
+    expect(sent, hasLength(2));
+    expect(sent.last.$3, {'delete': '1'});
+    expect(find.byTooltip('Bookmark'), findsOneWidget);
+  });
+
+  testWidgets('a post the session already bookmarked opens in the remove state', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Saved',
+      replyUrl: 'https://example.com/threads/s.1/add-reply',
+      posts: const [
+        ForumPost(
+          postId: 9,
+          number: 1,
+          author: 'A',
+          bookmarkUrl: 'https://f95zone.to/posts/9/bookmark',
+          bookmarked: true,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/s.1/',
+          title: 'Saved',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Remove bookmark'), findsOneWidget);
+    expect(find.byTooltip('Bookmark'), findsNothing);
+  });
+
+  testWidgets('a failed bookmark toggle reverts and surfaces the error', (tester) async {
+    final postsPage = ThreadPostsPage(
+      title: 'Oops',
+      csrfToken: 'tok',
+      replyUrl: 'https://example.com/threads/o.1/add-reply',
+      posts: const [ForumPost(postId: 5, number: 1, author: 'A', bookmarkUrl: 'https://f95zone.to/posts/5/bookmark')],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: ForumThreadScreen(
+          url: 'https://example.com/threads/o.1/',
+          title: 'Oops',
+          fetchPosts: (url, {page = 1}) async => postsPage,
+          bookmarkSender: (url, csrf, fields) async => throw Exception('offline'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Bookmark'));
+    await tester.pumpAndSettle();
+
+    // Reverted to un-bookmarked, error surfaced.
+    expect(find.byTooltip('Bookmark'), findsOneWidget);
+    expect(find.textContaining('offline'), findsOneWidget);
   });
 
   // A permalink scrolls its post into view. ensureVisible would park the card

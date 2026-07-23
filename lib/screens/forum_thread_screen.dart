@@ -11,6 +11,7 @@ import '../services/forum_service.dart';
 import '../services/site_error.dart';
 import '../services/thread_page_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_action_sheet.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/error_view.dart';
 import '../widgets/forum_composer.dart';
@@ -37,6 +38,7 @@ typedef EditFetcher = Future<String> Function(String editUrl);
 typedef EditSaver = Future<void> Function(String editUrl, String csrfToken, String message);
 typedef WatchSender = Future<void> Function(String url, String csrfToken, Map<String, String> fields);
 typedef PostDeleter = Future<void> Function(String deleteUrl, String csrfToken);
+typedef BookmarkSender = Future<void> Function(String bookmarkUrl, String csrfToken, Map<String, String> fields);
 
 /// The three watch modes the long-press sheet offers.
 enum WatchChoice { off, alerts, email }
@@ -59,6 +61,7 @@ class ForumThreadScreen extends StatefulWidget {
   final ReportFormFetcher? reportFormFetcher;
   final ReportSender? reportSender;
   final PostDeleter? deleteSender;
+  final BookmarkSender? bookmarkSender;
   final FetchThreadReviews? fetchReviews;
   final RateFormFetcher? rateFormFetcher;
   final RatingSender? ratingSender;
@@ -84,6 +87,7 @@ class ForumThreadScreen extends StatefulWidget {
     this.reportFormFetcher,
     this.reportSender,
     this.deleteSender,
+    this.bookmarkSender,
     this.fetchReviews,
     this.rateFormFetcher,
     this.ratingSender,
@@ -298,6 +302,7 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
           reportFormFetcher: widget.reportFormFetcher,
           reportSender: widget.reportSender,
           deleteSender: widget.deleteSender,
+          bookmarkSender: widget.bookmarkSender,
           urlLauncher: widget.urlLauncher,
         ),
       ),
@@ -442,6 +447,18 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       setState(() => _watched = wasWatched);
       AppToast.show(context, '$e', error: true);
     }
+  }
+
+  /// Fires the post bookmark toggle; the card owns the optimistic state and
+  /// reverts if this throws. Plain to add, `delete=1` to remove — the same
+  /// endpoint the browse sheet bookmarks a thread through.
+  Future<void> _sendBookmark(ForumPost post, {required bool remove}) async {
+    final page = _page;
+    final bookmarkUrl = post.bookmarkUrl;
+    if (page == null || bookmarkUrl == null) return;
+    final send =
+        widget.bookmarkSender ?? (url, csrf, fields) => ThreadPageService.postAction(url, csrf, fields: fields);
+    await send(bookmarkUrl, page.csrfToken, remove ? const {'delete': '1'} : const {});
   }
 
   Future<void> _react(ForumPost post) async {
@@ -590,28 +607,35 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
         ),
         actions: [
           // Room for the thread-level options to grow; opening externally is
-          // just the first tenant.
-          PopupMenuButton<VoidCallback>(
-            tooltip: 'Thread tools',
-            color: AppColors.of(context).chipSurface,
-            icon: const Icon(Icons.more_vert, size: 20),
-            onSelected: (action) => action(),
-            itemBuilder: (context) {
-              final threadId = _threadId;
-              return [
-                if (threadId != null)
-                  PopupMenuItem(
-                    value: () => _openThreadSearch(threadId),
-                    height: 40,
-                    child: const Text('Search thread', style: TextStyle(fontSize: 13)),
-                  ),
-                PopupMenuItem(
-                  value: () => _launch(Uri.parse(widget.url)),
-                  height: 40,
-                  child: const Text('Open in browser', style: TextStyle(fontSize: 13)),
-                ),
-              ];
-            },
+          // just the first tenant. Wrapped so the sheet can light this button
+          // through the shade — a near-circular window matching its ink.
+          Builder(
+            builder: (buttonContext) => IconButton(
+              tooltip: 'Thread tools',
+              icon: const Icon(Icons.more_vert, size: 20),
+              onPressed: () {
+                final threadId = _threadId;
+                final anchor = circleMenuAnchor(buttonContext, glyphSize: 20);
+                showAppActionSheet(
+                  buttonContext,
+                  anchorRect: anchor?.rect,
+                  anchorRadius: anchor?.radius ?? const BorderRadius.all(Radius.circular(20)),
+                  actions: [
+                    if (threadId != null)
+                      AppSheetAction(
+                        icon: Icons.search,
+                        label: 'Search thread',
+                        onTap: () => _openThreadSearch(threadId),
+                      ),
+                    AppSheetAction(
+                      icon: Icons.open_in_browser,
+                      label: 'Open in browser',
+                      onTap: () => _launch(Uri.parse(widget.url)),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -680,6 +704,12 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                 // per-post edit link (own posts only).
                 onReact: page.replyUrl == null ? null : () => _react(post),
                 onQuote: page.replyUrl == null ? null : () => _openComposer(initialMessage: _quoteBbcode(post)),
+                // Bookmark gates on the per-post link (members only), not the
+                // reply URL: you can bookmark a post in a thread you can't post
+                // in. The card owns the toggle's optimistic state.
+                onBookmark: post.bookmarkUrl == null
+                    ? null
+                    : ({required bool remove}) => _sendBookmark(post, remove: remove),
                 onEdit: post.editUrl == null ? null : () => _editPost(post),
                 onDelete: post.deleteUrl == null ? null : () => _deletePost(post),
                 // Unlike the others this needs no per-post link: the report
@@ -696,7 +726,6 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
       ),
     );
   }
-
 }
 
 /// Bottom sheet with the three watch modes; pops the picked [WatchChoice].
@@ -800,6 +829,10 @@ class _PostCard extends StatefulWidget {
   final VoidCallback? onAuthorTap;
   final VoidCallback? onReact;
   final VoidCallback? onQuote;
+
+  /// Toggles the post's bookmark; [remove] is true when clearing an existing
+  /// one. Throws on failure so the card can revert its optimistic state.
+  final Future<void> Function({required bool remove})? onBookmark;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final VoidCallback? onReport;
@@ -827,6 +860,7 @@ class _PostCard extends StatefulWidget {
     this.onAuthorTap,
     this.onReact,
     this.onQuote,
+    this.onBookmark,
     this.onEdit,
     this.onDelete,
     this.onReport,
@@ -844,6 +878,44 @@ class _PostCard extends StatefulWidget {
 
 class _PostCardState extends State<_PostCard> {
   final Set<int> _expandedSpoilers = {};
+
+  late bool _bookmarked = widget.post.bookmarked;
+
+  /// A bookmark round trip is out; further taps are dropped until it lands, so
+  /// a double-tap can't put opposing add/remove requests in flight. The button
+  /// keeps its lit look meanwhile — the optimistic flip is the feedback. Same
+  /// reasoning as the browse sheet's toggle.
+  bool _togglingBookmark = false;
+
+  @override
+  void didUpdateWidget(_PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A reload can hand back a fresh post (e.g. after a reaction refetch);
+    // resync the toggle unless a tap is mid-flight.
+    if (!_togglingBookmark && widget.post.bookmarked != oldWidget.post.bookmarked) {
+      _bookmarked = widget.post.bookmarked;
+    }
+  }
+
+  Future<void> _toggleBookmark() async {
+    final onBookmark = widget.onBookmark;
+    if (onBookmark == null || _togglingBookmark) return;
+
+    HapticFeedback.selectionClick();
+    final bool wasBookmarked = _bookmarked;
+    _togglingBookmark = true;
+    setState(() => _bookmarked = !wasBookmarked);
+
+    try {
+      await onBookmark(remove: wasBookmarked);
+      _togglingBookmark = false;
+    } catch (e) {
+      _togglingBookmark = false;
+      if (!mounted) return;
+      setState(() => _bookmarked = wasBookmarked);
+      AppToast.show(context, '$e', error: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -938,10 +1010,10 @@ class _PostCardState extends State<_PostCard> {
                     ),
                   ),
                 ),
-              // Overflow rides the header row, as on a bookmark card: report
-              // is rare enough that a fifth control in the action row below
-              // would cost more than it earns.
-              if (widget.onReport != null) _buildOverflow(widget.onReport!),
+              // Overflow rides the header row: the rarer, mostly-textual
+              // actions (a member's own Edit/Delete, and Report) live here
+              // rather than crowding the circular action row below.
+              if (widget.onEdit != null || widget.onDelete != null || widget.onReport != null) _buildOverflow(),
             ],
           ),
           // The thread score as the OP's second header row: the title bar
@@ -1005,28 +1077,32 @@ class _PostCardState extends State<_PostCard> {
           ],
           if ((post.reactions?.count ?? 0) > 0 ||
               widget.onReact != null ||
-              widget.onEdit != null ||
-              widget.onDelete != null) ...[
-            const SizedBox(height: 9),
+              widget.onQuote != null ||
+              widget.onBookmark != null) ...[
+            // Match the card's 12px top padding above and below this row (the
+            // container supplies the 12 below); the circles' own size is the
+            // row's height now, no extra chrome.
+            const SizedBox(height: 12),
             Row(
               children: [
                 if ((post.reactions?.count ?? 0) > 0) _buildReactionChip(colorScheme, post.reactions!),
                 const Spacer(),
-                // Edit and Delete sit here rather than in the overflow, as on
-                // a profile wall post: they are the author's own actions on
-                // their own post, and both confirm before doing anything.
-                if (widget.onEdit != null) ...[
-                  _buildFooterAction(Icons.edit_outlined, 'Edit', widget.onEdit!),
-                  const SizedBox(width: 14),
+                // A matching row of circular actions, the app's control shape.
+                // Bookmark is a toggle — its fill and primary tint are the
+                // state — so it leads; React and Quote follow as a pair.
+                if (widget.onBookmark != null) ...[
+                  _buildCircleAction(
+                    _bookmarked ? Icons.bookmark : Icons.bookmark_border,
+                    _bookmarked ? 'Remove bookmark' : 'Bookmark',
+                    _toggleBookmark,
+                    active: _bookmarked,
+                  ),
+                  const SizedBox(width: 8),
                 ],
-                if (widget.onDelete != null) ...[
-                  _buildFooterAction(Icons.delete_outline, 'Delete', widget.onDelete!),
-                  const SizedBox(width: 14),
-                ],
-                if (widget.onReact != null) _buildFooterAction(Icons.add_reaction_outlined, 'React', widget.onReact!),
+                if (widget.onReact != null) _buildCircleAction(Icons.add_reaction_outlined, 'React', widget.onReact!),
                 if (widget.onQuote != null) ...[
-                  const SizedBox(width: 14),
-                  _buildFooterAction(Icons.format_quote_outlined, 'Quote', widget.onQuote!),
+                  const SizedBox(width: 8),
+                  _buildCircleAction(Icons.format_quote_outlined, 'Quote', widget.onQuote!),
                 ],
               ],
             ),
@@ -1039,44 +1115,40 @@ class _PostCardState extends State<_PostCard> {
   /// Sized by its own padding via `child`, not `icon` — an M3 IconButton
   /// won't go under 40x40, which is too tall for a header row of 11px text.
   /// Same shape as the bookmark card's overflow.
-  Widget _buildOverflow(VoidCallback onReport) {
-    return PopupMenuButton<String>(
+  Widget _buildOverflow() {
+    return AppOverflowButton(
       tooltip: 'Post tools',
-      padding: EdgeInsets.zero,
-      color: AppColors.of(context).chipSurface,
-      onSelected: (_) => onReport(),
-      itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: 'report',
-          height: 40,
-          child: Text('Report…', style: TextStyle(fontSize: 13)),
-        ),
+      actions: [
+        if (widget.onEdit != null) AppSheetAction(icon: Icons.edit_outlined, label: 'Edit', onTap: widget.onEdit!),
+        if (widget.onDelete != null)
+          AppSheetAction(icon: Icons.delete_outline, label: 'Delete', destructive: true, onTap: widget.onDelete!),
+        if (widget.onReport != null)
+          AppSheetAction(icon: Icons.outlined_flag, label: 'Report…', onTap: widget.onReport!),
       ],
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
-        child: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
-      ),
     );
   }
 
-  Widget _buildFooterAction(IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: AppColors.of(context).subtleText),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5, fontWeight: FontWeight.w500),
-            ),
-          ],
+  /// A circular outlined action, the same toggle shape as the browse sheet's
+  /// bookmark. [active] tints it primary — used for a set bookmark.
+  Widget _buildCircleAction(IconData icon, String tooltip, VoidCallback onTap, {bool active = false}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return IconButton.outlined(
+      onPressed: onTap,
+      tooltip: tooltip,
+      iconSize: 18,
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      padding: EdgeInsets.zero,
+      style: IconButton.styleFrom(
+        // No 48px min tap target or density padding around the 36px circle:
+        // that invisible inset inflated the whole footer row's height and held
+        // the right-most control in from the card edge.
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.standard,
+        side: BorderSide(
+          color: active ? colorScheme.primary.withValues(alpha: 0.6) : colorScheme.outline.withValues(alpha: 0.5),
         ),
       ),
+      icon: Icon(icon, color: active ? colorScheme.primary : AppColors.of(context).subtleText),
     );
   }
 
@@ -1231,7 +1303,7 @@ class _PostCardState extends State<_PostCard> {
         fetchReactions: widget.fetchReactions,
       ),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(5, 3, 9, 3),
+        padding: const EdgeInsets.fromLTRB(6, 4, 11, 4),
         decoration: BoxDecoration(
           color: colorScheme.onSurface.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -1249,12 +1321,12 @@ class _PostCardState extends State<_PostCard> {
               Align(
                 widthFactor: i == 0 ? 1 : 0.8,
                 alignment: Alignment.centerRight,
-                child: ReactionBadge(reactionId: reactions.topReactionIds[i]),
+                child: ReactionBadge(reactionId: reactions.topReactionIds[i], size: 20),
               ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               '${reactions.count}',
-              style: TextStyle(color: AppColors.of(context).brightText, fontSize: 11.5, fontWeight: FontWeight.w600),
+              style: TextStyle(color: AppColors.of(context).brightText, fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ],
         ),

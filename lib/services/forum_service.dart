@@ -837,6 +837,7 @@ class ForumService {
             count: 69,
             url: 'https://example.com/posts/9001/reactions',
           ),
+          bookmarkUrl: 'https://example.com/posts/9001/bookmark',
         ),
         ForumPost(
           postId: 9100 + page,
@@ -869,6 +870,8 @@ class ForumService {
             count: 31,
             url: 'https://example.com/posts/9102/reactions',
           ),
+          bookmarkUrl: 'https://example.com/posts/9102/bookmark',
+          bookmarked: true,
         ),
       ],
       currentPage: page,

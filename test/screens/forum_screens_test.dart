@@ -252,9 +252,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Only the viewer's own post offers it.
-    expect(find.text('Delete'), findsOneWidget);
+    // Edit/Delete moved into the post's overflow menu. The other post's tools
+    // are just Report — only the viewer's own post carries Delete.
+    await tester.tap(find.byTooltip('Post tools').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Delete'), findsNothing);
+    expect(find.text('Report…'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Report…'))).pop();
+    await tester.pumpAndSettle();
 
+    await tester.tap(find.byTooltip('Post tools').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Delete'), findsOneWidget);
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
     expect(find.text('Delete post?'), findsOneWidget);
@@ -265,6 +274,8 @@ void main() {
     expect(deleted, isEmpty);
 
     final before = fetches;
+    await tester.tap(find.byTooltip('Post tools').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
@@ -347,7 +358,7 @@ void main() {
     await pumpForum(tester, reactSender: (postId, reactionId, csrf) async => reacted.add((postId, reactionId, csrf)));
     await openThreadViewer(tester);
 
-    await tester.tap(find.text('React').first);
+    await tester.tap(find.byTooltip('React').first);
     await tester.pumpAndSettle();
     expect(find.text('Yay, update!'), findsOneWidget);
 
@@ -362,7 +373,7 @@ void main() {
     await pumpForum(tester, replySender: (url, csrf, message) async => replies.add((url, csrf, message)));
     await openThreadViewer(tester);
 
-    await tester.tap(find.text('Quote').first);
+    await tester.tap(find.byTooltip('Quote').first);
     await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(find.byKey(const Key('composer-message')));
@@ -408,10 +419,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Reply'));
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(find.byKey(const Key('composer-message'))).controller!.text,
-      'half a thought',
-    );
+    expect(tester.widget<TextField>(find.byKey(const Key('composer-message'))).controller!.text, 'half a thought');
   });
 
   testWidgets('the reply FAB is a 56pt glass button riding one row above the search FAB spot', (tester) async {
@@ -491,8 +499,8 @@ void main() {
     );
     await openThreadViewer(tester);
 
-    expect(find.text('React'), findsNothing);
-    expect(find.text('Quote'), findsNothing);
+    expect(find.byTooltip('React'), findsNothing);
+    expect(find.byTooltip('Quote'), findsNothing);
     expect(find.byTooltip('Reply'), findsNothing);
     // Watch gates on its member-only anchor, absent from guest pages.
     expect(find.byTooltip('Watch thread'), findsNothing);
@@ -805,6 +813,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byTooltip('Post tools'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();
 
@@ -1108,29 +1118,36 @@ void main() {
     expect(find.textContaining('Mousetrap'), findsOneWidget);
   });
 
-  // The overflow used to stand as its own column beside the content, where
-  // Material's tap box reserved 48px of card width down every row. It rides
-  // the badge row now, so the title and snippet get the full card.
-  testWidgets('the bookmark overflow rides the badge row without reserving a column', (tester) async {
+  // The visible per-row overflow is gone — the row carries no control now, the
+  // way alerts work; its actions live in a long-press menu instead.
+  testWidgets('a bookmark row long-press opens a menu to view externally or remove', (tester) async {
     await signIn();
+    final launched = <Uri>[];
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark(),
-        home: BookmarksScreen(fetchBookmarks: ({page = 1}) async => ForumService.createMockBookmarks(page: page)),
+        home: BookmarksScreen(
+          fetchBookmarks: ({page = 1}) async => ForumService.createMockBookmarks(page: page),
+          urlLauncher: (uri) async {
+            launched.add(uri);
+            return true;
+          },
+        ),
       ),
     );
     await tester.pumpAndSettle();
 
-    final overflow = find.byType(PopupMenuButton<String>).first;
-    final badgeRow = find.ancestor(of: find.text('POST').first, matching: find.byType(Row)).first;
-    expect(
-      find.descendant(of: badgeRow, matching: find.byType(PopupMenuButton<String>)),
-      findsOneWidget,
-      reason: 'the overflow should sit in the same row as the POST/THREAD badge',
-    );
-    // Under 40 means it is not an M3 IconButton, which cannot go smaller and
-    // is what made it too big to live in that row.
-    expect(tester.getSize(overflow).width, lessThan(40));
+    // No visible control on the row any more.
+    expect(find.byTooltip('Bookmark tools'), findsNothing);
+
+    await tester.longPress(find.textContaining('Mousetrap'));
+    await tester.pumpAndSettle();
+    expect(find.text('Open in browser'), findsOneWidget);
+    expect(find.text('Remove bookmark'), findsOneWidget);
+
+    await tester.tap(find.text('Open in browser'));
+    await tester.pumpAndSettle();
+    expect(launched, [Uri.parse('https://example.com/threads/mousetrap.254486/')]);
   });
 
   testWidgets('bookmarks list renders, filters by kind, and opens the viewer', (tester) async {
@@ -1173,7 +1190,7 @@ void main() {
     expect(openedThreads, ['https://example.com/threads/mousetrap.254486/']);
   });
 
-  testWidgets('removing a bookmark posts delete=1 and drops the row', (tester) async {
+  testWidgets('removing a bookmark drops the row now and posts delete=1 once the undo window lapses', (tester) async {
     await signIn();
     final deleted = <(String, String)>[];
     await tester.pumpWidget(
@@ -1187,14 +1204,53 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Bookmark tools').first);
+    await tester.longPress(find.textContaining('Mousetrap'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Remove bookmark'));
+    await tester.pumpAndSettle();
+
+    // Gone from the list at once, with an Undo offered — but nothing sent yet.
+    expect(find.textContaining('Mousetrap'), findsNothing);
+    expect(find.text('Undo'), findsOneWidget);
+    expect(deleted, isEmpty);
+
+    // Let the toast close; the deferred delete then fires.
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
     expect(deleted, [('https://example.com/posts/16935508/bookmark', 'mock-csrf')]);
     expect(find.textContaining('Mousetrap'), findsNothing);
     expect(find.textContaining('Secret Flasher Manaka'), findsOneWidget);
+  });
+
+  testWidgets('undo restores the bookmark and sends no delete', (tester) async {
+    await signIn();
+    final deleted = <(String, String)>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(),
+        home: BookmarksScreen(
+          fetchBookmarks: ({page = 1}) async => ForumService.createMockBookmarks(page: page),
+          bookmarkDeleter: (url, csrf) async => deleted.add((url, csrf)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.textContaining('Mousetrap'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove bookmark'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Mousetrap'), findsNothing);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+
+    // Row back, and even after the window would have passed, nothing was sent.
+    expect(find.textContaining('Mousetrap'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(deleted, isEmpty);
   });
 
   testWidgets('a failed bookmark delete restores the row with an error toast', (tester) async {
@@ -1210,9 +1266,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Bookmark tools').first);
+    await tester.longPress(find.textContaining('Mousetrap'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Remove bookmark'));
+    await tester.pumpAndSettle();
+
+    // The delete only fires once the undo window lapses.
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Mousetrap'), findsOneWidget);
@@ -1294,7 +1354,11 @@ void main() {
       MaterialApp(
         theme: ThemeData.dark(),
         home: AlertsScreen(
-          fetchAlerts: ({page = 1}) async => AlertsPage(groups: [AlertGroup(title: 'Today', alerts: [alert])]),
+          fetchAlerts: ({page = 1}) async => AlertsPage(
+            groups: [
+              AlertGroup(title: 'Today', alerts: [alert]),
+            ],
+          ),
           alertsAcknowledger: (ids) async {},
           alertReadMarker: alertReadMarker ?? (id) async {},
           alertUnreadMarker: alertUnreadMarker ?? (id) async {},
@@ -1448,7 +1512,9 @@ void main() {
       MaterialApp(
         theme: ThemeData.dark(),
         home: AlertsScreen(
-          fetchAlerts: ({page = 1}) async => AlertsPage(groups: [AlertGroup(title: 'Today', alerts: alerts)]),
+          fetchAlerts: ({page = 1}) async => AlertsPage(
+            groups: [AlertGroup(title: 'Today', alerts: alerts)],
+          ),
           alertsAcknowledger: (ids) async {},
           alertReadMarker: (id) async {},
           preferencesFetcher: () async => AlertPreferences(popupSkipsMarkRead: popupSkipsMarkRead),

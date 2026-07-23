@@ -7,6 +7,7 @@ import '../services/api_service.dart' show ApiException;
 import '../services/forum_service.dart';
 import '../services/site_error.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_action_sheet.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/error_view.dart';
 import '../widgets/forum_composer.dart';
@@ -443,22 +444,9 @@ class _ThreadReviewsScreenState extends State<ThreadReviewsScreen> {
   /// Same shape as a post card's overflow: report is rare enough that it
   /// doesn't earn a spot in the footer row.
   Widget _buildOverflow(ThreadReview review) {
-    return PopupMenuButton<String>(
+    return AppOverflowButton(
       tooltip: 'Review tools',
-      padding: EdgeInsets.zero,
-      color: AppColors.of(context).chipSurface,
-      onSelected: (_) => _report(review),
-      itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: 'report',
-          height: 40,
-          child: Text('Report…', style: TextStyle(fontSize: 13)),
-        ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 2, 4),
-        child: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
-      ),
+      actions: [AppSheetAction(icon: Icons.outlined_flag, label: 'Report…', onTap: () => _report(review))],
     );
   }
 }

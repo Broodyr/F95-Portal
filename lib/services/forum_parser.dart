@@ -591,6 +591,8 @@ ForumPost _parsePost(Element post) {
     }
   }
 
+  final bookmarkLink = post.querySelector('a.bookmarkLink');
+
   return ForumPost(
     postId: _idFrom(source, _postIdPattern),
     number: number,
@@ -617,6 +619,11 @@ ForumPost _parsePost(Element post) {
     reactions: _parseReactionSummary(post.querySelector('.reactionsBar')),
     editUrl: _absoluteOrNull(post.querySelector('a.actionBar-action--edit')?.attributes['href']),
     deleteUrl: _absoluteOrNull(post.querySelector('a.actionBar-action--delete')?.attributes['href']),
+    // The bookmark link sits in the post's top-right share cluster, not the
+    // footer action bar — same server-rendered marker the browse sheet reads
+    // for a thread. Members only, so its absence just means no toggle.
+    bookmarkUrl: _absoluteOrNull(bookmarkLink?.attributes['href']),
+    bookmarked: bookmarkLink?.classes.contains('is-bookmarked') ?? false,
   );
 }
 

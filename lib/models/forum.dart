@@ -165,6 +165,16 @@ class ForumPost {
   /// own posts. Opens the site's confirm overlay rather than deleting outright.
   final String? deleteUrl;
 
+  /// The post's bookmark endpoint (`/posts/N/bookmark`); present only for a
+  /// logged-in session, since XenForo renders the link for members only. POST
+  /// it plain to bookmark, with `delete=1` to remove — as the thread's own
+  /// bookmark works in the browse sheet.
+  final String? bookmarkUrl;
+
+  /// Whether the session already has this post bookmarked (`is-bookmarked` on
+  /// the link), so the toggle opens in the right state.
+  final bool bookmarked;
+
   const ForumPost({
     required this.postId,
     this.number = 0,
@@ -179,6 +189,8 @@ class ForumPost {
     this.reactions,
     this.editUrl,
     this.deleteUrl,
+    this.bookmarkUrl,
+    this.bookmarked = false,
   });
 }
 

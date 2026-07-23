@@ -217,9 +217,7 @@ void main() {
 
     test('a text signature keeps its styling', () {
       // "My biggest flex…" is an italic, image-free signature.
-      final post = page.posts.firstWhere(
-        (p) => p.signature.any((piece) => piece.text.contains('My biggest flex')),
-      );
+      final post = page.posts.firstWhere((p) => p.signature.any((piece) => piece.text.contains('My biggest flex')));
       expect(post.signature.first.italic, isTrue);
       expect(post.signature.any((p) => p.imageUrl != null), isFalse);
     });
@@ -282,11 +280,7 @@ void main() {
 
     test('a relative reviews-tab href is absolutized', () {
       // The TimeLust fixture kept the live site's relative hrefs.
-      final rated = parseThreadPosts(
-        fixture(
-          "thread_renpy_timelust_videos.htm",
-        ),
-      );
+      final rated = parseThreadPosts(fixture("thread_renpy_timelust_videos.htm"));
       expect(rated.score!.rating, 4.0);
       expect(rated.score!.votes, 4);
       expect(rated.score!.reviewsUrl, 'https://f95zone.to/threads/timelust-v0-41-unknownwhiteraven.264757/br-reviews/');
@@ -330,13 +324,7 @@ void main() {
   group('parseThreadReviews', () {
     late ThreadReviewsPage page;
 
-    setUpAll(
-      () => page = parseThreadReviews(
-        fixture(
-          "reviews_rpgm_freya.htm",
-        ),
-      ),
-    );
+    setUpAll(() => page = parseThreadReviews(fixture("reviews_rpgm_freya.htm")));
 
     test('parses every review with pagination and the page CSRF', () {
       expect(page.reviews, hasLength(20));
@@ -1088,6 +1076,38 @@ void main() {
       final others = page.posts.where((p) => p.postId != 18025346 && p.postId != 18035017);
       expect(others, isNotEmpty);
       expect(others.every((p) => p.editUrl == null && p.deleteUrl == null), isTrue);
+    });
+  });
+
+  // The per-post bookmark link the browse sheet already reads for a thread.
+  // Members-only, so it rides the same own-post fixture (a logged-in save).
+  group('parseThreadPosts bookmarks', () {
+    test('reads and absolutizes each post bookmark endpoint', () {
+      final page = parseThreadPosts(fixture('thread_own_post.htm'));
+      expect(page.posts.where((p) => p.bookmarkUrl != null), isNotEmpty);
+      // Relative in the live markup (see the URL-trap note), absolutized here,
+      // and keyed to the post's own id.
+      final post = page.posts.firstWhere((p) => p.bookmarkUrl != null);
+      expect(post.bookmarkUrl, 'https://f95zone.to/posts/${post.postId}/bookmark');
+      // Nothing in this save is already bookmarked.
+      expect(page.posts.any((p) => p.bookmarked), isFalse);
+    });
+
+    test('flags an already-bookmarked post from is-bookmarked', () {
+      final page = parseThreadPosts('''
+        <article class="message message--post" data-author="Me" data-content="post-7">
+          <div class="message-body"><div class="bbWrapper">saved</div></div>
+          <a href="/posts/7/bookmark" class="bookmarkLink is-bookmarked" data-xf-click="bookmark-click"></a>
+        </article>
+        <article class="message message--post" data-author="Me" data-content="post-8">
+          <div class="message-body"><div class="bbWrapper">not saved</div></div>
+          <a href="/posts/8/bookmark" class="bookmarkLink" data-xf-click="bookmark-click"></a>
+        </article>
+      ''');
+
+      expect(page.posts.first.bookmarkUrl, 'https://f95zone.to/posts/7/bookmark');
+      expect(page.posts.first.bookmarked, isTrue);
+      expect(page.posts.last.bookmarked, isFalse);
     });
   });
 

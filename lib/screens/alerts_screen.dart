@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/forum_service.dart';
 import '../services/site_error.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_action_sheet.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/error_view.dart';
 import '../widgets/reaction_icon.dart';
@@ -362,42 +363,27 @@ class _AlertsScreenState extends State<AlertsScreen> {
   /// The per-row long-press menu: the read/unread toggle (the undo for a tap,
   /// and a manual read for anything the feed left new) plus opening the target
   /// in the browser — the only way to reach a type the app can't render yet.
-  Future<void> _showAlertMenu(AlertEntry alert) async {
+  Future<void> _showAlertMenu(AlertEntry alert, BuildContext rowContext) async {
+    // Long-press earns the heavier buzz; the InkWell's own feedback is off so
+    // this is the only one. The shared sheet stays haptic-free for the
+    // tap-to-open overflows that don't want it.
     HapticFeedback.vibrate();
-    final action = await showModalBottomSheet<VoidCallback>(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheetContext) {
-        Widget option(IconData icon, String label, VoidCallback onTap) => InkWell(
-          onTap: () => Navigator.of(sheetContext).pop(onTap),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-            child: Row(
-              children: [
-                Icon(icon, size: 19, color: AppColors.of(sheetContext).subtleText),
-                const SizedBox(width: 14),
-                Text(label, style: TextStyle(color: AppColors.of(sheetContext).brightText, fontSize: 13.5)),
-              ],
-            ),
-          ),
-        );
-
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              option(
-                alert.unread ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined,
-                alert.unread ? 'Mark as read' : 'Mark as unread',
-                () => _toggleRead(alert),
-              ),
-              if (alert.url.isNotEmpty) option(Icons.open_in_browser, 'Open in browser', () => _launch(alert.url)),
-            ],
-          ),
-        );
-      },
+    // A long-press acts on the whole row, so the whole row lights — matching
+    // its own rounded edge — rather than a single control.
+    await showAppActionSheet(
+      rowContext,
+      anchorRect: menuAnchorRect(rowContext),
+      anchorRadius: BorderRadius.circular(10),
+      actions: [
+        AppSheetAction(
+          icon: alert.unread ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined,
+          label: alert.unread ? 'Mark as read' : 'Mark as unread',
+          onTap: () => _toggleRead(alert),
+        ),
+        if (alert.url.isNotEmpty)
+          AppSheetAction(icon: Icons.open_in_browser, label: 'Open in browser', onTap: () => _launch(alert.url)),
+      ],
     );
-    if (action != null) action();
   }
 
   @override
@@ -575,14 +561,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
     // can't render (a trophy award, other server notices) instead confirms the
     // read and points at the browser. Long-press is the same row menu on every
     // alert: read/unread and open-in-browser.
-    return InkWell(
-      onTap: () => _onTapAlert(alert),
-      onLongPress: () => _showAlertMenu(alert),
-      // The menu fires its own haptic; InkWell's built-in long-press feedback
-      // on top of it was the occasional double-buzz.
-      enableFeedback: false,
-      borderRadius: BorderRadius.circular(10),
-      child: row,
+    // A Builder so the menu can anchor its highlight to this row's own box.
+    return Builder(
+      builder: (rowContext) => InkWell(
+        onTap: () => _onTapAlert(alert),
+        onLongPress: () => _showAlertMenu(alert, rowContext),
+        // The menu fires its own haptic; InkWell's built-in long-press feedback
+        // on top of it was the occasional double-buzz.
+        enableFeedback: false,
+        borderRadius: BorderRadius.circular(10),
+        child: row,
+      ),
     );
   }
 }

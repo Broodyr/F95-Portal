@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart' as launcher;
 
 import '../constants.dart';
 import '../models/account.dart';
@@ -8,6 +10,7 @@ import '../services/forum_service.dart';
 import '../services/site_error.dart';
 import '../services/thread_page_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_action_sheet.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/error_view.dart';
 import '../widgets/reaction_icon.dart';
@@ -30,6 +33,7 @@ class BookmarksScreen extends StatefulWidget {
   final BookmarkDeleter? bookmarkDeleter;
   final FetchThreadPosts? fetchThreadPosts;
   final FetchReactions? fetchReactions;
+  final Future<bool> Function(Uri uri)? urlLauncher;
 
   const BookmarksScreen({
     super.key,
@@ -37,6 +41,7 @@ class BookmarksScreen extends StatefulWidget {
     this.bookmarkDeleter,
     this.fetchThreadPosts,
     this.fetchReactions,
+    this.urlLauncher,
   });
 
   @override
@@ -124,34 +129,79 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     }
   }
 
-  /// Removes the row optimistically, restoring it if the delete fails.
-  Future<void> _delete(BookmarkEntry entry) async {
+  /// The row's long-press menu — the list has no visible per-row control now,
+  /// the way the alerts feed works. Opening externally and removal both live
+  /// here; a bookmark can also be cleared from the post it points at.
+  Future<void> _showRowMenu(BookmarkEntry entry, BuildContext rowContext) async {
+    HapticFeedback.vibrate();
+    await showAppActionSheet(
+      rowContext,
+      anchorRect: menuAnchorRect(rowContext),
+      anchorRadius: BorderRadius.circular(12),
+      actions: [
+        if (entry.url.isNotEmpty)
+          AppSheetAction(icon: Icons.open_in_browser, label: 'Open in browser', onTap: () => _openInBrowser(entry)),
+        if (entry.bookmarkUrl.isNotEmpty)
+          AppSheetAction(
+            icon: Icons.bookmark_remove_outlined,
+            label: 'Remove bookmark',
+            destructive: true,
+            onTap: () => _delete(entry),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _openInBrowser(BookmarkEntry entry) async {
+    if (entry.url.isEmpty) return;
+    final launch =
+        widget.urlLauncher ?? (uri) => launcher.launchUrl(uri, mode: launcher.LaunchMode.externalApplication);
+    await launch(Uri.parse(entry.url));
+  }
+
+  /// Removes the row optimistically and defers the actual delete until the
+  /// undo toast closes, so Undo takes it back with nothing having been sent.
+  /// A failed delete restores the row with an error toast.
+  void _delete(BookmarkEntry entry) {
     final page = _page;
     if (page == null || entry.bookmarkUrl.isEmpty) return;
 
     final int index = _entries.indexOf(entry);
+    if (index < 0) return;
     setState(() => _entries.remove(entry));
 
-    try {
-      final delete =
-          widget.bookmarkDeleter ??
-          (url, csrf) => ThreadPageService.postAction(url, csrf, fields: const {'delete': '1'});
-      await delete(entry.bookmarkUrl, page.csrfToken);
-      ForumService.clearCache();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _entries.insert(index.clamp(0, _entries.length), entry));
-      AppToast.show(context, '$e', error: true);
-    }
+    bool undone = false;
+    final controller = AppToast.show(
+      context,
+      'Bookmark removed',
+      actionLabel: 'Undo',
+      onAction: () {
+        undone = true;
+        if (mounted) setState(() => _entries.insert(index.clamp(0, _entries.length), entry));
+      },
+    );
+
+    controller.closed.then((_) async {
+      if (undone) return;
+      try {
+        final delete =
+            widget.bookmarkDeleter ??
+            (url, csrf) => ThreadPageService.postAction(url, csrf, fields: const {'delete': '1'});
+        await delete(entry.bookmarkUrl, page.csrfToken);
+        ForumService.clearCache();
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _entries.insert(index.clamp(0, _entries.length), entry));
+        AppToast.show(context, '$e', error: true);
+      }
+    });
   }
 
   void _openEntry(BookmarkEntry entry) {
     // A bookmarked profile post opens the member's wall jumped to it, not the
     // thread viewer; the permalink's redirect resolves which wall page it's on.
     if (isProfilePostUrl(entry.url)) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ProfileScreen(url: entry.url)),
-      );
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProfileScreen(url: entry.url)));
       return;
     }
     Navigator.of(context).push(
@@ -268,110 +318,84 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   Widget _buildRow(ColorScheme colorScheme, BookmarkEntry entry) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () => _openEntry(entry),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ForumAvatar(username: entry.author, avatarUrl: entry.avatarUrl, size: 34),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // The overflow rides this row rather than standing as its
-                    // own column: at Material's default tap size it reserved
-                    // 48px of card width down the whole row, and the badge
-                    // beside it leaves that space going spare anyway.
-                    Row(
-                      children: [
-                        Icon(
-                          entry.isPost ? Icons.subdirectory_arrow_right : Icons.forum_outlined,
-                          size: 12,
-                          color: AppColors.of(context).hintText,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          entry.isPost ? 'POST' : 'THREAD',
-                          style: TextStyle(color: AppColors.of(context).hintText, fontSize: 9.5),
-                        ),
-                        const Spacer(),
-                        _buildOverflow(entry),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      entry.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.of(context).brightText,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+      // A Builder so the long-press menu can anchor its highlight to the row.
+      child: Builder(
+        builder: (rowContext) => InkWell(
+          onTap: () => _openEntry(entry),
+          onLongPress: () => _showRowMenu(entry, rowContext),
+          // The menu fires its own haptic; the InkWell's would double it.
+          enableFeedback: false,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ForumAvatar(username: entry.author, avatarUrl: entry.avatarUrl, size: 34),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Just the kind badge now: removal and open-externally
+                      // moved to the row's long-press menu, freeing the width the
+                      // overflow used to reserve.
+                      Row(
+                        children: [
+                          Icon(
+                            entry.isPost ? Icons.subdirectory_arrow_right : Icons.forum_outlined,
+                            size: 12,
+                            color: AppColors.of(context).hintText,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            entry.isPost ? 'POST' : 'THREAD',
+                            style: TextStyle(color: AppColors.of(context).hintText, fontSize: 9.5),
+                          ),
+                        ],
                       ),
-                    ),
-                    if (entry.snippet.isNotEmpty)
+                      const SizedBox(height: 3),
+                      Text(
+                        entry.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.of(context).brightText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (entry.snippet.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            entry.snippet,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5, height: 1.35),
+                          ),
+                        ),
                       Padding(
-                        padding: const EdgeInsets.only(top: 3),
+                        padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          entry.snippet,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11.5, height: 1.35),
+                          [
+                            if (entry.author.isNotEmpty) entry.author,
+                            if (entry.date.isNotEmpty) 'bookmarked ${entry.date}',
+                          ].join(' · '),
+                          style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
                         ),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        [
-                          if (entry.author.isNotEmpty) entry.author,
-                          if (entry.date.isNotEmpty) 'bookmarked ${entry.date}',
-                        ].join(' · '),
-                        style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Card overflow, sized by its own padding rather than Material's.
-  ///
-  /// Passing `child` instead of `icon` is what allows that: the `icon` form
-  /// builds an IconButton, and an M3 IconButton will not go under 40x40
-  /// whatever you set for iconSize, padding or tapTargetSize. At 40 square in
-  /// a row of 12px badges this drove the whole card taller.
-  Widget _buildOverflow(BookmarkEntry entry) {
-    return PopupMenuButton<String>(
-      tooltip: 'Bookmark tools',
-      padding: EdgeInsets.zero,
-      color: AppColors.of(context).chipSurface,
-      onSelected: (_) => _delete(entry),
-      itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: 'delete',
-          height: 40,
-          child: Text('Remove bookmark', style: TextStyle(fontSize: 13)),
-        ),
-      ],
-      // Padding rather than a bare glyph: the tap target is this box, and the
-      // card underneath is tappable too, so it needs room to be hit on
-      // purpose. Asymmetric so the glyph sits out at the card's edge.
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 6, 2, 6),
-        child: Icon(Icons.more_vert, size: 16, color: AppColors.of(context).iconDefault),
       ),
     );
   }
