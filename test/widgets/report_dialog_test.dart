@@ -132,10 +132,7 @@ void main() {
     // the message field was the one way left to edit a report that had
     // already gone out.
     final inFlight = Completer<void>();
-    await pumpDialog(
-      tester,
-      sendReport: (action, csrf, {required reasonId, required message}) => inFlight.future,
-    );
+    await pumpDialog(tester, sendReport: (action, csrf, {required reasonId, required message}) => inFlight.future);
 
     await tester.tap(find.text('Game update'));
     await tester.pumpAndSettle();

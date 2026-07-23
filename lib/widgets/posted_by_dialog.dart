@@ -111,11 +111,7 @@ class _PostedByDialogState extends State<PostedByDialog> {
             if (_names.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [for (final name in _names) _buildNameChip(name)],
-                ),
+                child: Wrap(spacing: 6, runSpacing: 6, children: [for (final name in _names) _buildNameChip(name)]),
               ),
             TextField(
               key: const Key('posted-by-field'),

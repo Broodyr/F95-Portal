@@ -172,9 +172,7 @@ void main() {
   });
 
   testWidgets('a guest form degrades to a sign-in prompt', (tester) async {
-    await tester.pumpWidget(
-      screen(score: ratableScore, rateFormFetcher: (rateUrl) async => const RateForm()),
-    );
+    await tester.pumpWidget(screen(score: ratableScore, rateFormFetcher: (rateUrl) async => const RateForm()));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Write a review'));

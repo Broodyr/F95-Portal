@@ -68,9 +68,7 @@ void main() {
 
   testWidgets('dismissing without a choice runs nothing', (tester) async {
     var ran = 0;
-    await pumpSheet(tester, [
-      AppSheetAction(label: 'Report…', onTap: () => ran++),
-    ]);
+    await pumpSheet(tester, [AppSheetAction(label: 'Report…', onTap: () => ran++)]);
 
     // Tap the barrier above the sheet.
     await tester.tapAt(const Offset(200, 40));
@@ -81,9 +79,7 @@ void main() {
   });
 
   testWidgets('an icon-less action shows no leading glyph', (tester) async {
-    await pumpSheet(tester, [
-      AppSheetAction(label: 'Report…', onTap: () {}),
-    ]);
+    await pumpSheet(tester, [AppSheetAction(label: 'Report…', onTap: () {})]);
 
     // The grabber is a Container, not an Icon, so the sheet holds none.
     expect(find.descendant(of: find.byType(BottomSheet), matching: find.byType(Icon)), findsNothing);
@@ -139,18 +135,14 @@ void main() {
   });
 
   testWidgets('a sheet without an anchor draws no highlight', (tester) async {
-    await pumpSheet(tester, [
-      AppSheetAction(label: 'Report…', onTap: () {}),
-    ]);
+    await pumpSheet(tester, [AppSheetAction(label: 'Report…', onTap: () {})]);
 
     expect(find.byKey(const Key('menu-highlight')), findsNothing);
   });
 
   testWidgets('blurs the sheet when glass effects are on, and skips it when off', (tester) async {
     await service.update(service.settings.copyWith(glassEffects: true));
-    await pumpSheet(tester, [
-      AppSheetAction(label: 'Report…', onTap: () {}),
-    ]);
+    await pumpSheet(tester, [AppSheetAction(label: 'Report…', onTap: () {})]);
     expect(find.byType(BackdropFilter), findsOneWidget);
 
     // Close and reopen with glass off.

@@ -210,7 +210,11 @@ void main() {
     });
 
     testWidgets('the section says where these settings live', (tester) async {
-      await pumpTile(tester, loader: () async => const AlertPreferences(popupSkipsMarkRead: false), saver: (_) async {});
+      await pumpTile(
+        tester,
+        loader: () async => const AlertPreferences(popupSkipsMarkRead: false),
+        saver: (_) async {},
+      );
       await tester.pumpAndSettle();
 
       final noteFinder = find.text(sectionNote);

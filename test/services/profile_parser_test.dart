@@ -443,9 +443,7 @@ Support me on itch!</div>
     setUpAll(() => page = parseProfilePage(fixture('profile_post_links.htm')));
 
     test('a comment turns its URL into a link piece', () {
-      final comment = page.wallPosts
-          .expand((p) => p.comments)
-          .firstWhere((c) => c.body.contains('read section 5'));
+      final comment = page.wallPosts.expand((p) => p.comments).firstWhere((c) => c.body.contains('read section 5'));
 
       final link = comment.rich.firstWhere((p) => p.url != null);
       expect(link.url, 'https://f95zone.to/threads/general-rules-updated-2026-05-07.5589/');
@@ -547,7 +545,7 @@ Support me on itch!</div>
       expect(
         posts.last.body,
         'Will you let me know here when your Subscribestar is approved? =)\n'
-            "I'll migrate over there as soon as its up!",
+        "I'll migrate over there as soon as its up!",
       );
     });
   });

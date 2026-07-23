@@ -323,10 +323,7 @@ void main() {
       // The comment box on one of that profile's posts is its own draft.
       await tester.tap(find.text('Comment').first);
       await tester.pumpAndSettle();
-      expect(
-        tester.widget<TextField>(find.byKey(const Key('composer-message'))).controller!.text,
-        '',
-      );
+      expect(tester.widget<TextField>(find.byKey(const Key('composer-message'))).controller!.text, '');
       await tester.tapAt(const Offset(400, 20));
       await tester.pumpAndSettle();
 
@@ -992,7 +989,10 @@ void main() {
 
     testWidgets('a hand-built post with no pieces still shows its text', (tester) async {
       await signIn();
-      await pumpProfile(tester, fetchProfile: () async => pageWith(rich: const [], body: 'Plain and unparsed.'));
+      await pumpProfile(
+        tester,
+        fetchProfile: () async => pageWith(rich: const [], body: 'Plain and unparsed.'),
+      );
 
       expect(find.text('Plain and unparsed.'), findsOneWidget);
     });

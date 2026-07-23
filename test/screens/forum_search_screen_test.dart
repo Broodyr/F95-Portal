@@ -49,7 +49,9 @@ void main() {
             scopeThreadId: 207754,
             searcher: (keywords, {titleOnly = false, user = '', order = 'relevance', threadId}) async {
               calls.add((keywords, order, threadId));
-              return const ForumSearchPage(results: [ForumSearchResult(title: 'Hit', url: 'u')]);
+              return const ForumSearchPage(
+                results: [ForumSearchResult(title: 'Hit', url: 'u')],
+              );
             },
           ),
         ),

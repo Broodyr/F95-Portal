@@ -992,8 +992,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: isTarget ? Border.all(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge), width: 2.0)
-         : null,
+        border: isTarget
+            ? Border.all(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge), width: 2.0)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

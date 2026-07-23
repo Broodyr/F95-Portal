@@ -64,10 +64,7 @@ void main() {
 
   // The 8-bit alpha of the highlight circle's fill, as actually rasterised.
   int highlightAlpha(WidgetTester tester) {
-    final circle = find.descendant(
-      of: find.byKey(const Key('nav-highlight')),
-      matching: find.byType(Container),
-    );
+    final circle = find.descendant(of: find.byKey(const Key('nav-highlight')), matching: find.byType(Container));
     final decoration = tester.widget<Container>(circle).decoration! as BoxDecoration;
     return (decoration.color!.a * 255).round();
   }
@@ -128,9 +125,7 @@ void main() {
   });
 
   testWidgets('reduced motion leaves the highlight at rest', (tester) async {
-    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
-      disableAnimations: true,
-    );
+    tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 
     final controller = ScrollController();

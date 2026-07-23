@@ -75,10 +75,7 @@ void main() {
         theme: ThemeData.dark(),
         home: Scaffold(
           body: RichSpoilerText(
-            pieces: const [
-              RichPiece.text('Watch:'),
-              RichPiece.video('https://f95zone.to/data/video/1/1.mp4'),
-            ],
+            pieces: const [RichPiece.text('Watch:'), RichPiece.video('https://f95zone.to/data/video/1/1.mp4')],
             onOpenLink: (_) {},
           ),
         ),
@@ -261,9 +258,7 @@ void main() {
           theme: ThemeData.dark(),
           home: Scaffold(
             body: RichSpoilerText(
-              pieces: const [
-                RichPiece.text('boldlink', url: 'https://example.com', bold: true),
-              ],
+              pieces: const [RichPiece.text('boldlink', url: 'https://example.com', bold: true)],
               onOpenLink: (_) {},
             ),
           ),

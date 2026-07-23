@@ -224,9 +224,7 @@ class _PulsingHighlightState extends State<_PulsingHighlight> with SingleTickerP
           height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: restAlpha + swell * (peakAlpha - restAlpha)),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: restAlpha + swell * (peakAlpha - restAlpha)),
           ),
         );
       },

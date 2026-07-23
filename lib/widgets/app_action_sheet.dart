@@ -193,7 +193,10 @@ class _AppActionSheet extends StatelessWidget {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       child: glass
-          ? BackdropFilter(filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel), child: sheet)
+          ? BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: AppBlur.panel, sigmaY: AppBlur.panel),
+              child: sheet,
+            )
           : sheet,
     );
   }
@@ -209,10 +212,7 @@ class _AppActionSheet extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         child: Row(
           children: [
-            if (action.icon != null) ...[
-              Icon(action.icon, size: 19, color: iconColor),
-              const SizedBox(width: 14),
-            ],
+            if (action.icon != null) ...[Icon(action.icon, size: 19, color: iconColor), const SizedBox(width: 14)],
             Text(action.label, style: TextStyle(color: labelColor, fontSize: 13.5)),
           ],
         ),
@@ -296,11 +296,7 @@ class _HighlightScrimPainter extends CustomPainter {
     // The shade is the whole screen minus the trigger's window — painting the
     // difference leaves the trigger un-dimmed rather than punching a hole with
     // a saveLayer, which some raster backends handle unevenly.
-    final shade = Path.combine(
-      PathOperation.difference,
-      Path()..addRect(Offset.zero & size),
-      Path()..addRRect(rrect),
-    );
+    final shade = Path.combine(PathOperation.difference, Path()..addRect(Offset.zero & size), Path()..addRRect(rrect));
     canvas.drawPath(shade, Paint()..color = barrierColor.withValues(alpha: barrierColor.a * t));
 
     // A soft halo just outside the window, then a crisp lip on it: the trigger

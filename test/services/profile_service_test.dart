@@ -155,11 +155,12 @@ void main() {
   });
 
   group('non-200 responses', () {
-    Future<void> Function() fetchWith(http.Client client) => () => ProfileService.fetchProfile(
-      'https://f95zone.to/members/someone.1/',
-      client: client,
-      packageInfoLoader: () async => _packageInfo(),
-    );
+    Future<void> Function() fetchWith(http.Client client) =>
+        () => ProfileService.fetchProfile(
+          'https://f95zone.to/members/someone.1/',
+          client: client,
+          packageInfoLoader: () async => _packageInfo(),
+        );
 
     http.Client statedAs(String message, int status) => MockClient(
       (_) async => http.Response(
@@ -198,11 +199,7 @@ void main() {
       expect(
         fetchWith(MockClient((_) async => http.Response('nope', 403))),
         throwsA(
-          isA<ContentUnavailableException>().having(
-            (e) => e.message,
-            'message',
-            'Failed to load profile page: 403',
-          ),
+          isA<ContentUnavailableException>().having((e) => e.message, 'message', 'Failed to load profile page: 403'),
         ),
       );
     });

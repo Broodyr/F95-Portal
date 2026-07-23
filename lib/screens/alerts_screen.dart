@@ -396,11 +396,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         title: const Text('Alerts', style: TextStyle(fontSize: 16)),
         actions: [
           if (_showMarkAll)
-            IconButton(
-              tooltip: 'Mark all read',
-              icon: const Icon(Icons.done_all, size: 20),
-              onPressed: _markAllRead,
-            ),
+            IconButton(tooltip: 'Mark all read', icon: const Icon(Icons.done_all, size: 20), onPressed: _markAllRead),
         ],
       ),
       body: _buildBody(colorScheme),

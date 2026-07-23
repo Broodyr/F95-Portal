@@ -213,9 +213,7 @@ class _RichSpoilerTextState extends State<RichSpoilerText> {
             // Links carry a touch more weight than body text so the thin crimson
             // holds up at small sizes; kept under bold's w600 so a link never
             // reads as emphasis.
-            fontWeight: piece.bold
-                ? FontWeight.w600
-                : (url != null ? FontWeight.w500 : null),
+            fontWeight: piece.bold ? FontWeight.w600 : (url != null ? FontWeight.w500 : null),
             fontStyle: piece.italic ? FontStyle.italic : null,
             decoration: TextDecoration.combine([
               if (piece.underline || url != null) TextDecoration.underline,

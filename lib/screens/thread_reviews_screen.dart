@@ -23,7 +23,8 @@ import 'profile_screen.dart';
 typedef FetchThreadReviews = Future<ThreadReviewsPage> Function(String url, {int page});
 typedef ReviewLiker = Future<void> Function(int reviewId, String csrfToken);
 typedef RateFormFetcher = Future<RateForm> Function(String rateUrl);
-typedef RatingSender = Future<void> Function(String action, String csrfToken, {required int rating, required String message});
+typedef RatingSender =
+    Future<void> Function(String action, String csrfToken, {required int rating, required String message});
 
 /// A thread's reviews (`…/br-reviews/`), styled like the thread viewer's
 /// post loop. Reviews are read-mostly: the only interactions are Like and
@@ -335,10 +336,7 @@ class _ThreadReviewsScreenState extends State<ThreadReviewsScreen> {
             ),
           ),
         for (final review in page.reviews)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _buildReviewCard(colorScheme, review),
-          ),
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: _buildReviewCard(colorScheme, review)),
         if (totalPages > 1) PaginationBar(page: _pageNumber, totalPages: totalPages, onSelect: _goToPage),
       ],
     );
@@ -377,10 +375,7 @@ class _ThreadReviewsScreenState extends State<ThreadReviewsScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            Text(
-                              review.date,
-                              style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5),
-                            ),
+                            Text(review.date, style: TextStyle(color: AppColors.of(context).hintText, fontSize: 10.5)),
                           ],
                         ),
                       ),
@@ -401,10 +396,7 @@ class _ThreadReviewsScreenState extends State<ThreadReviewsScreen> {
                 if (likeCount > 0) ...[
                   Icon(Icons.favorite, size: 13, color: colorScheme.primary),
                   const SizedBox(width: 4),
-                  Text(
-                    '$likeCount',
-                    style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5),
-                  ),
+                  Text('$likeCount', style: TextStyle(color: AppColors.of(context).bodyText, fontSize: 11.5)),
                 ],
                 const Spacer(),
                 if (review.likeUrl != null)

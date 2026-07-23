@@ -60,8 +60,7 @@ Future<void> typeInto(WidgetTester tester, String key, String text) async {
   await tester.pumpAndSettle();
 }
 
-String fieldText(WidgetTester tester, String key) =>
-    tester.widget<TextField>(find.byKey(Key(key))).controller!.text;
+String fieldText(WidgetTester tester, String key) => tester.widget<TextField>(find.byKey(Key(key))).controller!.text;
 
 String messageText(WidgetTester tester) => fieldText(tester, 'composer-message');
 
@@ -113,10 +112,7 @@ void main() {
     await dismissSheet(tester);
 
     await openSheet(tester);
-    expect(
-      fieldText(tester, 'composer-title'),
-      'My thread',
-    );
+    expect(fieldText(tester, 'composer-title'), 'My thread');
     expect(messageText(tester), 'body text');
   });
 
@@ -223,11 +219,7 @@ void main() {
     await dismissSheet(tester);
 
     // Tapping Quote reopens the composer with the quote as initialMessage.
-    await pumpComposerHost(
-      tester,
-      draftKey: 'threads/1/add-reply',
-      initialMessage: '[QUOTE="bob"]hi[/QUOTE]\n',
-    );
+    await pumpComposerHost(tester, draftKey: 'threads/1/add-reply', initialMessage: '[QUOTE="bob"]hi[/QUOTE]\n');
     await openSheet(tester);
 
     expect(messageText(tester), '[QUOTE="bob"]hi[/QUOTE]\nmy own words');

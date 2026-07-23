@@ -61,11 +61,7 @@ class StarPicker extends StatelessWidget {
               onTap: () => onChanged(star),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Icon(
-                  star <= rating ? Icons.star : Icons.star_border,
-                  size: starSize,
-                  color: starColor,
-                ),
+                child: Icon(star <= rating ? Icons.star : Icons.star_border, size: starSize, color: starColor),
               ),
             ),
           ),

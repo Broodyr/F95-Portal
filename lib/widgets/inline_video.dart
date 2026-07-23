@@ -71,11 +71,7 @@ class _InlineVideoState extends State<InlineVideo> {
 
     final colors = AppColors.of(context);
     final Widget badge = switch (_stage) {
-      _Stage.loading => const SizedBox(
-        width: 28,
-        height: 28,
-        child: CircularProgressIndicator(strokeWidth: 2.5),
-      ),
+      _Stage.loading => const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5)),
       _Stage.failed => Icon(Icons.videocam_off_outlined, color: colors.mutedForeground, size: 32),
       _ => Container(
         width: 48,

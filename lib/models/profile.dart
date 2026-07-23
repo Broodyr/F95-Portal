@@ -123,12 +123,7 @@ class ProfilePostingsPage {
   /// append `&page=N` to. Empty when the page carried no canonical URL.
   final String searchUrl;
 
-  const ProfilePostingsPage({
-    this.postings = const [],
-    this.currentPage = 1,
-    this.totalPages = 1,
-    this.searchUrl = '',
-  });
+  const ProfilePostingsPage({this.postings = const [], this.currentPage = 1, this.totalPages = 1, this.searchUrl = ''});
 }
 
 class ProfileAbout {

@@ -127,8 +127,7 @@ class ForumService {
 
   /// Drops cached pages under [reviewsUrl] so the next fetch shows a
   /// just-posted review instead of the cached page.
-  static void invalidateThreadReviews(String reviewsUrl) =>
-      _cache.removeWhere((key, _) => key.startsWith(reviewsUrl));
+  static void invalidateThreadReviews(String reviewsUrl) => _cache.removeWhere((key, _) => key.startsWith(reviewsUrl));
 
   /// Toggles the viewer's like on a review. The same endpoint likes and
   /// unlikes; the caller flips its own state.
@@ -310,11 +309,7 @@ class ForumService {
   /// [acknowledgeAlerts] this ignores the pop-up-skip preference: an explicit
   /// tap is a visit, so it always reads. Account feeds are dropped so the next
   /// alerts fetch and bell count reflect the change.
-  static Future<void> markAlertRead(
-    int alertId, {
-    http.Client? client,
-    PackageInfoLoader? packageInfoLoader,
-  }) async {
+  static Future<void> markAlertRead(int alertId, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     if (kIsWeb) return;
     try {
       await _fetchHtml(
@@ -329,11 +324,7 @@ class ForumService {
 
   /// Restores one alert's unread/new marker through the same `/account/
   /// unread-alert` link the row's own "Mark unread" control points at.
-  static Future<void> markAlertUnread(
-    int alertId, {
-    http.Client? client,
-    PackageInfoLoader? packageInfoLoader,
-  }) async {
+  static Future<void> markAlertUnread(int alertId, {http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     if (kIsWeb) return;
     try {
       await _fetchHtml(
@@ -349,10 +340,7 @@ class ForumService {
   /// Marks the whole feed read via the alerts page's own "Mark all as read"
   /// link — the same `?skip_mark_read=0` override the site renders, which
   /// forces the mark-read the pop-up-skip preference otherwise suppresses.
-  static Future<void> markAllAlertsRead({
-    http.Client? client,
-    PackageInfoLoader? packageInfoLoader,
-  }) async {
+  static Future<void> markAllAlertsRead({http.Client? client, PackageInfoLoader? packageInfoLoader}) async {
     if (kIsWeb) return;
     try {
       await _fetchHtml('$alertsUrl?skip_mark_read=0', client: client, packageInfoLoader: packageInfoLoader);

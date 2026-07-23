@@ -202,11 +202,7 @@ void main() {
   group('parseThreadPage on TimeLust (videos embedded in a spoiler)', () {
     late ThreadPage page;
 
-    setUpAll(
-      () => page = parseFixture(
-        "thread_renpy_timelust_videos.htm",
-      ),
-    );
+    setUpAll(() => page = parseFixture("thread_renpy_timelust_videos.htm"));
 
     test('developer notes spoiler carries the embedded videos, absolutized', () {
       final notes = page.spoilers.firstWhere((s) => s.title == 'Developer Notes');

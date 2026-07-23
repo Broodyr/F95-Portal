@@ -20,10 +20,7 @@ class ComposerDraft {
   Map<String, dynamic> toJson() => {'title': title, 'message': message};
 
   factory ComposerDraft.fromJson(Map<String, dynamic> json) {
-    return ComposerDraft(
-      title: json['title'] as String? ?? '',
-      message: json['message'] as String? ?? '',
-    );
+    return ComposerDraft(title: json['title'] as String? ?? '', message: json['message'] as String? ?? '');
   }
 }
 

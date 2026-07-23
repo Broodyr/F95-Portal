@@ -55,8 +55,7 @@ Future<ImageSaveResult> saveImageToGallery(String url) async {
 /// because the check is a subset scan, and running it over a whole
 /// multi-megabyte image would both cost more and risk matching pixel
 /// data that happens to spell the marker.
-AvifFileType _avifType(Uint8List bytes) =>
-    isAvifFile(bytes.sublist(0, math.min(32, bytes.length)));
+AvifFileType _avifType(Uint8List bytes) => isAvifFile(bytes.sublist(0, math.min(32, bytes.length)));
 
 /// Whether these bytes are AVIF, whatever the file is named.
 ///
