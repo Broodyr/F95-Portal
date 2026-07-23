@@ -77,7 +77,7 @@ class PaginationBar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: _gapHPadding, vertical: _pillVPadding),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(AppRadii.pill),
-                    border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.18)),
+                    border: Border.all(color: colorScheme.onSurface.withValues(alpha: AppAlphas.subtleEdge)),
                   ),
                   child: Text(
                     '…',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../constants.dart';
 import '../models/forum.dart';
 import '../theme/app_colors.dart';
 
@@ -69,7 +70,9 @@ class ForumNodeRow extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 9 : 10),
         decoration: showDivider
             ? BoxDecoration(
-                border: Border(bottom: BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.06))),
+                border: Border(
+                  bottom: BorderSide(color: colorScheme.onSurface.withValues(alpha: AppAlphas.hairline)),
+                ),
               )
             : null,
         child: Row(

@@ -444,7 +444,7 @@ void main() {
 
       final primary = Theme.of(tester.element(find.text('The targeted post'))).colorScheme.primary;
       final border = borderedAncestor(tester, find.text('The targeted post')).border! as Border;
-      expect(border.top.color, primary.withValues(alpha: 0.45));
+      expect(border.top.color, primary.withValues(alpha: AppAlphas.outlineEdge));
 
       // The other post carries no outline.
       expect(hasBorderedAncestor(tester, find.text('An ordinary post')), isFalse);
@@ -465,7 +465,7 @@ void main() {
 
       final ctx = tester.element(find.text('the targeted reply'));
       final primary = Theme.of(ctx).colorScheme.primary;
-      final neutral = Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.15);
+      final neutral = Theme.of(ctx).colorScheme.onSurface.withValues(alpha: AppAlphas.subtleEdge);
 
       // The jumped-to reply's rail turns primary and its row takes a faint wash.
       final target = borderedAncestor(tester, find.text('the targeted reply'));

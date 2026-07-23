@@ -62,6 +62,22 @@ abstract final class AppAlphas {
   /// Primary-tinted wash marking a row as highlighted or unread — an unread
   /// alert, a jumped-to profile comment.
   static const double highlightWash = 0.15;
+
+  /// Edge on an outlined control or an emphasized container — outlined
+  /// buttons, toggle pills, the quote rail, a jumped-to post's outline. Drawn
+  /// over primary where the edge marks emphasis or an active state, over a
+  /// neutral where it only needs to describe the shape.
+  static const double outlineEdge = 0.5;
+
+  /// The quieter edge, for lines that describe a shape without asking to be
+  /// pressed — a comment rail, the faint outline on a chip. [outlineEdge]
+  /// would read as a border on these.
+  static const double subtleEdge = 0.2;
+
+  /// The app's divider weight: a rule that only separates, carrying no edge
+  /// of its own. Half [subtleEdge] — at that strength a divider stops
+  /// reading as a gap between rows and starts reading as a box around them.
+  static const double hairline = 0.1;
 }
 
 abstract final class AppLimits {

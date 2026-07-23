@@ -622,14 +622,14 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
             if (setIndex > 0)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.1)),
+                child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: AppAlphas.hairline)),
               ),
             _buildDownloadSet(colorScheme, setIndex, downloads.sets[setIndex]),
           ],
           if (downloads.extras.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.1)),
+              child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: AppAlphas.hairline)),
             ),
             Text('Extras', style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11)),
             const SizedBox(height: 6),
@@ -693,7 +693,9 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                       border: Border.all(
-                        color: i == selectedIndex ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.4),
+                        color: i == selectedIndex
+                            ? colorScheme.primary
+                            : colorScheme.onSurface.withValues(alpha: AppAlphas.outlineEdge),
                       ),
                     ),
                     child: Text(
@@ -734,7 +736,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               decoration: BoxDecoration(
                 color: colorScheme.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colorScheme.primary.withValues(alpha: 0.5)),
+                border: Border.all(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -871,7 +873,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
           decoration: BoxDecoration(
             color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.45)),
+            border: Border.all(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge)),
           ),
           child: Column(
             children: [
@@ -930,9 +932,8 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
     return GestureDetector(
       // Thumbs stay on the low-quality preview host; the viewer gets the HD
       // variants, all of which it starts loading as soon as it opens.
-      onTap: () => ImageGallery.show(context, [
-        for (final url in thread.screens) toHdImageUrl(url) ?? url,
-      ], initialIndex: index),
+      onTap: () =>
+          ImageGallery.show(context, [for (final url in thread.screens) toHdImageUrl(url) ?? url], initialIndex: index),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
@@ -980,7 +981,7 @@ class _BrowseDetailsSheetState extends State<BrowseDetailsSheet> {
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHighest.withValues(alpha: AppAlphas.chipFill),
                 borderRadius: BorderRadius.circular(AppRadii.pill),
-                border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.3)),
+                border: Border.all(color: colorScheme.onSurface.withValues(alpha: AppAlphas.outlineEdge)),
               ),
               child: Text(
                 metadata.tagName(tagId) ?? '#$tagId',

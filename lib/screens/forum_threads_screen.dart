@@ -270,7 +270,9 @@ class _ForumThreadsScreenState extends State<ForumThreadsScreen> {
                     style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 11, letterSpacing: 0.4),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.08))),
+                  Expanded(
+                    child: Divider(height: 1, color: colorScheme.onSurface.withValues(alpha: AppAlphas.hairline)),
+                  ),
                 ],
               ),
             ),

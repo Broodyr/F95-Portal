@@ -927,7 +927,9 @@ class _PostCardState extends State<_PostCard> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: widget.highlighted ? Border.all(color: colorScheme.primary.withValues(alpha: 0.45)) : null,
+        border: widget.highlighted
+            ? Border.all(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge), width: 2.0)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1061,7 +1063,7 @@ class _PostCardState extends State<_PostCard> {
           ..._buildBlocks(colorScheme, post),
           if (post.signature.isNotEmpty) ...[
             const SizedBox(height: 10),
-            Container(height: 1, color: colorScheme.onSurface.withValues(alpha: 0.08)),
+            Container(height: 1, color: colorScheme.onSurface.withValues(alpha: AppAlphas.hairline)),
             const SizedBox(height: 8),
             // Reduced scale and dimmed, so a signature reads as the post's
             // chrome rather than more of its content.
@@ -1145,7 +1147,9 @@ class _PostCardState extends State<_PostCard> {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         visualDensity: VisualDensity.standard,
         side: BorderSide(
-          color: active ? colorScheme.primary.withValues(alpha: 0.6) : colorScheme.outline.withValues(alpha: 0.5),
+          color: active
+              ? colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge)
+              : colorScheme.outline.withValues(alpha: AppAlphas.outlineEdge),
         ),
       ),
       icon: Icon(icon, color: active ? colorScheme.primary : AppColors.of(context).subtleText),
@@ -1199,7 +1203,9 @@ class _PostCardState extends State<_PostCard> {
           padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
           decoration: BoxDecoration(
             color: colorScheme.onSurface.withValues(alpha: 0.04),
-            border: Border(left: BorderSide(color: colorScheme.primary.withValues(alpha: 0.6), width: 2)),
+            border: Border(
+              left: BorderSide(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge), width: 2),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1307,7 +1313,7 @@ class _PostCardState extends State<_PostCard> {
         decoration: BoxDecoration(
           color: colorScheme.onSurface.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(color: colorScheme.onSurface.withValues(alpha: 0.12)),
+          border: Border.all(color: colorScheme.onSurface.withValues(alpha: AppAlphas.subtleEdge)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

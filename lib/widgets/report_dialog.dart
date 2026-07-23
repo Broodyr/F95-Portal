@@ -189,7 +189,9 @@ class _ReportDialogState extends State<ReportDialog> {
         decoration: BoxDecoration(
           color: selected ? colorScheme.primary.withValues(alpha: AppAlphas.selectedFill) : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadii.pill),
-          border: Border.all(color: selected ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.4)),
+          border: Border.all(
+            color: selected ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: AppAlphas.outlineEdge),
+          ),
         ),
         child: Text(
           reason.label,

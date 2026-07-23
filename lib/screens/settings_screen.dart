@@ -260,7 +260,7 @@ class SettingsScreen extends StatelessWidget {
                       onPressed: () => _clearDrafts(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: colorScheme.primary,
-                        side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.65)),
+                        side: BorderSide(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge)),
                       ),
                       icon: const Icon(Icons.drafts_outlined, size: 18),
                       label: Text('Clear saved drafts ($draftCount)'),
@@ -320,8 +320,8 @@ class SettingsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadii.pill),
               border: Border.all(
                 color: exclude
-                    ? colorScheme.error.withValues(alpha: 0.6)
-                    : colorScheme.onSurface.withValues(alpha: 0.4),
+                    ? colorScheme.error.withValues(alpha: AppAlphas.outlineEdge)
+                    : colorScheme.onSurface.withValues(alpha: AppAlphas.outlineEdge),
               ),
             ),
             child: Row(
@@ -422,7 +422,7 @@ class _ImageCacheButtonState extends State<_ImageCacheButton> {
       onPressed: _clear,
       style: OutlinedButton.styleFrom(
         foregroundColor: colorScheme.primary,
-        side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.65)),
+        side: BorderSide(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge)),
       ),
       icon: const Icon(Icons.delete_outline, size: 18),
       label: Text('Clear image cache$suffix'),
@@ -476,10 +476,7 @@ class _AlertsPopupPrefTileState extends State<_AlertsPopupPrefTile> {
       ),
       subtitle: Text.rich(
         TextSpan(
-          style: TextStyle(
-            color: AppColors.of(context).subtleText,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: AppColors.of(context).subtleText, fontSize: 12),
           children: [
             const TextSpan(text: 'When enabled, viewing the Alerts pop-up will '),
             const TextSpan(
@@ -487,8 +484,9 @@ class _AlertsPopupPrefTileState extends State<_AlertsPopupPrefTile> {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const TextSpan(
-              text: ' mark alerts as read. '
-                  'The Alerts screen in this app uses this setting. '
+              text:
+                  ' mark alerts as read. '
+                  'The Alerts screen in this app uses this setting. ',
             ),
           ],
         ),

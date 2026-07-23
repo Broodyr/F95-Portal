@@ -149,9 +149,7 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
     // A profile-post hit belongs on the member's wall, jumped to the post;
     // the permalink's redirect resolves which wall page it sits on.
     if (isProfilePostUrl(result.url)) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ProfileScreen(url: result.url)),
-      );
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProfileScreen(url: result.url)));
       return;
     }
     // Result URLs carry a /post-N permalink; the viewer resolves it to the
@@ -204,7 +202,12 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
               child: Row(
                 children: [
                   if (!widget.isThreadScoped) ...[
-                    _buildToggle(colorScheme, 'Titles only', _titleOnly, () => setState(() => _titleOnly = !_titleOnly)),
+                    _buildToggle(
+                      colorScheme,
+                      'Titles only',
+                      _titleOnly,
+                      () => setState(() => _titleOnly = !_titleOnly),
+                    ),
                     _buildDivider(colorScheme),
                     SegmentedSelector<String>(
                       dense: true,
@@ -247,10 +250,10 @@ class _ForumSearchScreenState extends State<ForumSearchScreen> {
       width: 1,
       height: 14,
       margin: const EdgeInsets.symmetric(horizontal: 9),
-      // The app's divider weight. Not the segmented track beside it: that's
-      // translucent black, which recesses against a fill but on the page
-      // background lands darker than the page and leaves no line at all.
-      color: colorScheme.onSurface.withValues(alpha: 0.1),
+      // Not the segmented track beside it: that's translucent black, which
+      // recesses against a fill but on the page background lands darker than
+      // the page and leaves no line at all.
+      color: colorScheme.onSurface.withValues(alpha: AppAlphas.hairline),
     );
   }
 

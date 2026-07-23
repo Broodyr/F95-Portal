@@ -597,9 +597,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // A profile-post row opens the member's wall jumped to that post, not the
     // thread viewer; the wall page is resolved by the permalink's redirect.
     if (isProfilePostUrl(posting.url)) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ProfileScreen(url: posting.url)),
-      );
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ProfileScreen(url: posting.url)));
       return;
     }
     Navigator.of(context).push(
@@ -994,7 +992,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: isTarget ? Border.all(color: colorScheme.primary.withValues(alpha: 0.45)) : null,
+        border: isTarget ? Border.all(color: colorScheme.primary.withValues(alpha: AppAlphas.outlineEdge), width: 2.0)
+         : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1126,7 +1125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: isTarget ? colorScheme.primary.withValues(alpha: AppAlphas.highlightWash) : null,
         border: Border(
           left: BorderSide(
-            color: isTarget ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.15),
+            color: isTarget ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: AppAlphas.subtleEdge),
             width: 1.5,
           ),
         ),
@@ -1195,7 +1194,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 message: 'The comment will be removed.',
                               ),
                             ),
-                          AppSheetAction(icon: Icons.outlined_flag, label: 'Report…', onTap: () => _reportComment(comment)),
+                          AppSheetAction(
+                            icon: Icons.outlined_flag,
+                            label: 'Report…',
+                            onTap: () => _reportComment(comment),
+                          ),
                         ], dense: true),
                     ],
                   ),
